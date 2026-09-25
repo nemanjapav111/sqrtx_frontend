@@ -21,7 +21,7 @@ function Cta() {
   return (
     <div className="flex flex-col items-center gap-2.5 md:flex-row md:items-start md:gap-6.25">
       <div className="flex w-46.5 flex-col items-center gap-1.5">
-        <Link href="#" className="w-full bg-[#009a1c] py-2.75 text-center font-bold">
+        <Link href="/register" className="w-full bg-[#009a1c] py-2.75 text-center font-bold">
           Register
         </Link>
         <p className="text-center text-sm">
