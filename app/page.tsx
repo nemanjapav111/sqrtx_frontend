@@ -31,7 +31,7 @@ function Cta() {
         </p>
       </div>
       <Link
-        href="#"
+        href="/login"
         className="w-46.5 border-2 border-white py-2.25 text-center font-bold"
       >
         Log in

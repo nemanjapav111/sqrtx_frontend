@@ -2,53 +2,56 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import Field from "@/app/components/field";
+import { GENERIC_ERROR, RATE_LIMIT_ERROR } from "@/lib/auth-messages";
 import { supabase } from "@/lib/supabase";
-import Field from "./field";
-
-// name@domain.tld: no spaces, no empty parts, and the ending (tld) is at least 2 characters.
-// (Checking that the address really exists is done by the confirmation email.)
-const emailOk = (v: string) => /^[^\s@]+@([^\s@.]+\.)+[^\s@.]{2,}$/.test(v.trim());
-
-// Must match the Supabase password policy (Auth settings): at least 8 characters and one each of
-// a-z, A-Z and 0-9. Supabase only counts those plain letters, so other alphabets (Ć, Ж) don't count.
-const passwordOk = (v: string) => v.length >= 8 && /[a-z]/.test(v) && /[A-Z]/.test(v) && /\d/.test(v);
+import { emailOk, passwordOk } from "@/lib/validation";
+import ArrowIcon from "./arrow-icon";
+import { NEXT_STEP } from "./constants";
 
 // Supabase error codes we can explain to the user. Anything else gets the generic message.
 const ERROR_MESSAGES: Record<string, string> = {
   weak_password: "That password is too weak. Use at least 8 characters, upper and lowercase letters, and a number.",
   email_address_invalid: "Please enter a valid email address.",
-  over_email_send_rate_limit: "Too many attempts. Please wait a few minutes and try again.",
-  over_request_rate_limit: "Too many attempts. Please wait a few minutes and try again.",
+  over_email_send_rate_limit: RATE_LIMIT_ERROR,
+  over_request_rate_limit: RATE_LIMIT_ERROR,
 };
-const GENERIC_ERROR = "Something went wrong. Please check your connection and try again.";
 
-// Where the link in the confirmation email brings the user back to.
-const NEXT_STEP = "/register/company";
+const ALREADY_REGISTERED = "Already registered";
 
-export default function RegisterForm() {
+export default function RegisterForm({
+  initialEmail,
+  onSent,
+}: {
+  initialEmail: string; // used when the user comes back with "Change email"
+  onSent: (email: string, password: string) => void; // account created, confirmation email sent
+}) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   // Errors stay hidden until the user clicks Next once. After that they update as the user types.
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false); // only used to grey out the button
   const inFlight = useRef(false); // the real "already sending" guard: state would be stale for a second submit in the same instant
-  const [sent, setSent] = useState(false); // account created, waiting for the user to confirm their email
   const [error, setError] = useState<string | null>(null);
+  const [emailTaken, setEmailTaken] = useState(false); // this address already has an account
 
   const emailBad = submitted && !emailOk(email);
   const passwordBad = submitted && !passwordOk(password);
+  const message = emailTaken ? ALREADY_REGISTERED : error; // the red line under the button
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (inFlight.current) return;
+    const form = e.currentTarget; // kept now because the event is gone after the await below
     setSubmitted(true);
     setError(null);
+    setEmailTaken(false);
 
     // Send the cursor to the first field that needs fixing.
     const field = !emailOk(email) ? "email" : !passwordOk(password) ? "password" : null;
     if (field) {
-      (e.currentTarget.elements.namedItem(field) as HTMLInputElement).focus();
+      (form.elements.namedItem(field) as HTMLInputElement).focus();
       return;
     }
 
@@ -61,14 +64,21 @@ export default function RegisterForm() {
         options: { emailRedirectTo: `${window.location.origin}${NEXT_STEP}` },
       });
 
-      if (error) {
+      // With email confirmation on, Supabase doesn't return an error for an address that already has a
+      // confirmed account. It answers "success" with an empty identities list instead. (A community-known
+      // behaviour, not a documented promise, so re-check it after Supabase upgrades.)
+      const alreadyRegistered =
+        error?.code === "user_already_exists" || error?.code === "email_exists" || data.user?.identities?.length === 0;
+
+      if (alreadyRegistered) {
+        setEmailTaken(true);
+        (form.elements.namedItem("email") as HTMLInputElement).focus();
+      } else if (error) {
         setError(ERROR_MESSAGES[error.code ?? ""] ?? GENERIC_ERROR);
       } else if (data.session) {
         router.push(NEXT_STEP); // email confirmation is off in Supabase: already signed in
       } else {
-        // Email confirmation is on. We show the same message even if the address is already
-        // registered, so nobody can use this form to find out who has an account.
-        setSent(true);
+        onSent(email.trim(), password); // new account, confirmation email sent
       }
     } catch {
       setError(GENERIC_ERROR);
@@ -76,18 +86,6 @@ export default function RegisterForm() {
       inFlight.current = false;
       setSending(false);
     }
-  }
-
-  if (sent) {
-    return (
-      <div role="status" className="flex w-full max-w-135 flex-col items-center gap-2 px-5 pb-17.5 text-center">
-        <p className="text-[20px] font-semibold">Check your email</p>
-        <p>
-          We sent a confirmation link to <span className="font-semibold break-all">{email.trim()}</span>. Open it to
-          continue.
-        </p>
-      </div>
-    );
   }
 
   // noValidate: we draw our own red underline instead of the browser's pop-up messages.
@@ -101,8 +99,11 @@ export default function RegisterForm() {
           type="email"
           autoComplete="username"
           value={email}
-          onChange={setEmail}
-          invalid={emailBad}
+          onChange={(v) => {
+            setEmail(v);
+            setEmailTaken(false); // a different address may be free
+          }}
+          invalid={emailBad || emailTaken}
         />
         <Field
           label="Password*"
@@ -116,22 +117,19 @@ export default function RegisterForm() {
         />
       </div>
 
-      {/* The arrow is an SVG because the → character isn't in the Inter font files Google serves. */}
       <button
         type="submit"
         disabled={sending}
         className="flex cursor-pointer items-center gap-1 bg-black px-17.25 py-2.75 font-bold text-white disabled:cursor-wait disabled:opacity-60"
       >
         Next
-        <svg aria-hidden viewBox="0 0 11 12" className="h-3.5 w-3 translate-y-px" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M0 6h9.6M5.1 1.5L9.6 6l-4.5 4.5" />
-        </svg>
+        <ArrowIcon className="h-3.5 w-3 translate-y-px" />
       </button>
 
-      {/* Server errors (rate limit, weak password, no connection). Not in the design yet. */}
-      {error && (
+      {/* "Already registered" and server errors (rate limit, weak password, no connection). Not in the design yet. */}
+      {message && (
         <p role="alert" className="w-full max-w-135 px-5 pt-5 text-center text-[14px] text-red-600">
-          {error}
+          {message}
         </p>
       )}
     </form>

@@ -14,6 +14,7 @@ export default function Field({
   type,
   autoComplete,
   hint,
+  below,
   value,
   onChange,
   invalid,
@@ -22,7 +23,8 @@ export default function Field({
   name: string;
   type: "email" | "password";
   autoComplete: string;
-  hint?: string;
+  hint?: string; // gray helper text under the underline (register)
+  below?: React.ReactNode; // anything else under the underline, like the "Forgot password?" link (log in)
   value: string;
   onChange: (value: string) => void;
   invalid: boolean; // draws the underline red
@@ -73,6 +75,7 @@ export default function Field({
             {hint}
           </p>
         )}
+        {below}
       </div>
     </div>
   );
