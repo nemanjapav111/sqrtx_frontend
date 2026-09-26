@@ -38,6 +38,7 @@ export default function AddressField({
   const token = useRef<SessionToken | null>(null); // one per search, see lib/places.ts
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latest = useRef(0); // only the newest search may show its results
+  const touched = useRef(false); // the user has typed or picked something, so an empty box is a decision, not a fresh field
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -46,6 +47,8 @@ export default function AddressField({
   }
 
   function handleChange(value: string) {
+    touched.current = true;
+    setOpen(true); // the list may have been closed by a pick or Escape while the box kept focus
     onText(value);
     if (place) onPlace(null); // only clear an existing pick; skips a needless re-render on every other keystroke
     setMessage(null);
@@ -61,7 +64,7 @@ export default function AddressField({
 
   function handleBlur() {
     setOpen(false);
-    setAbandoned(text.trim().length > 0 && !place);
+    setAbandoned((text.trim().length > 0 || touched.current) && !place);
   }
 
   async function search(value: string) {
@@ -79,8 +82,10 @@ export default function AddressField({
   }
 
   async function choose(suggestion: AddressSuggestion) {
+    touched.current = true;
     setOpen(false);
     setAbandoned(false);
+    setSuggestions([]); // so clicking the box again doesn't show the list of what was already picked
     onText(suggestion.text);
     try {
       const details = await getPlaceDetails(suggestion);
@@ -94,7 +99,13 @@ export default function AddressField({
     }
   }
 
-  const belowMessage = message ?? (abandoned ? "Please choose an address from the list." : null);
+  // The same sentence is the gray hint until the user leaves without picking (or hits Next without one), then it turns red.
+  const PICK = "Please choose an address from the list.";
+  const belowMessage = message ?? (abandoned || (invalid && !open && !place) ? PICK : null);
+  const listOpen = open && !belowMessage && suggestions.length > 0;
+  // The hint sits on the same line as the error, so it takes no extra space. It steps aside for an error,
+  // and for the suggestion list (which covers that line).
+  const hint = !belowMessage && !listOpen ? PICK : null;
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") setOpen(false);
@@ -117,41 +128,38 @@ export default function AddressField({
       id={id}
       label="Address*"
       invalid={invalid || abandoned}
-      message={belowMessage && <p role="alert" className="text-[13px] font-medium text-red-600">{belowMessage}</p>}
+      message={
+        belowMessage ? (
+          <p role="alert" className="text-[13px] font-medium text-red-600">{belowMessage}</p>
+        ) : hint ? (
+          <p className="text-[13px] font-medium text-[#4b5563]">{hint}</p>
+        ) : null
+      }
       dropdown={
         // Anchored right under the input line itself, so it doesn't drift when a message reserves space below it.
-        open &&
-        !belowMessage && (
+        listOpen && (
           // No design for this list yet.
           <ul id={listId} role="listbox" className="absolute top-full z-10 mt-1 w-full border border-black bg-white">
-            {suggestions.length > 0 ? (
-              <>
-                {suggestions.map((s, i) => (
-                  <li
-                    key={s.prediction.placeId}
-                    id={`${id}-option-${i}`}
-                    role="option"
-                    aria-selected={i === active}
-                    // mouse down (not click) so the box keeps focus and doesn't close before the pick registers
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      choose(s);
-                    }}
-                    className={`cursor-pointer px-3 py-2 text-[14px] ${i === active ? "bg-[#f3f4f6]" : ""}`}
-                  >
-                    {s.text}
-                  </li>
-                ))}
-                {/* Google's rules ask for this credit next to address suggestions. */}
-                <li aria-hidden className="px-3 py-1 text-[11px] text-[#4b5563]">
-                  Powered by Google
-                </li>
-              </>
-            ) : (
-              <li aria-hidden className="px-3 py-2 text-[14px] text-[#9ca3af]">
-                Start typing your street address…
+            {suggestions.map((s, i) => (
+              <li
+                key={s.prediction.placeId}
+                id={`${id}-option-${i}`}
+                role="option"
+                aria-selected={i === active}
+                // mouse down (not click) so the box keeps focus and doesn't close before the pick registers
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  choose(s);
+                }}
+                className={`cursor-pointer px-3 py-2 text-[14px] hover:bg-[#f3f4f6] ${i === active ? "bg-[#f3f4f6]" : ""}`}
+              >
+                {s.text}
               </li>
-            )}
+            ))}
+            {/* Google's rules ask for this credit next to address suggestions. */}
+            <li aria-hidden className="px-3 py-1 text-[11px] text-[#4b5563]">
+              Powered by Google
+            </li>
           </ul>
         )
       }
@@ -171,6 +179,7 @@ export default function AddressField({
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
+        onClick={handleFocus} // also reopens the list when the box already has focus (after a pick or Escape)
         onBlur={handleBlur}
         className="h-4.75 min-w-0 flex-1 bg-transparent outline-none"
       />

@@ -1,13 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
-import Field, { FieldShell } from "@/app/components/field";
+import Field from "@/app/components/field";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import {
-  BUSINESS_CATEGORIES,
   SITE_HOST,
   cleanSlug,
   createProfile,
@@ -25,6 +24,7 @@ import {
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
 import ArrowIcon from "../arrow-icon";
 import AddressField from "./address-field";
+import CategorySelect from "./category-select";
 import LogoPicker from "./logo-picker";
 
 // The form control that gets the cursor for each field that needs fixing.
@@ -40,46 +40,6 @@ const CONTROL_NAME: Record<FieldName, string> = {
   provides: "products",
   logo: "logo",
 };
-
-// Native dropdown: best on phones, and keyboard and screen reader friendly for free.
-function CategorySelect({ value, invalid, onChange }: { value: string; invalid: boolean; onChange: (v: string) => void }) {
-  const id = useId();
-  return (
-    <FieldShell id={id} label="Business category*" invalid={invalid} className="max-w-62.5">
-      {/* The select spans the whole row (icon included) so clicking anywhere, arrow included, opens it;
-          the icon is laid on top, purely decorative, so it never steals the click. */}
-      <select
-        id={id}
-        name="category"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-invalid={invalid}
-        className={`h-4.75 min-w-0 flex-1 cursor-pointer appearance-none bg-transparent pr-6 outline-none ${value === "" ? "text-[14px] text-[#9ca3af]" : ""}`}
-      >
-        {/* hidden as well as disabled: it should only ever show as the closed box's placeholder,
-            never as a row in the opened list once there are real categories to pick from. */}
-        <option value="" disabled hidden>
-          Select business category
-        </option>
-        {BUSINESS_CATEGORIES.map((category) => (
-          <option key={category} value={category} className="text-black">
-            {category}
-          </option>
-        ))}
-      </select>
-      <svg
-        aria-hidden
-        viewBox="0 0 20 20"
-        className="pointer-events-none absolute top-1/2 right-0 size-4.75 -translate-y-1/2"
-        fill="none"
-        stroke="black"
-        strokeWidth="2"
-      >
-        <path d="M5 8l5 5 5-5" />
-      </svg>
-    </FieldShell>
-  );
-}
 
 // A checkbox with its label before it, like the design. Bordered box; a black check mark when checked.
 const CHECK =
