@@ -118,8 +118,8 @@ export default function AddressField({
       label="Address*"
       invalid={invalid || abandoned}
       message={belowMessage && <p role="alert" className="text-[13px] font-medium text-red-600">{belowMessage}</p>}
-      below={
-        // Positioned out of the page flow so the open dropdown overlays what's below instead of pushing it down.
+      dropdown={
+        // Anchored right under the input line itself, so it doesn't drift when a message reserves space below it.
         open &&
         !belowMessage && (
           // No design for this list yet.

@@ -52,7 +52,7 @@ function CategorySelect({ value, invalid, onChange }: { value: string; invalid: 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={invalid}
-        className={`h-4.75 min-w-0 flex-1 cursor-pointer appearance-none bg-transparent outline-none ${value === "" ? "text-[#9ca3af]" : ""}`}
+        className={`h-4.75 min-w-0 flex-1 cursor-pointer appearance-none bg-transparent outline-none ${value === "" ? "text-[14px] text-[#9ca3af]" : ""}`}
       >
         {/* hidden as well as disabled: it should only ever show as the closed box's placeholder,
             never as a row in the opened list once there are real categories to pick from. */}

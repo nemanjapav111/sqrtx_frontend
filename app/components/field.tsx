@@ -14,6 +14,7 @@ export function FieldShell({
   invalid,
   hint,
   message,
+  dropdown,
   below,
   className = "",
   children,
@@ -26,7 +27,10 @@ export function FieldShell({
   // to reserve its line's height up front, the same way a static hint already keeps its space, so the rest
   // of the form doesn't jump when the message appears or clears.
   message?: React.ReactNode;
-  below?: React.ReactNode; // anything else under the underline, positioned so it doesn't affect layout (a dropdown)
+  // An absolutely positioned panel (e.g. an autocomplete list) anchored right under the input line itself,
+  // regardless of whatever hint, message or below content follows it.
+  dropdown?: React.ReactNode;
+  below?: React.ReactNode; // anything else under the underline, in normal flow (e.g. a "Forgot password?" link)
   className?: string; // for example a maximum width
   children: React.ReactNode;
 }) {
@@ -35,17 +39,19 @@ export function FieldShell({
       <label htmlFor={id} className="text-[14px] font-semibold">
         {label}
       </label>
-      <div className="relative flex flex-col gap-1">
+      <div className="flex flex-col gap-1">
         {/* Underline is the bottom border (-mb-px so it takes no height, like the design);
-            the shadow thickens it while typing as a keyboard focus cue. */}
+            the shadow thickens it while typing as a keyboard focus cue. relative so `dropdown`
+            anchors right under this row and not under whatever hint/message/below follows it. */}
         <div
-          className={`-mb-px flex items-center border-b pb-1 ${
+          className={`relative -mb-px flex items-center border-b pb-1 ${
             invalid
               ? "border-red-600 focus-within:shadow-[0_1px_0_0_#dc2626]"
               : "border-black focus-within:shadow-[0_1px_0_0_black]"
           }`}
         >
           {children}
+          {dropdown}
         </div>
         {hint && (
           <p id={`${id}-hint`} className="text-[13px] font-medium text-[#4b5563]">
