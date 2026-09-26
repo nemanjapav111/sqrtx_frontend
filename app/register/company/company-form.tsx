@@ -54,7 +54,9 @@ function CategorySelect({ value, invalid, onChange }: { value: string; invalid: 
         aria-invalid={invalid}
         className={`h-4.75 min-w-0 flex-1 cursor-pointer appearance-none bg-transparent outline-none ${value === "" ? "text-[#9ca3af]" : ""}`}
       >
-        <option value="" disabled>
+        {/* hidden as well as disabled: it should only ever show as the closed box's placeholder,
+            never as a row in the opened list once there are real categories to pick from. */}
+        <option value="" disabled hidden>
           Select business category
         </option>
         {BUSINESS_CATEGORIES.map((category) => (
@@ -279,16 +281,14 @@ export default function CompanyForm({ profile }: { profile: BusinessProfile | nu
                 </>
               )
             }
-            below={
-              // Positioned out of the page flow so the message overlays what's below instead of pushing it down.
-              <div className="absolute top-full mt-1 w-full">
-                {slugState === "checking" && <p className="bg-white text-[13px] font-medium text-[#4b5563]">Checking…</p>}
-                {slugTaken && (
-                  <p role="alert" className="bg-white text-[13px] font-medium text-red-600">
-                    This address is already taken.
-                  </p>
-                )}
-              </div>
+            message={
+              slugState === "checking" ? (
+                <p className="text-[13px] font-medium text-[#4b5563]">Checking…</p>
+              ) : slugTaken ? (
+                <p role="alert" className="text-[13px] font-medium text-red-600">
+                  This address is already taken.
+                </p>
+              ) : null
             }
           />
 

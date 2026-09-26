@@ -33,7 +33,7 @@ export default function AddressField({
   const [active, setActive] = useState(-1); // the highlighted suggestion (arrow keys)
   const [message, setMessage] = useState<string | null>(null);
   // True once the user has left the box with typed text but no picked suggestion. Cleared as soon as they
-  // type again or pick one, so it never fights with the "below" message shown while they're still choosing.
+  // type again or pick one, so it never fights with the message shown while they're still choosing.
   const [abandoned, setAbandoned] = useState(false);
   const token = useRef<SessionToken | null>(null); // one per search, see lib/places.ts
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -42,7 +42,7 @@ export default function AddressField({
   useEffect(() => () => clearTimeout(timer.current), []);
 
   function handleFocus() {
-    setOpen(true); // show the dropdown (with a "select your address" hint until there's something to search)
+    setOpen(true); // show the dropdown right away, with a hint until there's enough text to search
   }
 
   function handleChange(value: string) {
@@ -117,49 +117,43 @@ export default function AddressField({
       id={id}
       label="Address*"
       invalid={invalid || abandoned}
+      message={belowMessage && <p role="alert" className="text-[13px] font-medium text-red-600">{belowMessage}</p>}
       below={
-        // Positioned out of the page flow so an open dropdown or an error message overlays what's below
-        // instead of pushing it down.
-        <div className="absolute top-full z-10 mt-1 w-full">
-          {open && !belowMessage && (
-            // No design for this list yet.
-            <ul id={listId} role="listbox" className="border border-black bg-white">
-              {suggestions.length > 0 ? (
-                <>
-                  {suggestions.map((s, i) => (
-                    <li
-                      key={s.prediction.placeId}
-                      id={`${id}-option-${i}`}
-                      role="option"
-                      aria-selected={i === active}
-                      // mouse down (not click) so the box keeps focus and doesn't close before the pick registers
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        choose(s);
-                      }}
-                      className={`cursor-pointer px-3 py-2 text-[14px] ${i === active ? "bg-[#f3f4f6]" : ""}`}
-                    >
-                      {s.text}
-                    </li>
-                  ))}
-                  {/* Google's rules ask for this credit next to address suggestions. */}
-                  <li aria-hidden className="px-3 py-1 text-[11px] text-[#4b5563]">
-                    Powered by Google
+        // Positioned out of the page flow so the open dropdown overlays what's below instead of pushing it down.
+        open &&
+        !belowMessage && (
+          // No design for this list yet.
+          <ul id={listId} role="listbox" className="absolute top-full z-10 mt-1 w-full border border-black bg-white">
+            {suggestions.length > 0 ? (
+              <>
+                {suggestions.map((s, i) => (
+                  <li
+                    key={s.prediction.placeId}
+                    id={`${id}-option-${i}`}
+                    role="option"
+                    aria-selected={i === active}
+                    // mouse down (not click) so the box keeps focus and doesn't close before the pick registers
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      choose(s);
+                    }}
+                    className={`cursor-pointer px-3 py-2 text-[14px] ${i === active ? "bg-[#f3f4f6]" : ""}`}
+                  >
+                    {s.text}
                   </li>
-                </>
-              ) : (
-                <li aria-hidden className="px-3 py-2 text-[14px] text-[#6b7280]">
-                  Select your address
+                ))}
+                {/* Google's rules ask for this credit next to address suggestions. */}
+                <li aria-hidden className="px-3 py-1 text-[11px] text-[#4b5563]">
+                  Powered by Google
                 </li>
-              )}
-            </ul>
-          )}
-          {belowMessage && (
-            <p role="alert" className="mt-1 bg-white text-[13px] font-medium text-red-600">
-              {belowMessage}
-            </p>
-          )}
-        </div>
+              </>
+            ) : (
+              <li aria-hidden className="px-3 py-2 text-[14px] text-[#6b7280]">
+                Start typing your street address…
+              </li>
+            )}
+          </ul>
+        )
       }
     >
       <input

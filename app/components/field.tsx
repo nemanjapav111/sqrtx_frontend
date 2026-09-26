@@ -13,6 +13,7 @@ export function FieldShell({
   label,
   invalid,
   hint,
+  message,
   below,
   className = "",
   children,
@@ -21,7 +22,11 @@ export function FieldShell({
   label: string;
   invalid: boolean; // draws the underline red
   hint?: string; // gray helper text under the underline
-  below?: React.ReactNode; // anything else under the underline (a link, a dropdown, an error)
+  // A status/error line that comes and goes (e.g. "Checking…", "already taken"). Pass it (even as null)
+  // to reserve its line's height up front, the same way a static hint already keeps its space, so the rest
+  // of the form doesn't jump when the message appears or clears.
+  message?: React.ReactNode;
+  below?: React.ReactNode; // anything else under the underline, positioned so it doesn't affect layout (a dropdown)
   className?: string; // for example a maximum width
   children: React.ReactNode;
 }) {
@@ -47,6 +52,7 @@ export function FieldShell({
             {hint}
           </p>
         )}
+        {message !== undefined && <div className="min-h-4.5">{message}</div>}
         {below}
       </div>
     </div>
@@ -61,6 +67,7 @@ export default function Field({
   type,
   autoComplete,
   hint,
+  message,
   below,
   prefix,
   className,
@@ -76,6 +83,7 @@ export default function Field({
   type: "text" | "email" | "password" | "tel" | "url";
   autoComplete?: string;
   hint?: string; // gray helper text under the underline (register)
+  message?: React.ReactNode; // a status/error line with its space reserved up front, see FieldShell
   below?: React.ReactNode; // anything else under the underline, like the "Forgot password?" link (log in)
   prefix?: string; // fixed text before the input, like "sqrtx.co/"
   className?: string;
@@ -91,7 +99,7 @@ export default function Field({
   const isPassword = type === "password";
 
   return (
-    <FieldShell id={id} label={label} invalid={invalid} hint={hint} below={below} className={className}>
+    <FieldShell id={id} label={label} invalid={invalid} hint={hint} message={message} below={below} className={className}>
       {prefix && <span className="shrink-0 text-[#4b5563]">{prefix}</span>}
       <input
         id={id}
