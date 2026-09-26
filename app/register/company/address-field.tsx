@@ -41,6 +41,10 @@ export default function AddressField({
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
+  function handleFocus() {
+    setOpen(true); // show the dropdown (with a "select your address" hint until there's something to search)
+  }
+
   function handleChange(value: string) {
     onText(value);
     if (place) onPlace(null); // only clear an existing pick; skips a needless re-render on every other keystroke
@@ -50,7 +54,6 @@ export default function AddressField({
     latest.current++; // drop any search still on its way
     if (value.trim().length < 3) {
       setSuggestions([]);
-      setOpen(false);
       return;
     }
     timer.current = setTimeout(() => search(value), 250); // wait until the user pauses typing
@@ -69,7 +72,6 @@ export default function AddressField({
       if (mine !== latest.current) return;
       setSuggestions(found);
       setActive(-1);
-      setOpen(found.length > 0);
     } catch (err) {
       console.error(err);
       if (mine === latest.current) setMessage("Address search isn't available right now. Please try again later.");
@@ -116,38 +118,48 @@ export default function AddressField({
       label="Address*"
       invalid={invalid || abandoned}
       below={
-        <>
-          {open && (
+        // Positioned out of the page flow so an open dropdown or an error message overlays what's below
+        // instead of pushing it down.
+        <div className="absolute top-full z-10 mt-1 w-full">
+          {open && !belowMessage && (
             // No design for this list yet.
-            <ul id={listId} role="listbox" className="absolute top-full z-10 mt-1 w-full border border-black bg-white">
-              {suggestions.map((s, i) => (
-                <li
-                  key={s.prediction.placeId}
-                  id={`${id}-option-${i}`}
-                  role="option"
-                  aria-selected={i === active}
-                  // mouse down (not click) so the box keeps focus and doesn't close before the pick registers
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    choose(s);
-                  }}
-                  className={`cursor-pointer px-3 py-2 text-[14px] ${i === active ? "bg-[#f3f4f6]" : ""}`}
-                >
-                  {s.text}
+            <ul id={listId} role="listbox" className="border border-black bg-white">
+              {suggestions.length > 0 ? (
+                <>
+                  {suggestions.map((s, i) => (
+                    <li
+                      key={s.prediction.placeId}
+                      id={`${id}-option-${i}`}
+                      role="option"
+                      aria-selected={i === active}
+                      // mouse down (not click) so the box keeps focus and doesn't close before the pick registers
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        choose(s);
+                      }}
+                      className={`cursor-pointer px-3 py-2 text-[14px] ${i === active ? "bg-[#f3f4f6]" : ""}`}
+                    >
+                      {s.text}
+                    </li>
+                  ))}
+                  {/* Google's rules ask for this credit next to address suggestions. */}
+                  <li aria-hidden className="px-3 py-1 text-[11px] text-[#4b5563]">
+                    Powered by Google
+                  </li>
+                </>
+              ) : (
+                <li aria-hidden className="px-3 py-2 text-[14px] text-[#6b7280]">
+                  Select your address
                 </li>
-              ))}
-              {/* Google's rules ask for this credit next to address suggestions. */}
-              <li aria-hidden className="px-3 py-1 text-[11px] text-[#4b5563]">
-                Powered by Google
-              </li>
+              )}
             </ul>
           )}
           {belowMessage && (
-            <p role="alert" className="text-[13px] font-medium text-red-600">
+            <p role="alert" className="mt-1 bg-white text-[13px] font-medium text-red-600">
               {belowMessage}
             </p>
           )}
-        </>
+        </div>
       }
     >
       <input
@@ -164,6 +176,7 @@ export default function AddressField({
         value={text}
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
+        onFocus={handleFocus}
         onBlur={handleBlur}
         className="h-4.75 min-w-0 flex-1 bg-transparent outline-none"
       />
