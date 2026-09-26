@@ -32,6 +32,9 @@ export default function AddressField({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1); // the highlighted suggestion (arrow keys)
   const [message, setMessage] = useState<string | null>(null);
+  // True once the user has left the box with typed text but no picked suggestion. Cleared as soon as they
+  // type again or pick one, so it never fights with the "below" message shown while they're still choosing.
+  const [abandoned, setAbandoned] = useState(false);
   const token = useRef<SessionToken | null>(null); // one per search, see lib/places.ts
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latest = useRef(0); // only the newest search may show its results
@@ -40,8 +43,9 @@ export default function AddressField({
 
   function handleChange(value: string) {
     onText(value);
-    onPlace(null);
+    if (place) onPlace(null); // only clear an existing pick; skips a needless re-render on every other keystroke
     setMessage(null);
+    setAbandoned(false);
     clearTimeout(timer.current);
     latest.current++; // drop any search still on its way
     if (value.trim().length < 3) {
@@ -50,6 +54,11 @@ export default function AddressField({
       return;
     }
     timer.current = setTimeout(() => search(value), 250); // wait until the user pauses typing
+  }
+
+  function handleBlur() {
+    setOpen(false);
+    setAbandoned(text.trim().length > 0 && !place);
   }
 
   async function search(value: string) {
@@ -69,6 +78,7 @@ export default function AddressField({
 
   async function choose(suggestion: AddressSuggestion) {
     setOpen(false);
+    setAbandoned(false);
     onText(suggestion.text);
     try {
       const details = await getPlaceDetails(suggestion);
@@ -81,6 +91,8 @@ export default function AddressField({
       setMessage("Please choose a more specific address, with a street and a city.");
     }
   }
+
+  const belowMessage = message ?? (abandoned ? "Please choose an address from the list." : null);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") setOpen(false);
@@ -102,7 +114,7 @@ export default function AddressField({
     <FieldShell
       id={id}
       label="Address*"
-      invalid={invalid}
+      invalid={invalid || abandoned}
       below={
         <>
           {open && (
@@ -130,9 +142,9 @@ export default function AddressField({
               </li>
             </ul>
           )}
-          {message && (
+          {belowMessage && (
             <p role="alert" className="text-[13px] font-medium text-red-600">
-              {message}
+              {belowMessage}
             </p>
           )}
         </>
@@ -148,11 +160,11 @@ export default function AddressField({
         aria-controls={listId}
         aria-autocomplete="list"
         aria-activedescendant={open && active >= 0 ? `${id}-option-${active}` : undefined}
-        aria-invalid={invalid}
+        aria-invalid={invalid || abandoned}
         value={text}
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        onBlur={() => setOpen(false)}
+        onBlur={handleBlur}
         className="h-4.75 min-w-0 flex-1 bg-transparent outline-none"
       />
       {place && <span className="sr-only">Address chosen</span>}
