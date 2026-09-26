@@ -52,7 +52,8 @@ export interface BusinessProfile {
   instagram_link: string | null;
   company_url: string;
   provides: Provides;
-  logo: { avif: string; webp: string } | null;
+  // width and height: pixels of these files. null only for a logo saved before the API kept them (see API.md).
+  logo: { avif: string; webp: string; width: number | null; height: number | null } | null;
 }
 
 // Everything the user types or picks in the form.
@@ -70,6 +71,7 @@ export interface ProfileValues {
   products: boolean;
   services: boolean;
   logo: File | null; // a newly chosen file (an already saved logo is not a File)
+  logoSize: { width: number; height: number } | null; // its pixels, once read (null while reading, or a format the browser can't read)
 }
 
 export const emptyValues: ProfileValues = {
@@ -86,6 +88,7 @@ export const emptyValues: ProfileValues = {
   products: false,
   services: false,
   logo: null,
+  logoSize: null,
 };
 
 export function valuesFromProfile(p: BusinessProfile): ProfileValues {
@@ -113,6 +116,7 @@ export function valuesFromProfile(p: BusinessProfile): ProfileValues {
     products: p.provides !== "services",
     services: p.provides !== "products",
     logo: null,
+    logoSize: null,
   };
 }
 
@@ -174,6 +178,33 @@ export const logoProblem = (file: File): string | null => {
   return null;
 };
 
+// The logo is shown at most 110 x 68 (the phone navbar has little room), fitted inside without cropping or
+// enlarging. Sharp (retina) screens need twice the pixels, and a picture fitted into that box is limited by
+// its width or its height, whichever runs out first: so it must be 220 px wide OR 136 px tall.
+export const MIN_LOGO_WIDTH = 220;
+export const MIN_LOGO_HEIGHT = 136;
+// TODO: placeholder text, there is no design for it.
+export const logoSizeProblem = (size: ProfileValues["logoSize"]): string | null =>
+  size && size.width < MIN_LOGO_WIDTH && size.height < MIN_LOGO_HEIGHT
+    ? `This logo is too small (${size.width} x ${size.height} px). Use one at least ${MIN_LOGO_WIDTH} px wide or ${MIN_LOGO_HEIGHT} px tall.`
+    : null;
+
+/** Why the newly chosen logo can't be used, or null. An unknown size passes: the browser can't read every format (HEIC). */
+export const logoProblemOf = (v: Pick<ProfileValues, "logo" | "logoSize">): string | null =>
+  v.logo ? (logoProblem(v.logo) ?? logoSizeProblem(v.logoSize)) : null;
+
+/** The picture's size in pixels, or null when the browser can't decode it. */
+export async function readImageSize(file: File): Promise<ProfileValues["logoSize"]> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const size = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return size;
+  } catch {
+    return null;
+  }
+}
+
 // The full URL saved in the API for a company page name.
 const companyUrl = (slug: string) => `https://${SITE_HOST}/${slug}`;
 
@@ -203,7 +234,7 @@ export function invalidFields(v: ProfileValues, hasSavedLogo: boolean): FieldNam
   if (v.instagram.trim() !== "" && !urlOk(v.instagram)) bad.push("instagram");
   if (!slugOk(v.slug)) bad.push("slug");
   if (!providesOf(v)) bad.push("provides");
-  if (v.logo ? logoProblem(v.logo) : !hasSavedLogo) bad.push("logo");
+  if (v.logo ? logoProblemOf(v) : !hasSavedLogo) bad.push("logo");
   return bad;
 }
 

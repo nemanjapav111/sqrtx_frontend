@@ -42,7 +42,7 @@ Products and product images (multipart uploads, 1-30 images, AVIF/WebP variants)
 ## Frontend code map
 - `app/page.tsx` landing; `app/login`, `app/register`, `app/register/company` pages.
 - `app/components`: `field.tsx` (`FieldShell` + `Field`), `big-logo.tsx`, eye icons. Import eye icons and other images from inside `app/` (not `/public`) so they get long-term caching.
-- `lib/`: `supabase.ts`, `api.ts` (`apiFetch`: adds the Bearer token, refreshes once on 401, `ApiError`), `onboarding.ts`, `business-profile.ts` (fields, rules, API calls), `places.ts` (Google wrapper), `use-session.ts` (`useRequireSession`), `validation.ts`, `auth-messages.ts`.
+- `lib/`: `supabase.ts`, `api.ts` (`apiFetch`: adds the Bearer token, refreshes once on 401, `ApiError`), `onboarding.ts`, `business-profile.ts` (fields, rules, API calls), `places.ts` (Google wrapper), `use-session.ts` (`useRequireSession`), `validation.ts`, `auth-messages.ts`, `logo.ts` (how a logo is shown: fitted inside 110 x 68, never cropped or enlarged; `logoDisplaySize` turns the API's `logo.width`/`logo.height` into the exact size so pages reserve space and don't jump. Use it for the future navbar and cards). Logos must be at least 220 px wide or 136 px tall: checked in the browser first (`logoSizeProblem`) and enforced by the API (400 with the size in the message), the same rule in both places.
 - Common patterns: forms use `noValidate`, red underline after the first submit click, an "already sending" ref guard against double clicks, errors shown under the button.
 - The arrow character is not in the Inter subset served by Google, so arrows are inline SVGs. Only the `latin` subset of Inter is loaded.
 

@@ -13,7 +13,8 @@ import {
   emptyValues,
   invalidFields,
   isSlugAvailable,
-  logoProblem,
+  logoProblemOf,
+  readImageSize,
   slugOk,
   updateProfile,
   valuesFromProfile,
@@ -81,7 +82,14 @@ export default function CompanyForm({ profile }: { profile: BusinessProfile | nu
   const slugState = slugCheck?.slug === values.slug ? slugCheck.state : null;
   const slugTaken = slugState === "taken";
 
-  const logoIssue = values.logo ? logoProblem(values.logo) : null;
+  const logoIssue = logoProblemOf(values);
+
+  // A new file: forget the old file's size, then read this one's. If the user picked another file meanwhile,
+  // this answer is for an old file and is dropped.
+  function pickLogo(file: File | null) {
+    set({ logo: file, logoSize: null });
+    if (file) readImageSize(file).then((size) => setValues((v) => (v.logo === file ? { ...v, logoSize: size } : v)));
+  }
   const bad = new Set(submitted ? invalidFields(values, !!profile?.logo) : []);
   const invalid = (field: FieldName) => bad.has(field) || (field === "slug" && slugTaken);
 
@@ -238,8 +246,21 @@ export default function CompanyForm({ profile }: { profile: BusinessProfile | nu
             onChange={(v) => set({ slug: cleanSlug(v) })} // only lowercase letters, digits and dashes can be typed
             onBlur={checkSlug}
             invalid={invalid("slug")}
+            // The answer shows at the end of the line: a spinner while we ask, then the check mark. Only the
+            // "taken" sentence goes below the line, where there is room to read it.
             trailing={
-              slugState === "available" && (
+              slugState === "checking" ? (
+                <>
+                  {/* The gray ring stays put and the black arc turns, so it still reads as "working" with reduced motion. */}
+                  <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0 animate-spin motion-reduce:animate-none" fill="none" strokeWidth="2.5">
+                    <circle cx="10" cy="10" r="7.5" stroke="#d1d5db" />
+                    <path d="M10 2.5a7.5 7.5 0 0 1 7.5 7.5" stroke="black" strokeLinecap="round" />
+                  </svg>
+                  <span role="status" className="sr-only">
+                    Checking if this address is available
+                  </span>
+                </>
+              ) : slugState === "available" ? (
                 <>
                   <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0" fill="none" stroke="#009a1c" strokeWidth="2.5">
                     <path d="M4.5 10.5l3.5 3.5L15.5 6" />
@@ -248,12 +269,10 @@ export default function CompanyForm({ profile }: { profile: BusinessProfile | nu
                     This address is available
                   </span>
                 </>
-              )
+              ) : null
             }
             message={
-              slugState === "checking" ? (
-                <p className="text-[13px] font-medium text-[#4b5563]">Checking…</p>
-              ) : slugTaken ? (
+              slugTaken ? (
                 <p role="alert" className="text-[13px] font-medium text-red-600">
                   This address is already taken.
                 </p>
@@ -276,7 +295,7 @@ export default function CompanyForm({ profile }: { profile: BusinessProfile | nu
             saved={profile?.logo ?? null}
             invalid={invalid("logo")}
             problem={logoIssue}
-            onPick={(file) => set({ logo: file })}
+            onPick={pickLogo}
           />
         </div>
 
