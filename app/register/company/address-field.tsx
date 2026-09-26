@@ -148,7 +148,7 @@ export default function AddressField({
                 </li>
               </>
             ) : (
-              <li aria-hidden className="px-3 py-2 text-[14px] text-[#6b7280]">
+              <li aria-hidden className="px-3 py-2 text-[14px] text-[#9ca3af]">
                 Start typing your street address…
               </li>
             )}

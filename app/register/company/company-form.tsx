@@ -46,13 +46,15 @@ function CategorySelect({ value, invalid, onChange }: { value: string; invalid: 
   const id = useId();
   return (
     <FieldShell id={id} label="Business category*" invalid={invalid} className="max-w-62.5">
+      {/* The select spans the whole row (icon included) so clicking anywhere, arrow included, opens it;
+          the icon is laid on top, purely decorative, so it never steals the click. */}
       <select
         id={id}
         name="category"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={invalid}
-        className={`h-4.75 min-w-0 flex-1 cursor-pointer appearance-none bg-transparent outline-none ${value === "" ? "text-[14px] text-[#9ca3af]" : ""}`}
+        className={`h-4.75 min-w-0 flex-1 cursor-pointer appearance-none bg-transparent pr-6 outline-none ${value === "" ? "text-[14px] text-[#9ca3af]" : ""}`}
       >
         {/* hidden as well as disabled: it should only ever show as the closed box's placeholder,
             never as a row in the opened list once there are real categories to pick from. */}
@@ -65,7 +67,14 @@ function CategorySelect({ value, invalid, onChange }: { value: string; invalid: 
           </option>
         ))}
       </select>
-      <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none size-4.75 shrink-0" fill="none" stroke="black" strokeWidth="2">
+      <svg
+        aria-hidden
+        viewBox="0 0 20 20"
+        className="pointer-events-none absolute top-1/2 right-0 size-4.75 -translate-y-1/2"
+        fill="none"
+        stroke="black"
+        strokeWidth="2"
+      >
         <path d="M5 8l5 5 5-5" />
       </svg>
     </FieldShell>
