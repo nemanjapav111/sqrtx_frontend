@@ -27,6 +27,14 @@ export interface AddressSuggestion {
 
 export type SessionToken = google.maps.places.AutocompleteSessionToken;
 
+// The picked place is real but too vague to save (a country or region, no city). Any other error while
+// loading a pick means Google couldn't be reached, so the UI can tell "choose another" from "try again".
+export class AddressTooVagueError extends Error {
+  constructor() {
+    super("The chosen address has no city or country.");
+  }
+}
+
 let configured = false;
 
 async function placesLibrary() {
@@ -83,10 +91,19 @@ export function parsePlace(place: {
     part(parts, "administrative_area_level_2") ??
     part(parts, "administrative_area_level_1");
   const countryCode = part(parts, "country", "shortText");
-  const street = [part(parts, "street_number"), part(parts, "route")].filter(Boolean).join(" ") || null;
+  // Google's formatted address puts the number where that country writes it ("Trg republike 1" in Serbia,
+  // "15 Main St" in the US), so take the street from its first line when that line holds the street name.
+  // Joining the number and the name ourselves would give "1 Trg republike".
+  const route = part(parts, "route");
+  const firstLine = place.formattedAddress?.split(",")[0].trim();
+  const street = !route
+    ? null
+    : firstLine?.toLowerCase().includes(route.toLowerCase())
+      ? firstLine
+      : [part(parts, "street_number"), route].filter(Boolean).join(" ");
 
   if (!place.formattedAddress || !place.location || !city || !countryCode) {
-    throw new Error("The chosen address has no city or country.");
+    throw new AddressTooVagueError();
   }
   return {
     id: place.id,
