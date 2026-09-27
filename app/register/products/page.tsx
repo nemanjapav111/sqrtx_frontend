@@ -7,7 +7,7 @@ export const metadata = { title: "Add product – sqrtx" };
 // Registration step 2 (only for businesses that offer products). Back goes to the business profile.
 export default function Products() {
   return (
-    <main className="relative flex flex-1 flex-col items-center bg-white pt-17.5 pb-12.5 leading-[normal] text-black">
+    <main className="relative flex flex-1 flex-col items-center bg-white pt-17.5 pb-12.5 leading-[normal] text-black md:pt-8 md:pb-8">
       <Link href="/register/company" aria-label="Back" className="absolute top-1.75 left-3 p-1">
         <ArrowIcon className="h-7 w-6 rotate-180" />
       </Link>

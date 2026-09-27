@@ -7,7 +7,7 @@ export const metadata = { title: "Public profile – sqrtx" };
 // Registration step 1. This is also where the link in the confirmation email brings the user.
 export default function Company() {
   return (
-    <main className="relative flex flex-1 flex-col items-center bg-white pt-17.5 pb-12.5 leading-[normal] text-black">
+    <main className="relative flex flex-1 flex-col items-center bg-white pt-17.5 pb-12.5 leading-[normal] text-black md:pt-8 md:pb-8">
       {/* Back. TODO: goes to the landing page until we decide where Back from the first step should lead. */}
       <Link href="/" aria-label="Back" className="absolute top-1.75 left-3 p-1">
         <ArrowIcon className="h-7 w-6 rotate-180" />

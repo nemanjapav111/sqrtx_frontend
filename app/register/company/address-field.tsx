@@ -200,7 +200,9 @@ export default function AddressField({
                   choose(s);
                 }}
                 // 44px tall on phones so a thumb can hit it, tighter with a mouse
-                className={`flex min-h-11 cursor-pointer items-center px-3 text-[14px] hover:bg-soft-grey md:min-h-0 md:py-2 ${i === active ? "bg-soft-grey" : ""}`}
+                // The same grey the field hints use, at low opacity so the black text stays readable (see the
+                // category dropdown's rows, which light up the same way).
+                className={`flex min-h-11 cursor-pointer items-center px-3 text-[14px] hover:bg-[#4b5563]/10 md:min-h-0 md:py-2 ${i === active ? "bg-[#4b5563]/10" : ""}`}
               >
                 {s.text}
               </li>

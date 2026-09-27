@@ -187,7 +187,7 @@ export default function CompanyForm({
           inert={!!pending}
           className={`flex w-full flex-col items-center ${pending ? "opacity-40" : ""}`}
         >
-          <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5">
+          <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5 md:pb-8">
             <Field
               label="Company name*"
               name="companyName"
@@ -343,7 +343,7 @@ export default function CompanyForm({
               {error}
             </p>
           )}
-          <div className="pb-17.5" />
+          <div className="pb-17.5 md:pb-8" />
         </form>
         {pending && <PendingOverlay state={pending} onRetry={onRetry} />}
       </div>

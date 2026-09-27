@@ -131,16 +131,17 @@ export default function CategorySelect({
                     e.preventDefault();
                     choose(row.value);
                   }}
-                  // A category lights up soft grey under the mouse or the arrow keys. The "Create ..." row is soft grey
-                  // all the time, so it stands apart from the categories, and goes a step darker when it is picked.
+                  // A category lights up (the same grey the field hints use, at low opacity so the black text
+                  // stays readable) under the mouse or the arrow keys. The "Create ..." row has it all the time,
+                  // so it stands apart from the categories, and goes a step darker when it is picked.
                   className={`cursor-pointer px-3 py-2 text-[14px] ${
                     row.create
                       ? i === active
-                        ? "bg-soft-grey-dark"
-                        : "bg-soft-grey hover:bg-soft-grey-dark"
+                        ? "bg-[#4b5563]/20"
+                        : "bg-[#4b5563]/10 hover:bg-[#4b5563]/20"
                       : i === active
-                        ? "bg-soft-grey"
-                        : "hover:bg-soft-grey"
+                        ? "bg-[#4b5563]/10"
+                        : "hover:bg-[#4b5563]/10"
                   } ${row.value === value ? "font-semibold" : ""}`}
                 >
                   {row.text}

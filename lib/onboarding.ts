@@ -16,8 +16,12 @@ export const getOnboardingState = () => apiFetch<OnboardingState>("/onboarding/m
 export const completeStep = (step: "products" | "services") =>
   apiFetch<OnboardingState>("/onboarding/next", jsonBody("POST", { step }));
 
+/** The last page: saves the "about the company" text, records the terms/privacy acceptance and completes registration. */
+export const finishOnboarding = (aboutCompany: string) =>
+  apiFetch<OnboardingState>("/onboarding/finish", jsonBody("POST", { about_company: aboutCompany, terms_accepted: true }));
+
 // Which page each step lives on. Change a route here and everything that sends users to it follows.
-// TODO: the products, services and final pages don't exist yet, and "done" goes to the landing page for now.
+// TODO: "done" goes to the landing page for now.
 const STEP_PATHS: Record<OnboardingStep, string> = {
   business_profile: "/register/company",
   products: "/register/products",

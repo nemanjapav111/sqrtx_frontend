@@ -12,31 +12,31 @@ import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { completeStep, pathForStep } from "@/lib/onboarding";
 import {
-  MAX_PRODUCT_IMAGES,
-  createProduct,
-  emptyProduct,
-  invalidProductFields,
-  isEmptyProduct,
-  type ProductField,
-  type ProductValues,
-} from "@/lib/products";
+  MAX_SERVICE_IMAGES,
+  createService,
+  emptyService,
+  invalidServiceFields,
+  isEmptyService,
+  type ServiceField,
+  type ServiceValues,
+} from "@/lib/services";
 import ArrowIcon from "../arrow-icon";
 
 // The form control that gets the cursor for each field that needs fixing.
-const CONTROL_NAME: Record<ProductField, string> = {
-  name: "productName",
+const CONTROL_NAME: Record<ServiceField, string> = {
+  name: "serviceName",
   price: "price",
   category: "category",
   images: "images",
   description: "description",
 };
 
-// The "Add product" page of registration. Owners can add as many products as they like, one after another, and
-// adding products is optional: "Next" and "Skip for now" both move on to the next step.
-// `pending`, set by ProductsStep while it doesn't yet know the real category list: the form is shown anyway
+// The "Add service" page of registration. Owners can add as many services as they like, one after another, and
+// adding services is optional: "Next" and "Skip for now" both move on to the next step.
+// `pending`, set by ServicesStep while it doesn't yet know the real category list: the form is shown anyway
 // (empty), under a PendingOverlay, and marked `inert` so it can't be used before that is known. Skip is disabled
 // too (it doesn't need the category list, but this page hasn't yet confirmed the visitor belongs on it).
-export default function ProductForm({
+export default function ServiceForm({
   categories: knownCategories,
   pending,
   onRetry,
@@ -46,9 +46,9 @@ export default function ProductForm({
   onRetry: () => void;
 }) {
   const router = useRouter();
-  const [values, setValues] = useState<ProductValues>(emptyProduct);
-  const set = (change: Partial<ProductValues>) => setValues((v) => ({ ...v, ...change }));
-  // The categories products use, offered in the category box (a product with a new one adds it).
+  const [values, setValues] = useState<ServiceValues>(emptyService);
+  const set = (change: Partial<ServiceValues>) => setValues((v) => ({ ...v, ...change }));
+  // The categories services use, offered in the category box (a service with a new one adds it).
   const [categories, setCategories] = useState(knownCategories);
 
   // Red lines stay hidden until the user tries to add once. After that they update as the user types.
@@ -59,8 +59,8 @@ export default function ProductForm({
   const [notice, setNotice] = useState<string | null>(null); // "... was added"
   const busy = phase !== "idle";
 
-  const bad = new Set(submitted ? invalidProductFields(values) : []);
-  const invalid = (field: ProductField) => bad.has(field);
+  const bad = new Set(submitted ? invalidServiceFields(values) : []);
+  const invalid = (field: ServiceField) => bad.has(field);
 
   // Runs one action at a time: a second click (or Enter) while one is going is ignored.
   async function run(action: () => Promise<void>) {
@@ -74,14 +74,14 @@ export default function ProductForm({
     }
   }
 
-  // Validates, uploads and saves the product in the form, then empties the form for the next one. Returns whether it worked.
-  async function addProduct(form: HTMLFormElement): Promise<boolean> {
+  // Validates, uploads and saves the service in the form, then empties the form for the next one. Returns whether it worked.
+  async function addService(form: HTMLFormElement): Promise<boolean> {
     setSubmitted(true);
     setError(null);
     setNotice(null);
 
     // Send the cursor to the first field that needs fixing.
-    const first = invalidProductFields(values)[0];
+    const first = invalidServiceFields(values)[0];
     if (first) {
       (form.elements.namedItem(CONTROL_NAME[first]) as HTMLElement | null)?.focus();
       return false;
@@ -89,15 +89,15 @@ export default function ProductForm({
 
     setPhase("adding");
     try {
-      const product = await createProduct(values);
+      const service = await createService(values);
       // A category typed for the first time is offered from now on, on top so it is easy to find. Letter case
       // doesn't make a new category.
       setCategories((known) =>
-        known.some((c) => c.toLowerCase() === product.category.toLowerCase()) ? known : [product.category, ...known],
+        known.some((c) => c.toLowerCase() === service.category.toLowerCase()) ? known : [service.category, ...known],
       );
-      setValues(emptyProduct);
+      setValues(emptyService);
       setSubmitted(false);
-      setNotice(`"${product.product_name}" was added.`);
+      setNotice(`"${service.service_name}" was added.`);
       return true;
     } catch (err) {
       showError(err);
@@ -117,25 +117,25 @@ export default function ProductForm({
   async function goOn() {
     setPhase("moving");
     try {
-      const state = await completeStep("products");
+      const state = await completeStep("services");
       router.push(pathForStep(state.step));
     } catch (err) {
       showError(err);
     }
   }
 
-  // "Add product" (and Enter in a text box).
+  // "Add service" (and Enter in a text box).
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    void run(async () => void (await addProduct(form)));
+    void run(async () => void (await addService(form)));
   }
 
-  // "Next": a product that was filled in but not added yet is added first, so nothing typed is lost.
+  // "Next": a service that was filled in but not added yet is added first, so nothing typed is lost.
   function handleNext(e: React.MouseEvent<HTMLButtonElement>) {
     const form = e.currentTarget.form!;
     void run(async () => {
-      if (!isEmptyProduct(values) && !(await addProduct(form))) return;
+      if (!isEmptyService(values) && !(await addService(form))) return;
       await goOn();
     });
   }
@@ -151,7 +151,7 @@ export default function ProductForm({
   return (
     <>
       <BigLogo />
-      <PageHeading title="Add product" />
+      <PageHeading title="Add service" />
 
       {/* A plain text link, not a filled button: skipping is the secondary action next to "Next" below, and grey
           isn't otherwise used for anything in this black-and-white design. top-1.75 and h-9 match the Back
@@ -178,8 +178,8 @@ export default function ProductForm({
         >
           <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5 md:pb-8">
             <Field
-              label="Product name*"
-              name="productName"
+              label="Service name*"
+              name="serviceName"
               type="text"
               maxLength={255}
               value={values.name}
@@ -213,15 +213,15 @@ export default function ProductForm({
               images={values.images}
               invalid={invalid("images")}
               onChange={(update) => setValues((v) => ({ ...v, images: update(v.images) }))}
-              maxImages={MAX_PRODUCT_IMAGES}
-              itemLabel="product"
+              maxImages={MAX_SERVICE_IMAGES}
+              itemLabel="service"
             />
             <div className="flex w-full flex-col gap-2.25">
-              <label htmlFor="product-description" className="text-[14px] font-semibold">
+              <label htmlFor="service-description" className="text-[14px] font-semibold">
                 Description*
               </label>
               <textarea
-                id="product-description"
+                id="service-description"
                 name="description"
                 aria-invalid={invalid("description")}
                 value={values.description}
@@ -238,13 +238,13 @@ export default function ProductForm({
             disabled={busy}
             className="flex h-10.25 cursor-pointer items-center justify-center border border-black bg-white px-4.75 text-[16px] font-semibold disabled:cursor-wait disabled:opacity-60"
           >
-            Add product
+            Add service
           </button>
 
           {/* The 70px between the two buttons in the design holds the messages, so they never move anything. */}
           <div className="flex h-17.5 w-full max-w-135 items-center justify-center px-5">
             <p role="status" className="text-center text-[13px] font-medium text-[#4b5563]">
-              {phase === "adding" ? "Uploading your product. This can take a moment." : notice}
+              {phase === "adding" ? "Uploading your service. This can take a moment." : notice}
             </p>
           </div>
 
