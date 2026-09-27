@@ -2,16 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import BigLogo from "@/app/components/big-logo";
-import Loading from "@/app/components/loading";
-import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
 import { getProductCategories } from "@/lib/products";
 import { useRequireSession } from "@/lib/use-session";
 import ProductForm from "./product-form";
 
-// Decides what this page shows: the empty product form, or a send-away for people who don't belong here
-// (registration finished, the business profile isn't saved yet, or their business only offers services).
+// Decides what ProductForm shows: the empty product form, or a send-away for people who don't belong here
+// (registration finished, the business profile isn't saved yet, or their business only offers services). The form
+// itself is always on screen; see ProductForm's `pending` prop for what covers it until this is known.
 export default function ProductsStep() {
   const router = useRouter();
   const session = useRequireSession();
@@ -40,32 +38,18 @@ export default function ProductsStep() {
     };
   }, [session, attempt, router]);
 
-  if (load.status === "ready") return <ProductForm categories={load.categories} />;
-
   return (
-    <>
-      <BigLogo />
-      {load.status === "loading" ? (
-        <div className="pt-9.5">
-          <Loading />
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-4 px-5 pt-9.5 text-center">
-          <p role="alert" className="text-red-600">
-            {GENERIC_ERROR}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setLoad({ status: "loading" });
-              setAttempt((n) => n + 1);
-            }}
-            className="w-46.5 cursor-pointer border-2 border-black py-2.25 font-bold"
-          >
-            Try again
-          </button>
-        </div>
-      )}
-    </>
+    <ProductForm
+      // A fresh instance right as real data replaces the placeholder, so its category list (which only ever reads
+      // the `categories` prop once, when it's created) starts from the real list instead of carrying over the empty
+      // placeholder one. Harmless: the placeholder was `inert`, so nothing could have been typed into it yet.
+      key={load.status === "ready" ? "ready" : "pending"}
+      categories={load.status === "ready" ? load.categories : []}
+      pending={load.status === "loading" ? "loading" : load.status === "error" ? "error" : undefined}
+      onRetry={() => {
+        setLoad({ status: "loading" });
+        setAttempt((n) => n + 1);
+      }}
+    />
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LoginLink from "./components/login-link";
 
 // Breakpoints: phone = default, tablet = md: (768px), desktop = xl: (1280px).
 
@@ -30,12 +31,9 @@ function Cta() {
           <span className="italic">No credit card required.</span>
         </p>
       </div>
-      <Link
-        href="/login"
-        className="w-46.5 border-2 border-white py-2.25 text-center font-bold"
-      >
+      <LoginLink className="w-46.5 border-2 border-white py-2.25 text-center font-bold">
         Log in
-      </Link>
+      </LoginLink>
     </div>
   );
 }

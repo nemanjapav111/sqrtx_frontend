@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
 import Field from "@/app/components/field";
+import PageHeading from "@/app/components/page-heading";
+import PendingOverlay from "@/app/components/pending-overlay";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import {
@@ -64,7 +66,17 @@ function ProvidesBox({ name, label, checked, invalid, onChange }: { name: string
 
 // The "Public profile" page. `profile` is null the first time (create) and the saved profile when the user
 // comes back to edit it from a later step (update).
-export default function CompanyForm({ profile }: { profile: BusinessProfile | null }) {
+// `pending`, set by CompanyStep while it doesn't yet know which of those `profile` is: the form is shown anyway
+// (empty), under a PendingOverlay, and marked `inert` so it can't be used before that is known.
+export default function CompanyForm({
+  profile,
+  pending,
+  onRetry,
+}: {
+  profile: BusinessProfile | null;
+  pending?: "loading" | "error";
+  onRetry: () => void;
+}) {
   const router = useRouter();
   const editing = profile !== null;
   const [values, setValues] = useState<ProfileValues>(() => (profile ? valuesFromProfile(profile) : emptyValues));
@@ -163,169 +175,178 @@ export default function CompanyForm({ profile }: { profile: BusinessProfile | nu
   return (
     <>
       <BigLogo />
-      <h1 className="pt-9.5 pb-2 text-[20px] font-semibold">Public profile</h1>
-      <p className="pb-10 font-semibold">This information will be publicly visible.</p>
+      <PageHeading title="Public profile" />
 
-      {/* noValidate: we draw our own red underline instead of the browser's pop-up messages. */}
-      <form onSubmit={handleSubmit} noValidate className="flex w-full flex-col items-center">
-        <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5">
-          <Field
-            label="Company name*"
-            name="companyName"
-            type="text"
-            autoComplete="organization"
-            hint="This will be displayed next to your company logo."
-            maxLength={255}
-            value={values.companyName}
-            onChange={(v) => set({ companyName: v })}
-            invalid={invalid("companyName")}
-          />
-          <CategorySelect
-            label="Business category*"
-            placeholder="Select business category"
-            options={BUSINESS_CATEGORIES}
-            smallPlaceholder
-            className="max-w-62.5"
-            value={values.category}
-            invalid={invalid("category")}
-            onChange={(v) => set({ category: v })}
-          />
-          <AddressField
-            text={values.addressText}
-            place={values.place}
-            invalid={invalid("place")}
-            onText={(v) => set({ addressText: v })}
-            onPlace={(v) => set({ place: v })}
-          />
-          <Field
-            label="Contact email*"
-            name="contactEmail"
-            type="email"
-            autoComplete="email"
-            value={values.contactEmail}
-            onChange={(v) => set({ contactEmail: v })}
-            invalid={invalid("contactEmail")}
-          />
-          <Field
-            label="Phone (optional)"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            hint="Include country code (e.g., +1)."
-            className="max-w-62.5"
-            maxLength={255}
-            value={values.phone}
-            onChange={(v) => set({ phone: v })}
-            invalid={invalid("phone")}
-          />
-          <Field
-            label="Hours (optional)"
-            name="hours"
-            type="text"
-            hint="Example: Mon-Sat 5am-7pm, Sunday Closed"
-            maxLength={255}
-            value={values.hours}
-            onChange={(v) => set({ hours: v })}
-            invalid={false}
-          />
-          <Field
-            label="Facebook link (optional)"
-            name="facebook"
-            type="url"
-            maxLength={255}
-            value={values.facebook}
-            onChange={(v) => set({ facebook: v })}
-            invalid={invalid("facebook")}
-          />
-          <Field
-            label="Instagram link (optional)"
-            name="instagram"
-            type="url"
-            maxLength={255}
-            value={values.instagram}
-            onChange={(v) => set({ instagram: v })}
-            invalid={invalid("instagram")}
-          />
-          <Field
-            label="Your URL*"
-            name="slug"
-            type="text"
-            prefix={`${SITE_HOST}/`}
-            maxLength={50}
-            value={values.slug}
-            onChange={(v) => set({ slug: cleanSlug(v) })} // only lowercase letters, digits and dashes can be typed
-            onBlur={checkSlug}
-            invalid={invalid("slug")}
-            // The answer shows at the end of the line: a spinner while we ask, then the check mark. Only the
-            // "taken" sentence goes below the line, where there is room to read it.
-            trailing={
-              slugState === "checking" ? (
-                <>
-                  {/* The gray ring stays put and the black arc turns, so it still reads as "working" with reduced motion. */}
-                  <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0 animate-spin motion-reduce:animate-none" fill="none" strokeWidth="2.5">
-                    <circle cx="10" cy="10" r="7.5" stroke="#d1d5db" />
-                    <path d="M10 2.5a7.5 7.5 0 0 1 7.5 7.5" stroke="black" strokeLinecap="round" />
-                  </svg>
-                  <span role="status" className="sr-only">
-                    Checking if this address is available
-                  </span>
-                </>
-              ) : slugState === "available" ? (
-                <>
-                  <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0" fill="none" stroke="#009a1c" strokeWidth="2.5">
-                    <path d="M4.5 10.5l3.5 3.5L15.5 6" />
-                  </svg>
-                  <span role="status" className="sr-only">
-                    This address is available
-                  </span>
-                </>
-              ) : null
-            }
-            message={
-              slugTaken ? (
-                <p role="alert" className="text-[13px] font-medium text-red-600">
-                  This address is already taken.
-                </p>
-              ) : null
-            }
-          />
+      {/* relative: PendingOverlay (absolute) floats over the form while `pending`. `inert` on the form itself
+          (not just a visual dimming) is what actually stops it being typed into or submitted meanwhile. */}
+      <div className="relative w-full">
+        {/* noValidate: we draw our own red underline instead of the browser's pop-up messages. */}
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          inert={!!pending}
+          className={`flex w-full flex-col items-center ${pending ? "opacity-40" : ""}`}
+        >
+          <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5">
+            <Field
+              label="Company name*"
+              name="companyName"
+              type="text"
+              autoComplete="organization"
+              hint="This will be displayed next to your company logo."
+              maxLength={255}
+              value={values.companyName}
+              onChange={(v) => set({ companyName: v })}
+              invalid={invalid("companyName")}
+            />
+            <CategorySelect
+              label="Business category*"
+              placeholder="Select business category"
+              options={BUSINESS_CATEGORIES}
+              smallPlaceholder
+              className="max-w-62.5"
+              value={values.category}
+              invalid={invalid("category")}
+              onChange={(v) => set({ category: v })}
+            />
+            <AddressField
+              text={values.addressText}
+              place={values.place}
+              invalid={invalid("place")}
+              onText={(v) => set({ addressText: v })}
+              onPlace={(v) => set({ place: v })}
+            />
+            <Field
+              label="Contact email*"
+              name="contactEmail"
+              type="email"
+              autoComplete="email"
+              value={values.contactEmail}
+              onChange={(v) => set({ contactEmail: v })}
+              invalid={invalid("contactEmail")}
+            />
+            <Field
+              label="Phone (optional)"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              hint="Include country code (e.g., +1)."
+              className="max-w-62.5"
+              maxLength={255}
+              value={values.phone}
+              onChange={(v) => set({ phone: v })}
+              invalid={invalid("phone")}
+            />
+            <Field
+              label="Hours (optional)"
+              name="hours"
+              type="text"
+              hint="Example: Mon-Sat 5am-7pm, Sunday Closed"
+              maxLength={255}
+              value={values.hours}
+              onChange={(v) => set({ hours: v })}
+              invalid={false}
+            />
+            <Field
+              label="Facebook link (optional)"
+              name="facebook"
+              type="url"
+              maxLength={255}
+              value={values.facebook}
+              onChange={(v) => set({ facebook: v })}
+              invalid={invalid("facebook")}
+            />
+            <Field
+              label="Instagram link (optional)"
+              name="instagram"
+              type="url"
+              maxLength={255}
+              value={values.instagram}
+              onChange={(v) => set({ instagram: v })}
+              invalid={invalid("instagram")}
+            />
+            <Field
+              label="Your URL*"
+              name="slug"
+              type="text"
+              prefix={`${SITE_HOST}/`}
+              maxLength={50}
+              value={values.slug}
+              onChange={(v) => set({ slug: cleanSlug(v) })} // only lowercase letters, digits and dashes can be typed
+              onBlur={checkSlug}
+              invalid={invalid("slug")}
+              // The answer shows at the end of the line: a spinner while we ask, then the check mark. Only the
+              // "taken" sentence goes below the line, where there is room to read it.
+              trailing={
+                slugState === "checking" ? (
+                  <>
+                    {/* The gray ring stays put and the black arc turns, so it still reads as "working" with reduced motion. */}
+                    <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0 animate-spin motion-reduce:animate-none" fill="none" strokeWidth="2.5">
+                      <circle cx="10" cy="10" r="7.5" stroke="#d1d5db" />
+                      <path d="M10 2.5a7.5 7.5 0 0 1 7.5 7.5" stroke="black" strokeLinecap="round" />
+                    </svg>
+                    <span role="status" className="sr-only">
+                      Checking if this address is available
+                    </span>
+                  </>
+                ) : slugState === "available" ? (
+                  <>
+                    <svg aria-hidden viewBox="0 0 20 20" className="size-5 shrink-0" fill="none" stroke="#009a1c" strokeWidth="2.5">
+                      <path d="M4.5 10.5l3.5 3.5L15.5 6" />
+                    </svg>
+                    <span role="status" className="sr-only">
+                      This address is available
+                    </span>
+                  </>
+                ) : null
+              }
+              message={
+                slugTaken ? (
+                  <p role="alert" className="text-[13px] font-medium text-red-600">
+                    This address is already taken.
+                  </p>
+                ) : null
+              }
+            />
 
-          <div role="group" aria-labelledby="provides-label" className="flex w-full flex-col gap-2.25">
-            <p id="provides-label" className="text-[14px] font-semibold">
-              What does your company provide? (check one or both)*
-            </p>
-            <div className="flex items-center gap-7.75">
-              <ProvidesBox name="products" label="Products" checked={values.products} invalid={invalid("provides")} onChange={(v) => set({ products: v })} />
-              <ProvidesBox name="services" label="Services" checked={values.services} invalid={invalid("provides")} onChange={(v) => set({ services: v })} />
+            <div role="group" aria-labelledby="provides-label" className="flex w-full flex-col gap-2.25">
+              <p id="provides-label" className="text-[14px] font-semibold">
+                What does your company provide? (check one or both)*
+              </p>
+              <div className="flex items-center gap-7.75">
+                <ProvidesBox name="products" label="Products" checked={values.products} invalid={invalid("provides")} onChange={(v) => set({ products: v })} />
+                <ProvidesBox name="services" label="Services" checked={values.services} invalid={invalid("provides")} onChange={(v) => set({ services: v })} />
+              </div>
             </div>
+
+            <LogoPicker
+              file={values.logo}
+              saved={profile?.logo ?? null}
+              invalid={invalid("logo")}
+              problem={logoIssue}
+              onPick={pickLogo}
+            />
           </div>
 
-          <LogoPicker
-            file={values.logo}
-            saved={profile?.logo ?? null}
-            invalid={invalid("logo")}
-            problem={logoIssue}
-            onPick={pickLogo}
-          />
-        </div>
+          <button
+            type="submit"
+            disabled={sending}
+            className="flex cursor-pointer items-center gap-1 bg-black px-17.25 py-2.75 font-bold text-white disabled:cursor-wait disabled:opacity-60"
+          >
+            Next
+            <ArrowIcon className="h-3.5 w-3 translate-y-px" />
+          </button>
 
-        <button
-          type="submit"
-          disabled={sending}
-          className="flex cursor-pointer items-center gap-1 bg-black px-17.25 py-2.75 font-bold text-white disabled:cursor-wait disabled:opacity-60"
-        >
-          Next
-          <ArrowIcon className="h-3.5 w-3 translate-y-px" />
-        </button>
-
-        {/* Problems from the server or the connection. Not in the design yet. */}
-        {error && (
-          <p role="alert" className="w-full max-w-135 px-5 pt-5 text-center text-[14px] text-red-600">
-            {error}
-          </p>
-        )}
-        <div className="pb-17.5" />
-      </form>
+          {/* Problems from the server or the connection. Not in the design yet. */}
+          {error && (
+            <p role="alert" className="w-full max-w-135 px-5 pt-5 text-center text-[14px] text-red-600">
+              {error}
+            </p>
+          )}
+          <div className="pb-17.5" />
+        </form>
+        {pending && <PendingOverlay state={pending} onRetry={onRetry} />}
+      </div>
     </>
   );
 }

@@ -2,16 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import BigLogo from "@/app/components/big-logo";
-import Loading from "@/app/components/loading";
-import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { getMyProfile, type BusinessProfile } from "@/lib/business-profile";
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
 import { useRequireSession } from "@/lib/use-session";
 import CompanyForm from "./company-form";
 
-// Decides what this page shows: the empty form (first visit), the form filled with the saved profile
-// (coming back from a later step), or a send-away for people who shouldn't be here.
+// Decides what CompanyForm shows: the empty form (first visit), the form filled with the saved profile (coming
+// back from a later step), or a send-away for people who shouldn't be here. The form itself is always on screen;
+// see CompanyForm's `pending` prop for what covers it until this is known.
 export default function CompanyStep() {
   const router = useRouter();
   const session = useRequireSession();
@@ -38,32 +36,18 @@ export default function CompanyStep() {
     };
   }, [session, attempt, router]);
 
-  if (load.status === "ready") return <CompanyForm profile={load.profile} />;
-
   return (
-    <>
-      <BigLogo />
-      {load.status === "loading" ? (
-        <div className="pt-9.5">
-          <Loading />
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-4 px-5 pt-9.5 text-center">
-          <p role="alert" className="text-red-600">
-            {GENERIC_ERROR}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setLoad({ status: "loading" });
-              setAttempt((n) => n + 1);
-            }}
-            className="w-46.5 cursor-pointer border-2 border-black py-2.25 font-bold"
-          >
-            Try again
-          </button>
-        </div>
-      )}
-    </>
+    <CompanyForm
+      // A fresh instance right as real data replaces the placeholder, so its fields (which only ever read `profile`
+      // once, when they're created) start from the real values instead of carrying over the empty placeholder ones.
+      // Harmless: the placeholder was `inert`, so nothing could have been typed into it yet.
+      key={load.status === "ready" ? "ready" : "pending"}
+      profile={load.status === "ready" ? load.profile : null}
+      pending={load.status === "loading" ? "loading" : load.status === "error" ? "error" : undefined}
+      onRetry={() => {
+        setLoad({ status: "loading" });
+        setAttempt((n) => n + 1);
+      }}
+    />
   );
 }

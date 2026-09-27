@@ -34,7 +34,7 @@ export default function CategorySelect({
   placeholder: string;
   allowCreate?: boolean;
   maxRows?: number; // list at most this many categories (the Create row comes on top of that); all of them when not set
-  smallPlaceholder?: boolean; // the business category's design has a 14px placeholder, the product one 16px
+  smallPlaceholder?: boolean; // 14px placeholder text instead of the input's own 16px; both category boxes use this
   className?: string; // for example a maximum width
 }) {
   const id = useId();

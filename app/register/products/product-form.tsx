@@ -5,6 +5,8 @@ import { useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
 import CategorySelect from "@/app/components/category-select";
 import Field from "@/app/components/field";
+import PageHeading from "@/app/components/page-heading";
+import PendingOverlay from "@/app/components/pending-overlay";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { completeStep, pathForStep } from "@/lib/onboarding";
@@ -30,7 +32,18 @@ const CONTROL_NAME: Record<ProductField, string> = {
 
 // The "Add product" page of registration. Owners can add as many products as they like, one after another, and
 // adding products is optional: "Next" and "Skip for now" both move on to the next step.
-export default function ProductForm({ categories: knownCategories }: { categories: string[] }) {
+// `pending`, set by ProductsStep while it doesn't yet know the real category list: the form is shown anyway
+// (empty), under a PendingOverlay, and marked `inert` so it can't be used before that is known. Skip is disabled
+// too (it doesn't need the category list, but this page hasn't yet confirmed the visitor belongs on it).
+export default function ProductForm({
+  categories: knownCategories,
+  pending,
+  onRetry,
+}: {
+  categories: string[];
+  pending?: "loading" | "error";
+  onRetry: () => void;
+}) {
   const router = useRouter();
   const [values, setValues] = useState<ProductValues>(emptyProduct);
   const set = (change: Partial<ProductValues>) => setValues((v) => ({ ...v, ...change }));
@@ -137,103 +150,113 @@ export default function ProductForm({ categories: knownCategories }: { categorie
   return (
     <>
       <BigLogo />
-      <h1 className="pt-9.5 pb-2 text-[20px] font-semibold">Add product</h1>
-      <p className="pb-10 font-semibold">This information will be publicly visible.</p>
+      <PageHeading title="Add product" />
 
       <button
         type="button"
         onClick={handleSkip}
-        disabled={busy}
+        disabled={busy || !!pending}
         className="absolute top-3 right-3 flex cursor-pointer items-center gap-1.5 bg-[#aaa] px-8.25 py-2.75 text-[14px] font-semibold text-white disabled:cursor-wait disabled:opacity-60"
       >
         Skip for now
         <ArrowIcon className="h-3 w-3.5 translate-y-px" />
       </button>
 
-      {/* noValidate: we draw our own red underline instead of the browser's pop-up messages. */}
-      <form onSubmit={handleSubmit} noValidate className="flex w-full flex-col items-center">
-        <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5">
-          <Field
-            label="Product name*"
-            name="productName"
-            type="text"
-            maxLength={255}
-            value={values.name}
-            onChange={(v) => set({ name: v })}
-            invalid={invalid("name")}
-          />
-          <Field
-            label="Price"
-            name="price"
-            type="text"
-            inputMode="decimal"
-            hint={'Displays "Inquiry" if left blank.'}
-            maxLength={13}
-            value={values.price}
-            onChange={(v) => set({ price: v })}
-            invalid={invalid("price")}
-          />
-          <CategorySelect
-            label="Category*"
-            placeholder="Select or create a category"
-            options={categories}
-            allowCreate
-            maxRows={5}
-            value={values.category}
-            invalid={invalid("category")}
-            onChange={(v) => set({ category: v })}
-          />
-          <ImageZone images={values.images} invalid={invalid("images")} onChange={(update) => setValues((v) => ({ ...v, images: update(v.images) }))} />
-          <div className="flex w-full flex-col gap-2.25">
-            <label htmlFor="product-description" className="text-[14px] font-semibold">
-              Description*
-            </label>
-            <textarea
-              id="product-description"
-              name="description"
-              aria-invalid={invalid("description")}
-              value={values.description}
-              onChange={(e) => set({ description: e.target.value })}
-              className={`h-75 w-full resize-none border p-1 text-[16px] text-[#111] outline-none focus:shadow-[0_0_0_1px_black] ${
-                invalid("description") ? "border-red-600 focus:shadow-[0_0_0_1px_#dc2626]" : "border-black"
-              }`}
+      {/* relative: PendingOverlay (absolute) floats over the form while `pending`. `inert` on the form itself
+          (not just a visual dimming) is what actually stops it being typed into or submitted meanwhile. */}
+      <div className="relative w-full">
+        {/* noValidate: we draw our own red underline instead of the browser's pop-up messages. */}
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          inert={!!pending}
+          className={`flex w-full flex-col items-center ${pending ? "opacity-40" : ""}`}
+        >
+          <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5">
+            <Field
+              label="Product name*"
+              name="productName"
+              type="text"
+              maxLength={255}
+              value={values.name}
+              onChange={(v) => set({ name: v })}
+              invalid={invalid("name")}
             />
+            <Field
+              label="Price"
+              name="price"
+              type="text"
+              inputMode="decimal"
+              hint={'Displays "Inquiry" if left blank.'}
+              maxLength={13}
+              value={values.price}
+              onChange={(v) => set({ price: v })}
+              invalid={invalid("price")}
+            />
+            <CategorySelect
+              label="Category*"
+              placeholder="Select or create a category"
+              options={categories}
+              allowCreate
+              maxRows={5}
+              smallPlaceholder
+              value={values.category}
+              invalid={invalid("category")}
+              onChange={(v) => set({ category: v })}
+            />
+            <ImageZone images={values.images} invalid={invalid("images")} onChange={(update) => setValues((v) => ({ ...v, images: update(v.images) }))} />
+            <div className="flex w-full flex-col gap-2.25">
+              <label htmlFor="product-description" className="text-[14px] font-semibold">
+                Description*
+              </label>
+              <textarea
+                id="product-description"
+                name="description"
+                aria-invalid={invalid("description")}
+                value={values.description}
+                onChange={(e) => set({ description: e.target.value })}
+                className={`h-75 w-full resize-none border p-1 text-[16px] text-[#111] outline-none focus:shadow-[0_0_0_1px_black] ${
+                  invalid("description") ? "border-red-600 focus:shadow-[0_0_0_1px_#dc2626]" : "border-black"
+                }`}
+              />
+            </div>
           </div>
-        </div>
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="flex h-10.25 cursor-pointer items-center justify-center border border-black bg-white px-4.75 text-[16px] font-semibold disabled:cursor-wait disabled:opacity-60"
-        >
-          Add product
-        </button>
+          <button
+            type="submit"
+            disabled={busy}
+            className="flex h-10.25 cursor-pointer items-center justify-center border border-black bg-white px-4.75 text-[16px] font-semibold disabled:cursor-wait disabled:opacity-60"
+          >
+            Add product
+          </button>
 
-        {/* The 70px between the two buttons in the design holds the messages, so they never move anything. */}
-        <div className="flex h-17.5 w-full max-w-135 items-center justify-center px-5">
-          <p role="status" className="text-center text-[13px] font-medium text-[#4b5563]">
-            {phase === "adding" ? "Uploading your product. This can take a moment." : notice}
-          </p>
-        </div>
+          {/* The 70px between the two buttons in the design holds the messages, so they never move anything. */}
+          <div className="flex h-17.5 w-full max-w-135 items-center justify-center px-5">
+            <p role="status" className="text-center text-[13px] font-medium text-[#4b5563]">
+              {phase === "adding" ? "Uploading your product. This can take a moment." : notice}
+            </p>
+          </div>
 
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={busy}
-          className="flex cursor-pointer items-center gap-1 bg-black px-17.25 py-2.75 font-bold text-white disabled:cursor-wait disabled:opacity-60"
-        >
-          Next
-          <ArrowIcon className="h-3.5 w-3 translate-y-px" />
-        </button>
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={busy}
+            className="flex cursor-pointer items-center gap-1 bg-black px-17.25 py-2.75 font-bold text-white disabled:cursor-wait disabled:opacity-60"
+          >
+            Next
+            <ArrowIcon className="h-3.5 w-3 translate-y-px" />
+          </button>
 
-        {/* Problems from the server or the connection. Not in the design yet. */}
-        {error && (
-          <p role="alert" className="w-full max-w-135 px-5 pt-5 text-center text-[14px] text-red-600">
-            {error}
-          </p>
-        )}
-        <div className="pb-17.5" />
-      </form>
+          {/* Problems from the server or the connection. Not in the design yet. */}
+          {error && (
+            <p role="alert" className="w-full max-w-135 px-5 pt-5 text-center text-[14px] text-red-600">
+              {error}
+            </p>
+          )}
+          <div className="pb-17.5" />
+        </form>
+        {pending && <PendingOverlay state={pending} onRetry={onRetry} />}
+      </div>
     </>
   );
 }
