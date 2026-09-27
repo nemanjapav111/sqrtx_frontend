@@ -5,18 +5,18 @@ import { useEffect, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
 import Loading from "@/app/components/loading";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
-import { getMyProfile, type BusinessProfile } from "@/lib/business-profile";
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
+import { getProductCategories } from "@/lib/products";
 import { useRequireSession } from "@/lib/use-session";
-import CompanyForm from "./company-form";
+import ProductForm from "./product-form";
 
-// Decides what this page shows: the empty form (first visit), the form filled with the saved profile
-// (coming back from a later step), or a send-away for people who shouldn't be here.
-export default function CompanyStep() {
+// Decides what this page shows: the empty product form, or a send-away for people who don't belong here
+// (registration finished, the business profile isn't saved yet, or their business only offers services).
+export default function ProductsStep() {
   const router = useRouter();
   const session = useRequireSession();
   const [attempt, setAttempt] = useState(0); // "Try again" runs the loading again
-  const [load, setLoad] = useState<{ status: "loading" } | { status: "error" } | { status: "ready"; profile: BusinessProfile | null }>({
+  const [load, setLoad] = useState<{ status: "loading" } | { status: "error" } | { status: "ready"; categories: string[] }>({
     status: "loading",
   });
 
@@ -26,9 +26,11 @@ export default function CompanyStep() {
     (async () => {
       try {
         const state = await getOnboardingState();
-        if (state.step === "done") return router.replace(pathForStep("done")); // registration is finished
-        const profile = await getMyProfile(); // null on the first visit
-        if (!cancelled) setLoad({ status: "ready", profile });
+        // Coming back to this page from a later step is fine, as long as products are part of the user's path.
+        // Before the profile is saved that path is just the first page, so this also sends them there.
+        if (state.step === "done" || !state.steps.includes("products")) return router.replace(pathForStep(state.step));
+        const categories = await getProductCategories(); // what products use, most used first
+        if (!cancelled) setLoad({ status: "ready", categories });
       } catch {
         if (!cancelled) setLoad({ status: "error" });
       }
@@ -38,7 +40,7 @@ export default function CompanyStep() {
     };
   }, [session, attempt, router]);
 
-  if (load.status === "ready") return <CompanyForm profile={load.profile} />;
+  if (load.status === "ready") return <ProductForm categories={load.categories} />;
 
   return (
     <>

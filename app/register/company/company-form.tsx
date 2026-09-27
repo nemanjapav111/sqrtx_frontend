@@ -7,6 +7,7 @@ import Field from "@/app/components/field";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import {
+  BUSINESS_CATEGORIES,
   SITE_HOST,
   cleanSlug,
   createProfile,
@@ -25,7 +26,7 @@ import {
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
 import ArrowIcon from "../arrow-icon";
 import AddressField from "./address-field";
-import CategorySelect from "./category-select";
+import CategorySelect from "@/app/components/category-select";
 import LogoPicker from "./logo-picker";
 
 // The form control that gets the cursor for each field that needs fixing.
@@ -179,7 +180,16 @@ export default function CompanyForm({ profile }: { profile: BusinessProfile | nu
             onChange={(v) => set({ companyName: v })}
             invalid={invalid("companyName")}
           />
-          <CategorySelect value={values.category} invalid={invalid("category")} onChange={(v) => set({ category: v })} />
+          <CategorySelect
+            label="Business category*"
+            placeholder="Select business category"
+            options={BUSINESS_CATEGORIES}
+            smallPlaceholder
+            className="max-w-62.5"
+            value={values.category}
+            invalid={invalid("category")}
+            onChange={(v) => set({ category: v })}
+          />
           <AddressField
             text={values.addressText}
             place={values.place}

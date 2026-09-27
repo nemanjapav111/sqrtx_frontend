@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/api";
+import { apiFetch, jsonBody } from "@/lib/api";
 
 // What GET /onboarding/me returns (see API.md in the backend).
 export type OnboardingStep = "business_profile" | "products" | "services" | "final" | "done";
@@ -11,6 +11,10 @@ export interface OnboardingState {
 }
 
 export const getOnboardingState = () => apiFetch<OnboardingState>("/onboarding/me");
+
+/** The user is done with (or skips) this page: the server moves them on and answers with the new state. */
+export const completeStep = (step: "products" | "services") =>
+  apiFetch<OnboardingState>("/onboarding/next", jsonBody("POST", { step }));
 
 // Which page each step lives on. Change a route here and everything that sends users to it follows.
 // TODO: the products, services and final pages don't exist yet, and "done" goes to the landing page for now.

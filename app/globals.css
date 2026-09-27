@@ -8,6 +8,14 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Soft grey: the same warm grey the Claude desktop app uses (its bg-300 is #F0EEE6, its bg-400 is #E8E6DC).
+     Used for: the photo drop area, the "Create ..." row of the category list, and a row under the mouse or
+     picked with the arrow keys in the address and category lists. Change the two greys here. */
+  /* --color-soft-grey: #B8B8B8; */
+  /* A step darker (keep it darker than the soft grey), for something that is already soft grey and needs to react:
+     a photo being dragged over the drop area, the mouse over the "Create ..." row, and the placeholder of a photo
+     the browser can't draw. */
+  /* --color-soft-grey-dark: #B8B8B8; */
   /* --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono); */
 }

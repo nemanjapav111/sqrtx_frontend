@@ -72,6 +72,7 @@ export default function Field({
   name,
   type,
   autoComplete,
+  inputMode,
   hint,
   message,
   below,
@@ -88,6 +89,7 @@ export default function Field({
   name: string;
   type: "text" | "email" | "password" | "tel" | "url";
   autoComplete?: string;
+  inputMode?: "decimal" | "numeric"; // which keyboard a phone shows (a price, for example)
   hint?: string; // gray helper text under the underline (register)
   message?: React.ReactNode; // a status/error line with its space reserved up front, see FieldShell
   below?: React.ReactNode; // anything else under the underline, like the "Forgot password?" link (log in)
@@ -112,6 +114,7 @@ export default function Field({
         name={name}
         type={isPassword && visible ? "text" : type}
         autoComplete={autoComplete}
+        inputMode={inputMode}
         maxLength={maxLength}
         value={value}
         onChange={(e) => onChange(e.target.value)}

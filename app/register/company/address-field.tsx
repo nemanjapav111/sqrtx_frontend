@@ -200,7 +200,7 @@ export default function AddressField({
                   choose(s);
                 }}
                 // 44px tall on phones so a thumb can hit it, tighter with a mouse
-                className={`flex min-h-11 cursor-pointer items-center px-3 text-[14px] hover:bg-[#f3f4f6] md:min-h-0 md:py-2 ${i === active ? "bg-[#f3f4f6]" : ""}`}
+                className={`flex min-h-11 cursor-pointer items-center px-3 text-[14px] hover:bg-soft-grey md:min-h-0 md:py-2 ${i === active ? "bg-soft-grey" : ""}`}
               >
                 {s.text}
               </li>
