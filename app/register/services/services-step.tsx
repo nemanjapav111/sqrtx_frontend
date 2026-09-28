@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getOnboardingState, pathForStep } from "@/lib/onboarding";
+import { getOnboardingState, homePath } from "@/lib/onboarding";
 import { getServiceCategories } from "@/lib/services";
 import { useRequireSession } from "@/lib/use-session";
 import ArrowIcon from "../arrow-icon";
@@ -32,7 +32,7 @@ export default function ServicesStep() {
         const state = await getOnboardingState();
         if (!cancelled) setBackHref(state.steps.includes("products") ? "/register/products" : "/register/company");
         // Coming back to this page from a later step is fine, as long as services are part of the user's path.
-        if (state.step === "done" || !state.steps.includes("services")) return router.replace(pathForStep(state.step));
+        if (state.step === "done" || !state.steps.includes("services")) return router.replace(await homePath(state));
         const categories = await getServiceCategories(); // what services use, most used first
         if (!cancelled) setLoad({ status: "ready", categories });
       } catch {

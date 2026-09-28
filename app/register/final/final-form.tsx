@@ -8,7 +8,7 @@ import PageHeading from "@/app/components/page-heading";
 import PendingOverlay from "@/app/components/pending-overlay";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
-import { finishOnboarding, pathForStep } from "@/lib/onboarding";
+import { finishOnboarding, homePath } from "@/lib/onboarding";
 
 // A checkbox with its sentence after it, like the design. Bordered box; a black check mark when checked. Mirrors the
 // "Products"/"Services" checkbox in company-form.tsx (a 20px box with a 44px tap area, the same approved deviation from
@@ -87,7 +87,7 @@ export default function FinalForm({ pending, onRetry }: { pending?: "loading" | 
     setBusy(true);
     try {
       const state = await finishOnboarding(about);
-      router.push(pathForStep(state.step));
+      router.push(await homePath(state)); // registration is finished: on to their own public page
     } catch (err) {
       showError(err);
     } finally {

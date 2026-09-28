@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import LogoutButton from "@/app/components/logout-button";
-import { getOnboardingState, pathForStep } from "@/lib/onboarding";
+import { getOnboardingState, homePath, pathForStep } from "@/lib/onboarding";
 import { useRequireSession } from "@/lib/use-session";
 import ArrowIcon from "../arrow-icon";
 import FinalForm from "./final-form";
@@ -31,7 +31,7 @@ export default function FinalStep() {
         const before = state.steps[state.steps.indexOf("final") - 1];
         if (!cancelled && before) setBackHref(pathForStep(before));
         // Coming back to this page once registration is already done sends them to the normal site instead.
-        if (state.step !== "final") return router.replace(pathForStep(state.step));
+        if (state.step !== "final") return router.replace(await homePath(state));
         if (!cancelled) setLoad({ status: "ready" });
       } catch {
         if (!cancelled) setLoad({ status: "error" });

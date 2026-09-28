@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
 import Field from "@/app/components/field";
 import { GENERIC_ERROR, RATE_LIMIT_CODES, RATE_LIMIT_ERROR } from "@/lib/auth-messages";
-import { getOnboardingState, pathForStep } from "@/lib/onboarding";
+import { getOnboardingState, homePath } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
 import { passwordOk } from "@/lib/validation";
 
@@ -48,7 +48,7 @@ export default function ResetForm() {
     setContinuing(true);
     try {
       const state = await getOnboardingState();
-      router.push(pathForStep(state.step));
+      router.push(await homePath(state));
     } catch {
       router.push("/login");
     }

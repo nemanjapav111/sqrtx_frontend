@@ -79,6 +79,9 @@ export default function LogoPicker({
         />
         {content}
       </label>
+      {/* Not cropped, only fitted (see the comment on LOGO): a logo shaped close to this box keeps the most of its size.
+          Pixels, not a ratio: easier to act on when picking or exporting a file. Not in the design; wording is a placeholder. */}
+      <p className="text-[13px] font-medium text-[#4b5563]">Ideal logo size: 220 x 136 px.</p>
       {problem && (
         <p role="alert" className="text-[13px] font-medium text-red-600">
           {problem}

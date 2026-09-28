@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
-import { getOnboardingState, pathForStep } from "@/lib/onboarding";
+import { getOnboardingState, homePath } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
 
 // The landing page's "Log in" link. A visitor with no session goes to the login form, same as a plain link would.
 // Someone who is already signed in (their browser still has a session) skips the form and goes straight to their
-// registration step, the same place LoginForm itself sends them right after signing in.
+// page (their registration step, or their public page once registered), the same place LoginForm itself sends them.
 export default function LoginLink({ className, children }: { className?: string; children: React.ReactNode }) {
   const router = useRouter();
   const inFlight = useRef(false); // ignores a second click while the first is still deciding where to go
@@ -21,7 +21,7 @@ export default function LoginLink({ className, children }: { className?: string;
       if (!data.session) return router.push("/login");
       try {
         const state = await getOnboardingState();
-        router.push(pathForStep(state.step));
+        router.push(await homePath(state));
       } catch {
         // Couldn't tell where they belong (expired session, no connection, ...): the login form is the safe fallback.
         router.push("/login");

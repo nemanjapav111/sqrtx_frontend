@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
 import Loading from "@/app/components/loading";
@@ -81,6 +82,10 @@ export default function AccountStep({ returned }: { returned: "success" | "cance
               <span className="text-[#4b5563]">Email: </span>
               {load.email}
             </p>
+            {/* h-11: a 44px tap area, like the other links and buttons on phone-size pages. */}
+            <Link href="/account/settings" className="flex h-11 items-center self-start text-[14px] font-semibold underline">
+              Change login email or password
+            </Link>
           </section>
 
           <section className="flex flex-col gap-2">

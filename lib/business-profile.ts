@@ -120,7 +120,7 @@ export function valuesFromProfile(p: BusinessProfile): ProfileValues {
   };
 }
 
-const slugFromUrl = (url: string) => {
+export const slugFromUrl = (url: string) => {
   try {
     return new URL(url).pathname.replace(/^\/+|\/+$/g, "");
   } catch {

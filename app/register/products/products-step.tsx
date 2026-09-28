@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getOnboardingState, pathForStep } from "@/lib/onboarding";
+import { getOnboardingState, homePath } from "@/lib/onboarding";
 import { getProductCategories } from "@/lib/products";
 import { useRequireSession } from "@/lib/use-session";
 import ProductForm from "./product-form";
@@ -26,7 +26,7 @@ export default function ProductsStep() {
         const state = await getOnboardingState();
         // Coming back to this page from a later step is fine, as long as products are part of the user's path.
         // Before the profile is saved that path is just the first page, so this also sends them there.
-        if (state.step === "done" || !state.steps.includes("products")) return router.replace(pathForStep(state.step));
+        if (state.step === "done" || !state.steps.includes("products")) return router.replace(await homePath(state));
         const categories = await getProductCategories(); // what products use, most used first
         if (!cancelled) setLoad({ status: "ready", categories });
       } catch {

@@ -1,4 +1,6 @@
 import { apiFetch, jsonBody } from "@/lib/api";
+import { getBillingStatus } from "@/lib/billing";
+import { getMyProfile, slugFromUrl } from "@/lib/business-profile";
 
 // What GET /onboarding/me returns (see API.md in the backend).
 export type OnboardingStep = "business_profile" | "products" | "services" | "final" | "done";
@@ -31,6 +33,24 @@ const STEP_PATHS: Record<OnboardingStep, string> = {
 };
 
 export const pathForStep = (step: OnboardingStep) => STEP_PATHS[step];
+
+/**
+ * Where a logged-in user belongs: the registration page they are on, or, once registration is finished, their own public
+ * page (sqrtx.co/<their address>). Used after logging in and wherever a signed-in visitor is sent to "their page".
+ * A finished user whose page is hidden (free trial over, not subscribed) goes to the account page instead, because their
+ * public page would only say "not found" and the account page is where they subscribe. So does anyone whose profile or
+ * billing can't be read right now.
+ */
+export async function homePath(state: OnboardingState): Promise<string> {
+  if (state.step !== "done") return pathForStep(state.step);
+  try {
+    const [profile, billing] = await Promise.all([getMyProfile(), getBillingStatus()]);
+    const slug = profile ? slugFromUrl(profile.company_url) : "";
+    return billing.has_access && slug ? `/${slug}` : pathForStep("done");
+  } catch {
+    return pathForStep("done");
+  }
+}
 
 /**
  * The page "Next" leads to from `current`: the step after it on the user's own path. Not `state.step`, which is the

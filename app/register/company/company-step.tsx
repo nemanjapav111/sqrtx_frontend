@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getBusinessCategories, getMyProfile, type BusinessCategory, type BusinessProfile } from "@/lib/business-profile";
-import { getOnboardingState, pathForStep } from "@/lib/onboarding";
+import { getOnboardingState, homePath } from "@/lib/onboarding";
 import { useRequireSession } from "@/lib/use-session";
 import CompanyForm from "./company-form";
 
@@ -24,7 +24,7 @@ export default function CompanyStep() {
     (async () => {
       try {
         const state = await getOnboardingState();
-        if (state.step === "done") return router.replace(pathForStep("done")); // registration is finished
+        if (state.step === "done") return router.replace(await homePath(state)); // registration is finished
         const [profile, categories] = await Promise.all([getMyProfile(), getBusinessCategories()]); // profile: null on the first visit
         if (!cancelled) setLoad({ status: "ready", profile, categories });
       } catch {
