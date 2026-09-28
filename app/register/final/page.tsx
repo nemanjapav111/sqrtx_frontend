@@ -9,7 +9,7 @@ export const metadata = { title: "About your company – sqrtx" };
 // this one frame's own number exactly.
 export default function Final() {
   return (
-    <main className="relative flex flex-1 flex-col items-center bg-white pt-17.5 pb-12.5 leading-[normal] text-black md:pt-8 md:pb-8">
+    <main className="relative flex flex-1 flex-col items-center bg-white pt-17.5 pb-12.5 leading-[normal] text-black md:pb-8">
       <div className="flex w-full max-w-200 flex-col items-center">
         <FinalStep />
       </div>

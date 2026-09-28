@@ -5,12 +5,13 @@ import { useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
 import CategorySelect from "@/app/components/category-select";
 import Field from "@/app/components/field";
+import LogoutButton from "@/app/components/logout-button";
 import ImageZone from "@/app/components/image-zone";
 import PageHeading from "@/app/components/page-heading";
 import PendingOverlay from "@/app/components/pending-overlay";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
-import { completeStep, pathForStep } from "@/lib/onboarding";
+import { completeStep, pageAfter } from "@/lib/onboarding";
 import {
   MAX_PRODUCT_IMAGES,
   createProduct,
@@ -113,12 +114,12 @@ export default function ProductForm({
     else setError(GENERIC_ERROR);
   }
 
-  // Tells the server this page is done, then goes to whichever page the server says comes next.
+  // Tells the server this page is done, then goes to the next page on the user's path (see pageAfter).
   async function goOn() {
     setPhase("moving");
     try {
       const state = await completeStep("products");
-      router.push(pathForStep(state.step));
+      router.push(pageAfter(state, "products"));
     } catch (err) {
       showError(err);
     }
@@ -154,17 +155,21 @@ export default function ProductForm({
       <PageHeading title="Add product" />
 
       {/* A plain text link, not a filled button: skipping is the secondary action next to "Next" below, and grey
-          isn't otherwise used for anything in this black-and-white design. top-1.75 and h-9 match the Back
-          arrow's own box (top-1.75 p-1 on a h-7 icon = 36px tall) so the two sit on the same line. */}
-      <button
-        type="button"
-        onClick={handleSkip}
-        disabled={busy || !!pending}
-        className="absolute top-1.75 right-3 flex h-9 cursor-pointer items-center gap-1.5 px-3 text-[14px] font-medium disabled:cursor-wait disabled:opacity-60"
-      >
-        Skip for now
-        <ArrowIcon className="h-3 w-3.5 translate-y-px" />
-      </button>
+          isn't otherwise used for anything in this black-and-white design. top-0.75 and h-11 match the Back
+          arrow's own box (top-0.75, 44px tall: the usual minimum tap size, around a 28px icon that looks unchanged)
+          so the two sit on the same line. Log out shares this wrapper. */}
+      <div className="absolute top-0.75 right-3 flex md:right-[calc(50%-262px)]">
+        <LogoutButton />
+        <button
+          type="button"
+          onClick={handleSkip}
+          disabled={busy || !!pending}
+          className="flex h-11 cursor-pointer items-center gap-1.5 px-3 text-[14px] font-medium disabled:cursor-wait disabled:opacity-60"
+        >
+          Skip for now
+          <ArrowIcon className="h-3 w-3.5 translate-y-px" />
+        </button>
+      </div>
 
       {/* relative: PendingOverlay (absolute) floats over the form while `pending`. `inert` on the form itself
           (not just a visual dimming) is what actually stops it being typed into or submitted meanwhile. */}

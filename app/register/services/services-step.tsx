@@ -46,7 +46,7 @@ export default function ServicesStep() {
 
   return (
     <>
-      <Link href={backHref} aria-label="Back" className="absolute top-1.75 left-3 p-1">
+      <Link href={backHref} aria-label="Back" className="absolute top-0.75 left-1.5 px-2.5 py-2 md:left-[calc(50%-260px)]">
         <ArrowIcon className="h-7 w-6 rotate-180" />
       </Link>
       <ServiceForm

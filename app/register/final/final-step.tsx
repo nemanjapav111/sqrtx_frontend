@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import LogoutButton from "@/app/components/logout-button";
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
 import { useRequireSession } from "@/lib/use-session";
 import ArrowIcon from "../arrow-icon";
@@ -43,9 +44,12 @@ export default function FinalStep() {
 
   return (
     <>
-      <Link href={backHref} aria-label="Back" className="absolute top-1.75 left-3 p-1">
+      <Link href={backHref} aria-label="Back" className="absolute top-0.75 left-1.5 px-2.5 py-2 md:left-[calc(50%-260px)]">
         <ArrowIcon className="h-7 w-6 rotate-180" />
       </Link>
+      <div className="absolute top-0.75 right-3 md:right-[calc(50%-262px)]">
+        <LogoutButton />
+      </div>
       <FinalForm
         // A fresh instance right as real data replaces the placeholder: harmless, since the placeholder was
         // `inert` and nothing could have been typed into it yet (see ProductForm/ServiceForm for the same pattern).

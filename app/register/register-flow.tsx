@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import BigLogo from "@/app/components/big-logo";
+import { useRedirectIfSignedIn } from "@/lib/use-redirect-if-signed-in";
 import RegisterForm from "./register-form";
 import VerifyEmail from "./verify-email";
 
@@ -10,6 +11,9 @@ import VerifyEmail from "./verify-email";
 export default function RegisterFlow() {
   const [sent, setSent] = useState<{ email: string; password: string } | null>(null);
   const [emailToKeep, setEmailToKeep] = useState(""); // pre-fills the form after "Change email"
+  const redirecting = useRedirectIfSignedIn(); // already signed in: not shown this page
+
+  if (redirecting) return <BigLogo />;
 
   if (sent) {
     return (

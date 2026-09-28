@@ -8,27 +8,27 @@ import { emailOk } from "@/lib/validation";
 // The company page address is shown as sqrtx.co/<slug>. It is saved in the API as the full URL.
 export const SITE_HOST = "sqrtx.co";
 
-// TODO: placeholder list. The design doesn't say which categories exist, so replace this with the real list.
-export const BUSINESS_CATEGORIES = [
-  "Bakery",
-  "Restaurant & cafe",
-  "Grocery & food",
-  "Clothing & fashion",
-  "Health & beauty",
-  "Home & garden",
-  "Electronics",
-  "Construction & repair",
-  "Professional services",
-  "Education & training",
-  "Automotive",
-  "Other",
-];
+// One of the categories a business picks from. The list lives in the API (GET /business-profile/categories): `id` is
+// what the profile stores and never changes, `name` is shown, `group` is its heading, and `keywords` are never shown but
+// make the search find it.
+export interface BusinessCategory {
+  id: string;
+  name: string;
+  group: string; // the heading it is listed under while the search box is empty
+  keywords: string[];
+}
 
-// Words that already mean something on the site, so a company can't take them as its address (sqrtx.co/login).
-// The API must refuse these too, because this list can be bypassed.
+// Words that already mean something on the site (or will), so a company can't take them as its address (sqrtx.co/login).
+// The API refuses these too (RESERVED_COMPANY_SLUGS in the backend's business-profile.constants.ts, and the database's
+// business_profiles_company_url_check): keep the three lists identical.
 const RESERVED_SLUGS = [
-  "about", "admin", "api", "business", "businesses", "company", "contact", "help", "login", "onboarding",
-  "privacy", "products", "register", "services", "settings", "support", "terms", "www",
+  "about", "account", "accounts", "admin", "api", "app", "apps", "assets", "auth", "billing", "blog", "business",
+  "businesses", "careers", "cart", "checkout", "community", "companies", "company", "contact", "dashboard",
+  "directory", "docs", "download", "downloads", "explore", "faq", "favicon", "feed", "forgot-password", "help", "home",
+  "index", "jobs", "legal", "log-in", "log-out", "login", "logout", "mail", "me", "news", "onboarding", "pricing",
+  "privacy", "product", "products", "profile", "profiles", "register", "reset-password", "robots", "search", "security",
+  "service", "services", "settings", "sign-in", "sign-up", "signin", "signup", "sitemap", "static", "status",
+  "subscription", "support", "terms", "trial", "user", "users", "verify", "www",
 ];
 
 export type Provides = "products" | "services" | "both";
@@ -222,11 +222,12 @@ export const providesOf = (v: Pick<ProfileValues, "products" | "services">): Pro
 /**
  * The fields that need fixing, in page order (so the first can get the cursor).
  * `hasSavedLogo`: in edit mode an already saved logo satisfies the "logo is required" rule.
+ * `categories`: the category must be one of these (the API refuses anything else).
  */
-export function invalidFields(v: ProfileValues, hasSavedLogo: boolean): FieldName[] {
+export function invalidFields(v: ProfileValues, hasSavedLogo: boolean, categories: readonly BusinessCategory[]): FieldName[] {
   const bad: FieldName[] = [];
   if (v.companyName.trim() === "" || v.companyName.length > 255) bad.push("companyName");
-  if (!BUSINESS_CATEGORIES.includes(v.category)) bad.push("category");
+  if (!categories.some((c) => c.id === v.category)) bad.push("category");
   if (!v.place) bad.push("place");
   if (!emailOk(v.contactEmail)) bad.push("contactEmail");
   if (!phoneOk(v.phone)) bad.push("phone");
@@ -239,6 +240,11 @@ export function invalidFields(v: ProfileValues, hasSavedLogo: boolean): FieldNam
 }
 
 // ---------- talking to the API ----------
+
+// cache: "no-cache" = ask the API again every time. Without it a browser that stored an earlier answer under the API's old
+// one-hour rule keeps showing that old list (a hard reload doesn't clear it for requests the page itself makes).
+export const getBusinessCategories = () =>
+  apiFetch<BusinessCategory[]>("/business-profile/categories", { cache: "no-cache" });
 
 export async function getMyProfile(): Promise<BusinessProfile | null> {
   try {

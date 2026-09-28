@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
@@ -9,24 +10,41 @@ import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { finishOnboarding, pathForStep } from "@/lib/onboarding";
 
-// A checkbox with its label after it, like the design. Bordered box; a black check mark when checked. Mirrors the
-// "Products"/"Services" checkbox in company-form.tsx (20px box in a 44px tap row - the same approved deviation
-// from Figma's 11px box, noted in PROJECT_NOTES), just with the label after the box instead of before it.
+// A checkbox with its sentence after it, like the design. Bordered box; a black check mark when checked. Mirrors the
+// "Products"/"Services" checkbox in company-form.tsx (a 20px box with a 44px tap area, the same approved deviation from
+// Figma's 11px box, noted in PROJECT_NOTES), with two differences:
+// - The sentence holds links (terms, privacy), so it is NOT part of the label: only the box and the 44 x 44 px area
+//   around it tick the box. Tapping the words, or missing a link by a finger's width, does nothing.
+// - The sentence comes after the box, and the box's tap area reaches 12px to the left of the form column so the box
+//   itself lines up with the "About*" label above it.
 const CHECK =
   "checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2020%2020%22%3E%3Cpath%20d=%22M4.5%2010.5l3.5%203.5L15.5%206%22%20fill=%22none%22%20stroke=%22black%22%20stroke-width=%222.5%22/%3E%3C/svg%3E')]";
 function TermsBox({ checked, invalid, onChange }: { checked: boolean; invalid: boolean; onChange: (v: boolean) => void }) {
   return (
-    // The padding makes the whole row easy to tap on a phone.
-    <label className="flex cursor-pointer items-center gap-1 py-3 text-[14px] font-semibold">
-      <input
-        type="checkbox"
-        name="termsAccepted"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className={`size-5 appearance-none border bg-white bg-center bg-no-repeat ${invalid ? "border-red-600" : "border-black"} ${CHECK}`}
-      />
-      I accept the terms and conditions
-    </label>
+    <div className="flex items-center text-[14px] font-semibold">
+      <label className="-ml-3 flex size-11 shrink-0 cursor-pointer items-center justify-center">
+        <input
+          type="checkbox"
+          name="termsAccepted"
+          aria-labelledby="terms-sentence"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className={`size-5 appearance-none border bg-white bg-center bg-no-repeat ${invalid ? "border-red-600" : "border-black"} ${CHECK}`}
+        />
+      </label>
+      {/* The links open in a new tab so what the user typed above is not lost. The wording adds the privacy policy to
+          the design's "I accept the terms and conditions": the API records both versions when the user finishes. */}
+      <span id="terms-sentence" className="py-1">
+        I accept the{" "}
+        <Link href="/terms" target="_blank" rel="noopener" className="underline">
+          terms and conditions
+        </Link>{" "}
+        and the{" "}
+        <Link href="/privacy" target="_blank" rel="noopener" className="underline">
+          privacy policy
+        </Link>
+      </span>
+    </div>
   );
 }
 
@@ -97,7 +115,7 @@ export default function FinalForm({ pending, onRetry }: { pending?: "loading" | 
               not the wider gap used between separate fields on the product/service forms. */}
           <div className="flex w-full max-w-135 flex-col gap-2.25 px-5">
             <label htmlFor="about" className="text-[14px] font-semibold">
-              About
+              About*
             </label>
             <textarea
               id="about"

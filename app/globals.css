@@ -28,6 +28,13 @@
   }
 } */
 
+/* Inter's "contextual alternates" raise an "@" that comes right after a digit or a capital letter and drop it back
+   when the next lowercase letter is typed, so in a text box the "@" of an email jumps while typing. Off for typing. */
+input,
+textarea {
+  font-feature-settings: "calt" 0;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

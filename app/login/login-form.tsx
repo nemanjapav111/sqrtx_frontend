@@ -8,6 +8,7 @@ import Field from "@/app/components/field";
 import { GENERIC_ERROR, RATE_LIMIT_CODES, RATE_LIMIT_ERROR } from "@/lib/auth-messages";
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
+import { useRedirectIfSignedIn } from "@/lib/use-redirect-if-signed-in";
 import { emailOk } from "@/lib/validation";
 
 // "Not confirmed yet" only comes back when the password was right, so showing it doesn't reveal who has an account.
@@ -15,9 +16,11 @@ const WRONG_LOGIN = "Wrong email or password.";
 const NOT_CONFIRMED = "Please confirm your email first. Open the link we sent you.";
 const PROGRESS_ERROR = "You're logged in, but we couldn't load your registration progress. Please try again.";
 
-// "Forgot ..." links from the design. Their pages don't exist yet.
-const helperLink = (text: string) => (
-  <Link href="#" className="self-end text-[13px] font-medium">
+// The "Forgot password?" link from the design. The design's "Forgot email?" link is deliberately not here: someone
+// who forgot their login email can't be identified by anything else, so changing it is planned for the account
+// settings, for signed-in users (see PROJECT_NOTES).
+const helperLink = (text: string, href: string) => (
+  <Link href={href} className="self-end text-[13px] font-medium">
     {text}
   </Link>
 );
@@ -31,6 +34,7 @@ export default function LoginForm() {
   const [sending, setSending] = useState(false); // only used to grey out the button
   const inFlight = useRef(false); // the real "already sending" guard: state would be stale for a second submit in the same instant
   const [error, setError] = useState<string | null>(null);
+  const redirecting = useRedirectIfSignedIn(); // already signed in: not shown this page
 
   // Log in accepts any password the account already has, so only "not empty" is checked.
   const emailBad = submitted && !emailOk(email);
@@ -76,6 +80,8 @@ export default function LoginForm() {
     }
   }
 
+  if (redirecting) return <BigLogo />;
+
   // noValidate: we draw our own red underline instead of the browser's pop-up messages.
   // method="post" so the password can never end up in the URL if this runs before the page is ready.
   return (
@@ -93,7 +99,6 @@ export default function LoginForm() {
             value={email}
             onChange={setEmail}
             invalid={emailBad}
-            below={helperLink("Forgot email?")}
           />
           <Field
             label="Password*"
@@ -103,7 +108,7 @@ export default function LoginForm() {
             value={password}
             onChange={setPassword}
             invalid={passwordBad}
-            below={helperLink("Forgot password?")}
+            below={helperLink("Forgot password?", "/forgot-password")}
           />
         </div>
 

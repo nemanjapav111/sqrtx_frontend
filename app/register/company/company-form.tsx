@@ -9,7 +9,6 @@ import PendingOverlay from "@/app/components/pending-overlay";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import {
-  BUSINESS_CATEGORIES,
   SITE_HOST,
   cleanSlug,
   createProfile,
@@ -21,11 +20,12 @@ import {
   slugOk,
   updateProfile,
   valuesFromProfile,
+  type BusinessCategory,
   type BusinessProfile,
   type FieldName,
   type ProfileValues,
 } from "@/lib/business-profile";
-import { getOnboardingState, pathForStep } from "@/lib/onboarding";
+import { getOnboardingState, pageAfter } from "@/lib/onboarding";
 import ArrowIcon from "../arrow-icon";
 import AddressField from "./address-field";
 import CategorySelect from "@/app/components/category-select";
@@ -50,17 +50,22 @@ const CHECK =
   "checked:bg-[url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2020%2020%22%3E%3Cpath%20d=%22M4.5%2010.5l3.5%203.5L15.5%206%22%20fill=%22none%22%20stroke=%22black%22%20stroke-width=%222.5%22/%3E%3C/svg%3E')]";
 function ProvidesBox({ name, label, checked, invalid, onChange }: { name: string; label: string; checked: boolean; invalid: boolean; onChange: (v: boolean) => void }) {
   return (
-    // The padding makes the whole row easy to tap on a phone.
-    <label className="flex cursor-pointer items-center gap-1 py-3 text-[14px] font-semibold">
-      {label}
-      <input
-        type="checkbox"
-        name={name}
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className={`size-5 appearance-none border bg-white bg-center bg-no-repeat ${invalid ? "border-red-600" : "border-black"} ${CHECK}`}
-      />
-    </label>
+    // Only the box and the 44 x 44 px area around it tick it (easy to tap on a phone); tapping the word does nothing,
+    // like the terms checkbox on the last page. The area reaches 12px to the right, into the space before the next
+    // checkbox, so the spacing stays as designed. The word is not part of the label, so it is linked by aria-labelledby.
+    <div className="flex items-center text-[14px] font-semibold">
+      <span id={`${name}-label`}>{label}</span>
+      <label className="-mr-3 flex size-11 shrink-0 cursor-pointer items-center justify-center">
+        <input
+          type="checkbox"
+          name={name}
+          aria-labelledby={`${name}-label`}
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className={`size-5 appearance-none border bg-white bg-center bg-no-repeat ${invalid ? "border-red-600" : "border-black"} ${CHECK}`}
+        />
+      </label>
+    </div>
   );
 }
 
@@ -70,16 +75,23 @@ function ProvidesBox({ name, label, checked, invalid, onChange }: { name: string
 // (empty), under a PendingOverlay, and marked `inert` so it can't be used before that is known.
 export default function CompanyForm({
   profile,
+  categories,
   pending,
   onRetry,
 }: {
   profile: BusinessProfile | null;
+  categories: BusinessCategory[]; // what the category box lists (empty while `pending`)
   pending?: "loading" | "error";
   onRetry: () => void;
 }) {
   const router = useRouter();
   const editing = profile !== null;
-  const [values, setValues] = useState<ProfileValues>(() => (profile ? valuesFromProfile(profile) : emptyValues));
+  const [values, setValues] = useState<ProfileValues>(() => {
+    if (!profile) return emptyValues;
+    const saved = valuesFromProfile(profile);
+    // A category that is no longer in the list (a profile saved before the list existed) is shown as not picked yet.
+    return categories.some((c) => c.id === saved.category) ? saved : { ...saved, category: "" };
+  });
   const set = (change: Partial<ProfileValues>) => setValues((v) => ({ ...v, ...change }));
 
   // Red lines stay hidden until the user clicks Next once. After that they update as the user types.
@@ -103,7 +115,7 @@ export default function CompanyForm({
     set({ logo: file, logoSize: null });
     if (file) readImageSize(file).then((size) => setValues((v) => (v.logo === file ? { ...v, logoSize: size } : v)));
   }
-  const bad = new Set(submitted ? invalidFields(values, !!profile?.logo) : []);
+  const bad = new Set(submitted ? invalidFields(values, !!profile?.logo, categories) : []);
   const invalid = (field: FieldName) => bad.has(field) || (field === "slug" && slugTaken);
 
   // When the user leaves the box: ask the server if the name is free. Shows a green check mark or "taken".
@@ -121,9 +133,9 @@ export default function CompanyForm({
     }
   }
 
-  async function goToCurrentStep() {
-    const state = await getOnboardingState();
-    router.push(pathForStep(state.step));
+  // The page after this one on the user's path (see pageAfter): not the furthest step they ever reached.
+  async function goToNextPage() {
+    router.push(pageAfter(await getOnboardingState(), "business_profile"));
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -134,7 +146,7 @@ export default function CompanyForm({
     setError(null);
 
     // Send the cursor to the first field that needs fixing. A name we already know is taken counts too.
-    const first = invalidFields(values, !!profile?.logo)[0] ?? (slugTaken ? "slug" : undefined);
+    const first = invalidFields(values, !!profile?.logo, categories)[0] ?? (slugTaken ? "slug" : undefined);
     if (first) {
       (form.elements.namedItem(CONTROL_NAME[first]) as HTMLElement | null)?.focus();
       return;
@@ -144,7 +156,7 @@ export default function CompanyForm({
     setSending(true);
     try {
       await (editing ? updateProfile(values) : createProfile(values));
-      await goToCurrentStep();
+      await goToNextPage();
     } catch (err) {
       await handleError(err, form);
     } finally {
@@ -162,7 +174,7 @@ export default function CompanyForm({
     } else if (err.status === 409) {
       // The profile was already saved (a double click, or another tab): carry on with the saved one.
       try {
-        await goToCurrentStep();
+        await goToNextPage();
       } catch {
         setError(GENERIC_ERROR);
       }
@@ -202,8 +214,10 @@ export default function CompanyForm({
             <CategorySelect
               label="Business category*"
               placeholder="Select business category"
-              options={BUSINESS_CATEGORIES}
+              options={categories.map((c) => ({ value: c.id, text: c.name, group: c.group, keywords: c.keywords }))}
               smallPlaceholder
+              // No design for this line yet. It only shows once something is typed, and picks the "Other" category.
+              fallback={categories.some((k) => k.id === "other") ? { value: "other", text: "Can't find yours? Choose \"Other\"" } : undefined}
               className="max-w-62.5"
               value={values.category}
               invalid={invalid("category")}
