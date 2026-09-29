@@ -2,15 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { BusinessProfile } from "@/lib/business-profile";
-import { logoDisplaySize } from "@/lib/logo";
+import { LOGO_FIT_CLASS, logoDisplaySize } from "@/lib/logo";
 
 // The logo is shown the way it will be on the site (navbar, cards), see lib/logo.ts: fitted inside 110 x 68, proportions
 // kept, nothing cropped, never enlarged (files that are too small are refused, see logoSizeProblem).
 // The box shrinks to the picture, so there is no white space around it. A wide logo is therefore short (4:1 = 110 x 27).
-// These classes do the fitting when the size isn't known up front (a file just chosen, or an old saved logo); keep
-// max-w / max-h in step with LOGO_MAX_WIDTH / LOGO_MAX_HEIGHT (27.5 and 17 are 110px and 68px).
-// It is a block, not a flex item: a flex item shrinks to max-width but not to max-height, which would squash it.
-const LOGO = "block h-auto max-h-17 w-auto max-w-27.5";
 
 // The company logo box from the design: click it to choose a photo. It shows the new photo, or the saved logo when
 // editing, or "+ Add photo". With a logo the box shrinks to fit it instead of keeping the design's 110 x 68.
@@ -37,7 +33,7 @@ export default function LogoPicker({
   if (previewUrl && broken !== previewUrl) {
     showsLogo = true;
     // eslint-disable-next-line @next/next/no-img-element -- a local preview, not a site image
-    content = <img src={previewUrl} alt="Chosen logo" onError={() => setBroken(previewUrl)} className={LOGO} />;
+    content = <img src={previewUrl} alt="Chosen logo" onError={() => setBroken(previewUrl)} className={LOGO_FIT_CLASS} />;
   } else if (file) {
     content = "Photo chosen";
   } else if (saved) {
@@ -54,7 +50,7 @@ export default function LogoPicker({
           width={saved.width ?? undefined}
           height={saved.height ?? undefined}
           style={logoDisplaySize(saved.width, saved.height) ?? undefined}
-          className={LOGO}
+          className={LOGO_FIT_CLASS}
         />
       </picture>
     );

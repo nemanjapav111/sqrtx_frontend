@@ -2,16 +2,25 @@ import { notFound } from "next/navigation";
 import { getBusiness, getProducts } from "@/lib/public-site";
 import ProductList from "./product-list";
 
-// sqrtx.co/<address>: the business's public site opens on its products (Figma 2063:8869, "Products Phone new"). The
-// layout next to this file draws the top and bottom bars and 404s a business that isn't public. This is a phone design,
-// there is no tablet or desktop version yet: on a wide screen it stays one narrow column in the middle.
-// The Products page is shown even when the business only offers services: it just has no products (the Services page
-// does not exist yet, so there is nowhere better to send visitors).
-export default async function BusinessProducts({ params }: { params: Promise<{ slug: string }> }) {
+// sqrtx.co/<address>: the business's public site opens on whichever of products or services it actually lists (see
+// tabs.ts's primaryTab; a business that lists both opens on Products, the more built-out of the two so far). The
+// layout next to this file draws the top and bottom bars and 404s a business that isn't public. Products is a phone
+// design (Figma 2063:8869, "Products Phone new") extended for tablet/desktop; there is no design at all yet for a
+// Services page, so a services-only business gets a plain placeholder instead (see below) rather than the empty,
+// mislabelled Products page ("No products yet.") this used to show it.
+export default async function BusinessHome({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const business = await getBusiness(slug);
   if (!business) notFound();
-  const products = await getProducts(business.user_id);
 
+  if (business.provides === "services") {
+    return (
+      <main className="mx-auto flex w-full flex-col px-4 pb-2.5 md:px-7.5 md:pt-7.5">
+        <p className="text-[14px] text-[#636363]">This business&apos;s services aren&apos;t listed here yet.</p>
+      </main>
+    );
+  }
+
+  const products = await getProducts(business.user_id);
   return <ProductList products={products} />;
 }

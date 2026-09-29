@@ -42,7 +42,7 @@ export default async function BusinessLayout({
         {/* pb: on a phone, room for the fixed bottom bar (44px + its 1px top line, plus the phone's own bottom edge
             where it has one). Tablet and desktop have no bottom bar. */}
         <div className="flex flex-1 flex-col pb-[calc(45px+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
-        <BusinessFooter slug={slug} />
+        <BusinessFooter slug={slug} provides={business.provides} />
       </div>
     </SearchProvider>
   );

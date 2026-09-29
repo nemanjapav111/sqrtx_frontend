@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LOGO_FIT_CLASS, logoDisplaySize } from "@/lib/logo";
 import type { PublicBusiness } from "@/lib/public-site";
 import HeaderLinks from "./header-links";
 import HeaderSearch from "./header-search";
@@ -8,23 +9,26 @@ import VisitorIcon from "./visitor-icon";
 //  - Phone (under 768px, Figma 2063:8870): logo row (69px), then the search line. The pages are in the bottom bar.
 //  - Tablet (768px up, Figma 2022:236): logo row, then a row of page links, then the search line (centered, 390px).
 //  - Desktop (1120px up, Figma 1424:453): one row (69px): logo and name, the page links and a search box in the middle, and
-//    "← sqrtx" and the account icon at the right. The logo box is 110 x 68 at every size, like the design. 1120px is
-//    where the bar still fits with a scrollbar: 303 (logo + name) + 534 (links + search) + 196 (right side).
-// The logo is never cropped: it is shown fitted inside its 110 x 68 box (the API stores it at twice the size), against
-// the left edge of the screen like the designs (a narrow logo stays at the left; the name keeps its place).
+//    "← sqrtx" and the account icon at the right. 1120px is where the bar still fits with a scrollbar:
+//    303 (logo + name) + 534 (links + search) + 196 (right side).
+// The logo is never cropped: it is fitted inside 110 x 68 (the API stores it at twice the size, see lib/logo.ts), the
+// same way the registration page's own logo preview is, and against the left edge of the screen like the designs. Its
+// OWN box only reserves the 68px height (so the bar's height never depends on what shape the logo is, see below): not
+// a fixed 110px width too, or a narrow logo would leave a big gap before the name that a wide logo would not, making
+// the space between the logo and the name look different from one business to the next (found by the owner,
+// 2026-09-29). The name keeps its place either way: gap-3.25 is between the logo's own actual edge and the name now,
+// not the edge of an oversized box some logos never reach.
 // The account icon is a picture for visitors (they can't have accounts yet) and a link to the account page for someone
 // who is logged in (see visitor-icon.tsx).
 export default function BusinessHeader({ business, slug, categoryName }: { business: PublicBusiness; slug: string; categoryName: string | null }) {
-  const { logo } = business;
+  const { logo, provides } = business;
   return (
     <header className="sticky top-0 z-30 bg-white">
       <div className="flex items-center border-b border-[#b8b8b8]">
         <div className="flex min-w-0 flex-1 items-center gap-3.25 min-[1120px]:w-75.75 min-[1120px]:flex-none">
-          <div className="flex h-17 w-27.5 shrink-0 items-center justify-start">
+          <div className="flex h-17 shrink-0 items-center justify-start">
             {logo && (
-              // The picture fills the box: "max-h-full" on the image only limits its height when its parent has a real height,
-              // and a bare <picture> has none, so a tall or square logo used to be drawn at its full size and stick out of the bar.
-              <picture className="flex size-full items-center justify-start">
+              <picture className="contents">
                 <source srcSet={logo.avif} type="image/avif" />
                 {/* alt="" because the name is written right next to it */}
                 <img
@@ -32,7 +36,8 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
                   alt=""
                   width={logo.width ?? undefined}
                   height={logo.height ?? undefined}
-                  className="max-h-full max-w-full object-contain object-left"
+                  style={logoDisplaySize(logo.width, logo.height) ?? undefined}
+                  className={LOGO_FIT_CLASS}
                 />
               </picture>
             )}
@@ -45,7 +50,7 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
 
         {/* Desktop only: the page links and the search box, centered between the logo and the right side. */}
         <div className="hidden min-w-0 flex-1 items-center justify-center gap-4.25 min-[1120px]:flex">
-          <HeaderLinks slug={slug} variant="desktop" />
+          <HeaderLinks slug={slug} provides={provides} variant="desktop" />
           <HeaderSearch variant="desktop" />
         </div>
 
@@ -60,7 +65,7 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
       {/* Tablet only: the page links get their own row (54px). */}
       {/* max-[1120px] means "narrower than 1120px" (Tailwind's max-* is exclusive), the mirror of min-[1120px] (1120px and up). */}
       <div className="hidden md:max-[1120px]:block">
-        <HeaderLinks slug={slug} variant="tablet" />
+        <HeaderLinks slug={slug} provides={provides} variant="tablet" />
       </div>
 
       {/* Phone and tablet: the search line. 20px above and below on the phone; on the tablet only below, centered and at most 390px wide. */}

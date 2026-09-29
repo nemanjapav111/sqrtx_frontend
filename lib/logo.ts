@@ -4,6 +4,12 @@
 export const LOGO_MAX_WIDTH = 110;
 export const LOGO_MAX_HEIGHT = 68;
 
+// Fits a logo inside 110 x 68 by itself, with no JS math: for when its real pixel size isn't known yet (a freshly
+// chosen file, before its dimensions are read, or an old saved logo from before the API kept sizes). A block, not a
+// flex item: a flex item shrinks to max-width but not to max-height, which would squash it. Used as a fallback next
+// to `logoDisplaySize`'s exact pixel size (below), which every place a saved logo is shown prefers when it can.
+export const LOGO_FIT_CLASS = "block h-auto max-h-17 w-auto max-w-27.5";
+
 /**
  * The size to show a logo at, worked out from the pixel size the API sends (logo.width, logo.height).
  * Set it on the <img> so the space is reserved before the picture loads and nothing on the page jumps.

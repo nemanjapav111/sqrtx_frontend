@@ -7,6 +7,7 @@ import BigLogo from "@/app/components/big-logo";
 import Loading from "@/app/components/loading";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { getBillingPlans, getBillingStatus, type BillingPlans, type BillingStatus } from "@/lib/billing";
+import { getMyProfile, slugFromUrl } from "@/lib/business-profile";
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
 import { useRequireSession } from "@/lib/use-session";
@@ -15,7 +16,7 @@ import BillingSection from "./billing-section";
 type Load =
   | { status: "loading" }
   | { status: "error" }
-  | { status: "ready"; email: string; billing: BillingStatus; plans: BillingPlans };
+  | { status: "ready"; email: string; billing: BillingStatus; plans: BillingPlans; slug: string };
 
 // Loads what the page shows, or sends the visitor away if they don't belong here (not logged in, or registration
 // not finished yet). `returned` is what the payment provider brought the user back with, if anything.
@@ -32,8 +33,14 @@ export default function AccountStep({ returned }: { returned: "success" | "cance
       try {
         const state = await getOnboardingState();
         if (state.step !== "done") return router.replace(pathForStep(state.step)); // registration is not finished
-        const [billing, plans, auth] = await Promise.all([getBillingStatus(), getBillingPlans(), supabase.auth.getSession()]);
-        if (!cancelled) setLoad({ status: "ready", email: auth.data.session?.user.email ?? "", billing, plans });
+        const [billing, plans, auth, profile] = await Promise.all([
+          getBillingStatus(),
+          getBillingPlans(),
+          supabase.auth.getSession(),
+          getMyProfile(),
+        ]);
+        const slug = profile ? slugFromUrl(profile.company_url) : "";
+        if (!cancelled) setLoad({ status: "ready", email: auth.data.session?.user.email ?? "", billing, plans, slug });
       } catch {
         if (!cancelled) setLoad({ status: "error" });
       }
@@ -95,6 +102,18 @@ export default function AccountStep({ returned }: { returned: "success" | "cance
                 ? "Your business page is public."
                 : "Your business page is hidden from the public. Your information is safe, and it becomes public again when you subscribe."}
             </p>
+            {/* Only when there is something to see: hidden from the public (trial over, not subscribed) or a
+                profile that failed to load would just land on a "not found" page. A real button, not a plain link
+                like "Change login email" above: for someone whose page is public this is likely the thing they came
+                here to do, so it gets the same weight as "Manage subscription" below, not a line of text next to it. */}
+            {load.billing.has_access && load.slug && (
+              <Link
+                href={`/${load.slug}`}
+                className="flex h-11 w-full items-center justify-center border-2 border-black bg-white text-[14px] font-bold"
+              >
+                View my page
+              </Link>
+            )}
           </section>
 
           <BillingSection billing={load.billing} plans={load.plans} returned={returned} onRefresh={refreshBilling} />
