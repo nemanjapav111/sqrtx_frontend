@@ -27,33 +27,54 @@ export default function LogoPicker({
   useEffect(() => () => (previewUrl ? URL.revokeObjectURL(previewUrl) : undefined), [previewUrl]);
   // Most browsers can't draw a HEIC photo. When a preview fails we just say a photo was chosen.
   const [broken, setBroken] = useState<string | null>(null);
+  // The chosen photo has finished loading. Until then the box keeps the size it had (an <img> that hasn't loaded is 0
+  // x 0, which collapsed the box to a thin line for a moment and made everything below it jump up and down again).
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const previewPending = !!previewUrl && broken !== previewUrl && loadedUrl !== previewUrl;
+
+  // The logo already saved on the server (editing), drawn the way it is shown on the site.
+  // <picture>, not next/image: the API's files are already optimized (see API.md).
+  // The API sends the picture's pixel size, so its space is reserved before it loads and the form doesn't jump.
+  const savedPicture = saved && (
+    <picture className="contents">
+      <source srcSet={saved.avif} type="image/avif" />
+      <source srcSet={saved.webp} type="image/webp" />
+      <img
+        src={saved.webp}
+        alt="Your company logo"
+        width={saved.width ?? undefined}
+        height={saved.height ?? undefined}
+        style={logoDisplaySize(saved.width, saved.height) ?? undefined}
+        className={LOGO_FIT_CLASS}
+      />
+    </picture>
+  );
 
   let content: React.ReactNode = "+ Add photo";
   let showsLogo = false; // a real picture is in the box (not one of the texts)
   if (previewUrl && broken !== previewUrl) {
-    showsLogo = true;
-    // eslint-disable-next-line @next/next/no-img-element -- a local preview, not a site image
-    content = <img src={previewUrl} alt="Chosen logo" onError={() => setBroken(previewUrl)} className={LOGO_FIT_CLASS} />;
+    // While the chosen photo is still loading the box stays as it is: the saved logo when editing (in its own, maybe
+    // much smaller, box: swapping in the empty "+ Add photo" box for a moment showed a bigger frame), else "+ Add photo".
+    showsLogo = previewPending ? !!saved : true;
+    content = (
+      <>
+        {previewPending && (savedPicture ?? "+ Add photo")}
+        {/* hidden (still loads) until it is ready to show: see previewPending */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- a local preview, not a site image */}
+        <img
+          src={previewUrl}
+          alt="Chosen logo"
+          onLoad={() => setLoadedUrl(previewUrl)}
+          onError={() => setBroken(previewUrl)}
+          className={previewPending ? "hidden" : LOGO_FIT_CLASS}
+        />
+      </>
+    );
   } else if (file) {
     content = "Photo chosen";
   } else if (saved) {
     showsLogo = true;
-    // <picture>, not next/image: the API's files are already optimized (see API.md).
-    // The API sends the picture's pixel size, so its space is reserved before it loads and the form doesn't jump.
-    content = (
-      <picture className="contents">
-        <source srcSet={saved.avif} type="image/avif" />
-        <source srcSet={saved.webp} type="image/webp" />
-        <img
-          src={saved.webp}
-          alt="Your company logo"
-          width={saved.width ?? undefined}
-          height={saved.height ?? undefined}
-          style={logoDisplaySize(saved.width, saved.height) ?? undefined}
-          className={LOGO_FIT_CLASS}
-        />
-      </picture>
-    );
+    content = savedPicture;
   }
 
   return (

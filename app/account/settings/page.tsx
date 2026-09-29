@@ -1,4 +1,3 @@
-import LogoutButton from "@/app/components/logout-button";
 import BackButton from "./back-button";
 import SettingsStep from "./settings-step";
 
@@ -11,9 +10,6 @@ export default function Settings() {
   return (
     <main className="relative flex flex-1 flex-col items-center bg-white pt-17.5 pb-12.5 leading-[normal] text-black md:pb-8">
       <BackButton />
-      <div className="absolute top-0.75 right-3 md:right-[calc(50%-262px)]">
-        <LogoutButton />
-      </div>
       <div className="flex w-full max-w-200 flex-col items-center">
         <SettingsStep />
       </div>

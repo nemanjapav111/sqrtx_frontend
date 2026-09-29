@@ -1,6 +1,6 @@
 import { apiFetch } from "@/lib/api";
 import { priceOk } from "@/lib/products";
-import type { PickedPhoto } from "@/lib/photos";
+import { isSaved, type ZonePhoto } from "@/lib/photos";
 
 export { priceOk };
 
@@ -17,7 +17,7 @@ export interface Service {
 }
 
 // A photo the user picked, waiting to be uploaded with the service. The id only tells the photos apart on screen.
-export type ServiceImage = PickedPhoto;
+export type ServiceImage = ZonePhoto;
 
 // Everything the user types or picks in the service form.
 export interface ServiceValues {
@@ -59,6 +59,6 @@ export function createService(v: ServiceValues) {
   form.append("category", v.category.trim());
   form.append("description", v.description.trim());
   if (v.price.trim() !== "") form.append("price", v.price.trim().replace(",", "."));
-  for (const image of v.images) form.append("images", image.file);
+  for (const image of v.images) if (!isSaved(image)) form.append("images", image.file);
   return apiFetch<Service>("/service", { method: "POST", body: form });
 }

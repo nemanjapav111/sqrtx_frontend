@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
-import Loading from "@/app/components/loading";
-import { GENERIC_ERROR } from "@/lib/auth-messages";
+import PendingOverlay from "@/app/components/pending-overlay";
 import { supabase } from "@/lib/supabase";
+import { useAfterDelay } from "@/lib/use-after-delay";
 import { useRequireSession } from "@/lib/use-session";
 import ChangeEmailForm from "./change-email-form";
 import ChangePasswordForm from "./change-password-form";
@@ -35,37 +35,43 @@ export default function SettingsStep() {
     };
   }, [session, attempt]);
 
+  const pending = load.status === "ready" ? undefined : load.status;
+  // Blocked (inert) at once, but only looks dimmed, with the "Loading" box, if it takes a moment (an error shows at once).
+  // Not remembered from the last visit like the account page: a pending email change is only known to Supabase's server.
+  const showPending = useAfterDelay(pending === "loading", 200) || pending === "error";
+  const email = load.status === "ready" ? load.email : "";
+  const pendingEmail = load.status === "ready" ? load.pendingEmail : null;
+
   return (
     <>
       <BigLogo />
       <h1 className="pt-9.5 pb-10 text-[20px] font-semibold md:pt-6 md:pb-6">Settings</h1>
 
-      {load.status === "loading" && <Loading />}
+      {/* relative: PendingOverlay (absolute) floats over this while `pending`. `inert` on the content itself keeps
+          it from being read by a screen reader or focused into while it's just a placeholder underneath. */}
+      <div className="relative flex w-full max-w-135 flex-col">
+        <div
+          inert={!!pending}
+          className={`flex w-full flex-col gap-12 px-5 pb-10 transition-opacity duration-200 md:pb-6 ${showPending ? "opacity-40" : ""}`}
+        >
+          {/* A fresh instance right as real data replaces the placeholder: ChangeEmailForm's `waitingFor` state only
+              ever reads `pendingEmail` once, when it's created (see that file), so it needs to be re-created instead
+              of updated once the real value is known. Harmless: the placeholder was `inert`, so nothing could have
+              been typed into it yet. ChangePasswordForm doesn't seed any state from its props, so it doesn't need this. */}
+          <ChangeEmailForm key={pending ? "pending" : "ready"} currentEmail={email} pendingEmail={pendingEmail} />
+          <ChangePasswordForm currentEmail={email} />
+        </div>
 
-      {load.status === "error" && (
-        <div className="flex flex-col items-center gap-4 px-5 text-center">
-          <p role="alert" className="text-red-600">
-            {GENERIC_ERROR}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
+        {pending && showPending && (
+          <PendingOverlay
+            state={pending}
+            onRetry={() => {
               setLoad({ status: "loading" });
               setAttempt((n) => n + 1);
             }}
-            className="h-11 w-46.5 cursor-pointer border-2 border-black bg-white font-bold"
-          >
-            Try again
-          </button>
-        </div>
-      )}
-
-      {load.status === "ready" && (
-        <div className="flex w-full max-w-135 flex-col gap-12 px-5 pb-10 md:pb-6">
-          <ChangeEmailForm currentEmail={load.email} pendingEmail={load.pendingEmail} />
-          <ChangePasswordForm currentEmail={load.email} />
-        </div>
-      )}
+          />
+        )}
+      </div>
     </>
   );
 }

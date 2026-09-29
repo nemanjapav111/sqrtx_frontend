@@ -3,17 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
-import CategorySelect from "@/app/components/category-select";
-import Field from "@/app/components/field";
+import ProductFields, { CONTROL_NAME } from "@/app/components/product-fields";
 import LogoutButton from "@/app/components/logout-button";
-import ImageZone from "@/app/components/image-zone";
 import PageHeading from "@/app/components/page-heading";
 import PendingOverlay from "@/app/components/pending-overlay";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { completeStep, pageAfter } from "@/lib/onboarding";
 import {
-  MAX_PRODUCT_IMAGES,
   createProduct,
   emptyProduct,
   invalidProductFields,
@@ -22,15 +19,6 @@ import {
   type ProductValues,
 } from "@/lib/products";
 import ArrowIcon from "../arrow-icon";
-
-// The form control that gets the cursor for each field that needs fixing.
-const CONTROL_NAME: Record<ProductField, string> = {
-  name: "productName",
-  price: "price",
-  category: "category",
-  images: "images",
-  description: "description",
-};
 
 // The "Add product" page of registration. Owners can add as many products as they like, one after another, and
 // adding products is optional: "Next" and "Skip for now" both move on to the next step.
@@ -48,7 +36,6 @@ export default function ProductForm({
 }) {
   const router = useRouter();
   const [values, setValues] = useState<ProductValues>(emptyProduct);
-  const set = (change: Partial<ProductValues>) => setValues((v) => ({ ...v, ...change }));
   // The categories products use, offered in the category box (a product with a new one adds it).
   const [categories, setCategories] = useState(knownCategories);
 
@@ -182,60 +169,7 @@ export default function ProductForm({
           className={`flex w-full flex-col items-center ${pending ? "opacity-40" : ""}`}
         >
           <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5 md:pb-8">
-            <Field
-              label="Product name*"
-              name="productName"
-              type="text"
-              maxLength={255}
-              value={values.name}
-              onChange={(v) => set({ name: v })}
-              invalid={invalid("name")}
-            />
-            <Field
-              label="Price"
-              name="price"
-              type="text"
-              inputMode="decimal"
-              prefix="$"
-              hint={'Displays "Inquiry" if left blank.'}
-              maxLength={13}
-              value={values.price}
-              onChange={(v) => set({ price: v })}
-              invalid={invalid("price")}
-            />
-            <CategorySelect
-              label="Category*"
-              placeholder="Select or create a category"
-              options={categories}
-              allowCreate
-              maxRows={5}
-              smallPlaceholder
-              value={values.category}
-              invalid={invalid("category")}
-              onChange={(v) => set({ category: v })}
-            />
-            <ImageZone
-              images={values.images}
-              invalid={invalid("images")}
-              onChange={(update) => setValues((v) => ({ ...v, images: update(v.images) }))}
-              maxImages={MAX_PRODUCT_IMAGES}
-              itemLabel="product"
-            />
-            <div className="flex w-full flex-col gap-2.25">
-              <label htmlFor="product-description" className="text-[14px] font-semibold">
-                Description*
-              </label>
-              <textarea
-                id="product-description"
-                name="description"
-                aria-invalid={invalid("description")}
-                value={values.description}
-                onChange={(e) => set({ description: e.target.value })}
-                className={`h-75 w-full resize-none border p-1 text-[16px] text-[#111] outline-none focus:shadow-[0_0_0_1px_black] ${
-                  invalid("description") ? "border-red-600 focus:shadow-[0_0_0_1px_#dc2626]" : "border-black"
-                }`}
-              />
-            </div>
+            <ProductFields values={values} onChange={setValues} invalid={invalid} categories={categories} />
           </div>
 
           <button

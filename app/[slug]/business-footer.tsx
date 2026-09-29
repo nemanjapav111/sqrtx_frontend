@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import BackToSqrtx from "./back-to-sqrtx";
 import { currentTab, tabsFor, type TabKey } from "./tabs";
 
 // The bottom bar of the PHONE design (Figma "footer_links", 2015:215): five equal cells in a 44px bar fixed to the
@@ -67,7 +68,7 @@ export default function BusinessFooter({ slug, provides }: { slug: string; provi
           </Link>
         ))}
         <Link href="/" className={`${CELL} text-black`}>
-          ← sqrtx
+          <BackToSqrtx />
         </Link>
       </div>
     </nav>

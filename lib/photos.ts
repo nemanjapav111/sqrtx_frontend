@@ -19,6 +19,18 @@ export interface PickedPhoto {
   file: File;
 }
 
+// A photo that is already saved on the server (when editing a product): the id is the API's image id, the url a
+// picture to draw it from (the card size, see API.md). It is never uploaded again.
+export interface SavedPhoto {
+  id: string;
+  url: string;
+  name: string; // only for the alt text and the remove button's label
+}
+
+// What the photo zone holds: photos picked just now and, when editing, photos that are already saved.
+export type ZonePhoto = PickedPhoto | SavedPhoto;
+export const isSaved = (photo: ZonePhoto): photo is SavedPhoto => "url" in photo;
+
 // Why one chosen photo can't be used at all, or null. HEIC files often have no type, so the name is checked too.
 // The 10 MB limit is NOT checked here: a big photo is shrunk first (see shrinkPhoto) and the result is checked.
 export function imageProblem(file: File): string | null {

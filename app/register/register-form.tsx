@@ -58,6 +58,11 @@ export default function RegisterForm({
     inFlight.current = true;
     setSending(true);
     try {
+      // Registering means starting a new account, so no login from before may linger in this browser: the "check
+      // your email" page would take a leftover session with the same email (a user deleted in Supabase, then
+      // registered again) for the confirmation and skip past it. "local": only this browser forgets it.
+      await supabase.auth.signOut({ scope: "local" });
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,

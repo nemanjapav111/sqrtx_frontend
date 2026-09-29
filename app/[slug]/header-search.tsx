@@ -1,11 +1,17 @@
 "use client";
 
+import { useParams, usePathname, useRouter } from "next/navigation";
+import ArrowIcon from "@/app/register/arrow-icon";
+import BackToProducts from "./back-to-products";
 import { useSearch } from "./search-context";
 
 // The search box of the top bar, in the two looks the designs have.
 //  - "bar" (phone and tablet, Figma 2063:8902 and 1960:663): a line with a search icon and nothing else. The design's
 //    "Find..." text is hidden there, so it is only the icon.
 //  - "desktop" (Figma 1424:468): a bordered box that says "Find..." with a square icon button at its end.
+// On a product's own page (Figma 2108:344) the phone/tablet line has a back arrow to the products in front of it, and typing
+// in either box takes the visitor back to the products, where the list follows what was typed (the text lives in the
+// layout, so it is still there).
 // Both look at product names and categories (the products page does the filtering). Typing is enough: the button on the
 // desktop box only moves the cursor back into it, because the list already follows every letter.
 function SearchIcon({ className, color, width }: { className: string; color: string; width: string }) {
@@ -19,21 +25,38 @@ function SearchIcon({ className, color, width }: { className: string; color: str
 
 export default function HeaderSearch({ variant }: { variant: "bar" | "desktop" }) {
   const { query, setQuery } = useSearch();
+  const router = useRouter();
+  const { slug } = useParams<{ slug: string }>();
+  const onProductPage = /^\/[^/]+\/product\//.test(usePathname());
+  const type = (value: string) => {
+    setQuery(value);
+    if (onProductPage) router.push(`/${slug}`);
+  };
 
   if (variant === "bar") {
-    return (
-      <label className="flex h-11 items-center gap-1 border-b border-[#b8b8b8] px-1.75">
+    const line = (
+      <label className="flex h-11 min-w-0 flex-1 items-center gap-1 border-b border-[#b8b8b8] px-1.75">
         <SearchIcon className="size-5 shrink-0" color="#b8b8b8" width="2.5" />
         <span className="sr-only">Search products</span>
         <input
           type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => type(e.target.value)}
           autoComplete="off"
           enterKeyHint="search"
           className="min-w-0 flex-1 bg-transparent px-1 text-[16px] outline-none [&::-webkit-search-cancel-button]:hidden"
         />
       </label>
+    );
+    if (!onProductPage) return line;
+    // The arrow's 44px box starts 6px from the screen's edge and overlaps the line by 1px, like the design.
+    return (
+      <div className="flex items-center">
+        <BackToProducts slug={slug} className="-mr-px -ml-2.5 flex size-11 shrink-0 items-center justify-center">
+          <ArrowIcon className="h-5 w-5.5 rotate-180" strokeWidth={1.6} />
+        </BackToProducts>
+        {line}
+      </div>
     );
   }
 
@@ -51,7 +74,7 @@ export default function HeaderSearch({ variant }: { variant: "bar" | "desktop" }
         aria-label="Search products"
         placeholder="Find..."
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => type(e.target.value)}
         autoComplete="off"
         className="h-full min-w-0 flex-1 border border-[#b8b8b8] bg-white px-1.75 text-[15px] outline-none placeholder:text-[#8f8f8f] [&::-webkit-search-cancel-button]:hidden"
       />

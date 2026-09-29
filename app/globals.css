@@ -40,3 +40,26 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* A soft darker-grey streak that keeps sweeping across a light-grey placeholder, like a reflection gliding over
+   glass: shows that a picture is on its way. (A white streak was invisible on the grey; light base + darker
+   streak reads.) Put `glass-shimmer` on the block (it needs `absolute` + `overflow-hidden`).
+   Held still for people who ask their system for less motion. */
+.glass-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(105deg, transparent 35%, rgba(156, 163, 175, 0.6) 50%, transparent 65%);
+  animation: glass-sweep 1s ease-in-out infinite;
+}
+@keyframes glass-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-shimmer::after {
+    animation: none;
+  }
+}

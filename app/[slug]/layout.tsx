@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { getBusiness, getCategoryName } from "@/lib/public-site";
 import BusinessFooter from "./business-footer";
 import BusinessHeader from "./business-header";
+import PathTracker from "./path-tracker";
 import { SearchProvider } from "./search-context";
 
 // The shell of a business's public site (sqrtx.co/<address>): the top bar with the logo and name, and, on a phone, the
@@ -37,6 +38,7 @@ export default async function BusinessLayout({
 
   return (
     <SearchProvider>
+      <PathTracker />
       <div className="flex min-h-dvh flex-col bg-white leading-[normal] text-black">
         <BusinessHeader business={business} slug={slug} categoryName={categoryName} />
         {/* pb: on a phone, room for the fixed bottom bar (44px + its 1px top line, plus the phone's own bottom edge

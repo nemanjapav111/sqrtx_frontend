@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import BackToSqrtx from "./back-to-sqrtx";
 import { currentTab, tabsFor } from "./tabs";
 
 // The page links of the top bar on tablet and desktop (the phone has them in the bottom bar instead).
@@ -44,7 +45,7 @@ export default function HeaderLinks({
       ))}
       {!desktop && (
         <Link href="/" className="flex h-11 items-center px-2.5 text-[14px] leading-[17px] font-medium tracking-[0.98px] text-black">
-          ← sqrtx
+          <BackToSqrtx />
         </Link>
       )}
     </nav>

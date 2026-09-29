@@ -32,8 +32,13 @@ export default function VerifyEmail({
 
   // Auto-continue: the user opened the link in another tab of this browser, which signs them in
   // and tells this tab. Only counts if the session belongs to the address we are waiting for.
+  // INITIAL_SESSION is ignored: Supabase sends it to every new listener right away with whatever session the browser
+  // already had, and that is an OLD session, not the link being opened. Found when a user was deleted in Supabase and
+  // registered again with the same address in the same browser: the deleted user's leftover session (same email) sent
+  // them straight past the "check your email" page. Only a session that appears while we wait (SIGNED_IN) counts.
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") return;
       if (session?.user.email?.toLowerCase() === email.toLowerCase()) router.push(NEXT_STEP);
     });
     return () => data.subscription.unsubscribe();

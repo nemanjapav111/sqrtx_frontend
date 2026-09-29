@@ -25,7 +25,9 @@ import {
   type FieldName,
   type ProfileValues,
 } from "@/lib/business-profile";
-import { getOnboardingState, pageAfter } from "@/lib/onboarding";
+import { forgetOwnerProfile } from "@/lib/memory-cache";
+import { getOnboardingState, pageAfter, refreshMyPublicPage } from "@/lib/onboarding";
+import { useAfterDelay } from "@/lib/use-after-delay";
 import ArrowIcon from "../arrow-icon";
 import AddressField from "./address-field";
 import CategorySelect from "@/app/components/category-select";
@@ -71,14 +73,19 @@ function ProvidesBox({ name, label, checked, invalid, onChange }: { name: string
 
 // The "Public profile" page. `profile` is null the first time (create) and the saved profile when the user
 // comes back to edit it from a later step (update).
+// `variant`: "registration" (the first registration step: "Next" goes on to the next step) or "account" (the owner
+// editing the profile after registration, /account/profile: "Save changes" goes back to the account page and the
+// site forgets its saved copy of the public page, so the change shows there at once).
 // `pending`, set by CompanyStep while it doesn't yet know which of those `profile` is: the form is shown anyway
 // (empty), under a PendingOverlay, and marked `inert` so it can't be used before that is known.
 export default function CompanyForm({
   profile,
   categories,
+  variant = "registration",
   pending,
   onRetry,
 }: {
+  variant?: "registration" | "account";
   profile: BusinessProfile | null;
   categories: BusinessCategory[]; // what the category box lists (empty while `pending`)
   pending?: "loading" | "error";
@@ -86,6 +93,9 @@ export default function CompanyForm({
 }) {
   const router = useRouter();
   const editing = profile !== null;
+  const account = variant === "account";
+  // Blocked (inert) at once, but only looks dimmed, with the "Loading" box, if it takes a moment (an error shows at once).
+  const showPending = useAfterDelay(pending === "loading", 200) || pending === "error";
   const [values, setValues] = useState<ProfileValues>(() => {
     if (!profile) return emptyValues;
     const saved = valuesFromProfile(profile);
@@ -133,8 +143,15 @@ export default function CompanyForm({
     }
   }
 
-  // The page after this one on the user's path (see pageAfter): not the furthest step they ever reached.
+  // Where saving leads. Registration: the page after this one on the user's path (see pageAfter), not the furthest step
+  // they ever reached. Account: back to the account page, after the public page's saved copy is thrown away (also the one
+  // under the old address, if the address was changed: that link stops working, see the hint under the address box).
   async function goToNextPage() {
+    if (account) {
+      await refreshMyPublicPage(savedSlug && savedSlug !== values.slug ? savedSlug : undefined);
+      router.push("/account");
+      return;
+    }
     router.push(pageAfter(await getOnboardingState(), "business_profile"));
   }
 
@@ -155,7 +172,11 @@ export default function CompanyForm({
     inFlight.current = true;
     setSending(true);
     try {
-      await (editing ? updateProfile(values) : createProfile(values));
+      try {
+        await (editing ? updateProfile(values) : createProfile(values));
+      } finally {
+        if (account) forgetOwnerProfile(); // what the account pages remembered of the profile is out of date, even if this half worked
+      }
       await goToNextPage();
     } catch (err) {
       await handleError(err, form);
@@ -171,7 +192,7 @@ export default function CompanyForm({
     if (err.status === 409 && /company url/i.test(text)) {
       setSlugCheck({ slug: values.slug, state: "taken" }); // someone took it after the check above, or it was never checked
       (form.elements.namedItem("slug") as HTMLElement | null)?.focus();
-    } else if (err.status === 409) {
+    } else if (err.status === 409 && !account) {
       // The profile was already saved (a double click, or another tab): carry on with the saved one.
       try {
         await goToNextPage();
@@ -187,7 +208,7 @@ export default function CompanyForm({
   return (
     <>
       <BigLogo />
-      <PageHeading title="Public profile" />
+      <PageHeading title={account ? "Business profile" : "Public profile"} />
 
       {/* relative: PendingOverlay (absolute) floats over the form while `pending`. `inert` on the form itself
           (not just a visual dimming) is what actually stops it being typed into or submitted meanwhile. */}
@@ -197,7 +218,7 @@ export default function CompanyForm({
           onSubmit={handleSubmit}
           noValidate
           inert={!!pending}
-          className={`flex w-full flex-col items-center ${pending ? "opacity-40" : ""}`}
+          className={`flex w-full flex-col items-center transition-opacity duration-200 ${showPending ? "opacity-40" : ""}`}
         >
           <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5 md:pb-8">
             <Field
@@ -285,6 +306,7 @@ export default function CompanyForm({
               type="text"
               prefix={`${SITE_HOST}/`}
               maxLength={50}
+              hint={account ? "Changing it stops your old address from working." : undefined}
               value={values.slug}
               onChange={(v) => set({ slug: cleanSlug(v) })} // only lowercase letters, digits and dashes can be typed
               onBlur={checkSlug}
@@ -331,6 +353,12 @@ export default function CompanyForm({
                 <ProvidesBox name="products" label="Products" checked={values.products} invalid={invalid("provides")} onChange={(v) => set({ products: v })} />
                 <ProvidesBox name="services" label="Services" checked={values.services} invalid={invalid("provides")} onChange={(v) => set({ services: v })} />
               </div>
+              {/* Not in a design. What really happens (see the API notes): nothing is deleted, it is only hidden. */}
+              {account && (
+                <p className="text-[13px] font-medium text-[#4b5563]">
+                  If you untick one, its items are hidden from your public page. Nothing is deleted, and ticking it again brings them back.
+                </p>
+              )}
             </div>
 
             <LogoPicker
@@ -347,8 +375,14 @@ export default function CompanyForm({
             disabled={sending}
             className="flex cursor-pointer items-center gap-1 bg-black px-17.25 py-2.75 font-bold text-white disabled:cursor-wait disabled:opacity-60"
           >
-            Next
-            <ArrowIcon className="h-3.5 w-3 translate-y-px" />
+            {account ? (
+              "Save changes"
+            ) : (
+              <>
+                Next
+                <ArrowIcon className="h-3.5 w-3 translate-y-px" />
+              </>
+            )}
           </button>
 
           {/* Problems from the server or the connection. Not in the design yet. */}
@@ -359,7 +393,7 @@ export default function CompanyForm({
           )}
           <div className="pb-17.5 md:pb-8" />
         </form>
-        {pending && <PendingOverlay state={pending} onRetry={onRetry} />}
+        {pending && showPending && <PendingOverlay state={pending} onRetry={onRetry} />}
       </div>
     </>
   );

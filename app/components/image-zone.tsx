@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { MAX_IMAGE_BYTES, drawThumbnail, imageProblem, shrinkPhoto, type PickedPhoto } from "@/lib/photos";
+import { MAX_IMAGE_BYTES, drawThumbnail, imageProblem, isSaved, shrinkPhoto, type PickedPhoto, type ZonePhoto } from "@/lib/photos";
 
 // A custom drag payload type, so a tile being dragged to reorder is never mistaken for an external file being
 // dragged in (which carries the browser's own "Files" type) or for a plain text drag from elsewhere on the page.
@@ -32,7 +32,7 @@ function Tile({
   onTouchOverChange,
   onTouchDrop,
 }: {
-  image: PickedPhoto;
+  image: ZonePhoto;
   big: boolean;
   dragging: boolean; // this tile is the one currently being dragged
   dropTarget: boolean; // another tile is being dragged over this one
@@ -46,19 +46,22 @@ function Tile({
 }) {
   // Most browsers can't draw a HEIC photo. When a preview fails we just say a photo was added.
   const [broken, setBroken] = useState(false);
+  // A photo that is already saved on the server (editing) is drawn from its picture URL instead of a local file.
+  const file = isSaved(image) ? null : image.file;
+  const label = isSaved(image) ? image.name : image.file.name;
   // Draws when the canvas appears. It has to be a stable function, or React would draw again on every render.
   const draw = useCallback(
     (canvas: HTMLCanvasElement | null) => {
-      if (!canvas) return;
+      if (!canvas || !file) return;
       let leftAlready = false;
-      drawThumbnail(image.file, canvas).catch(() => {
+      drawThumbnail(file, canvas).catch(() => {
         if (!leftAlready) setBroken(true);
       });
       return () => {
         leftAlready = true;
       };
     },
-    [image.file],
+    [file],
   );
 
   // How far a touch drag has moved the tile from its grid slot (and whether one is armed at all); null the rest
@@ -166,12 +169,16 @@ function Tile({
         touchOffset ? "z-10" : ""
       } ${dragging ? "opacity-40" : ""} ${dropTarget ? "outline outline-2 -outline-offset-2 outline-black" : ""}`}
     >
-      {broken ? (
+      {isSaved(image) ? (
+        // The centre square, like the canvas below draws for a new photo. draggable=false: the tile itself is what drags.
+        // eslint-disable-next-line @next/next/no-img-element -- the API's files are already optimized (see API.md)
+        <img src={image.url} alt={label} draggable={false} className="pointer-events-none size-full object-cover" />
+      ) : broken ? (
         <div className="flex size-full items-center justify-center bg-soft-grey-dark p-2.5 text-center text-[13px] font-medium">
           Photo added
         </div>
       ) : (
-        <canvas ref={draw} role="img" aria-label={image.file.name} className="pointer-events-none size-full" />
+        <canvas ref={draw} role="img" aria-label={label} className="pointer-events-none size-full" />
       )}
       {/* No design for removing a photo yet: a small white-on-black cross in the corner. The button itself
           reaches further than the cross (44px, the usual minimum comfortable touch target) so it's easy to tap
@@ -180,7 +187,7 @@ function Tile({
       <button
         type="button"
         onClick={onRemove}
-        aria-label={`Remove ${image.file.name}`}
+        aria-label={`Remove ${label}`}
         className="absolute top-0 right-0 size-11 cursor-pointer"
       >
         <span aria-hidden className="absolute top-0 right-0 flex size-6 items-center justify-center bg-black text-white">
@@ -205,10 +212,10 @@ export default function ImageZone({
   maxImages,
   itemLabel,
 }: {
-  images: PickedPhoto[];
+  images: ZonePhoto[];
   invalid: boolean;
   // Gets a function from the current list to the new one, so two quick additions can't both start from an old list.
-  onChange: (update: (current: PickedPhoto[]) => PickedPhoto[]) => void;
+  onChange: (update: (current: ZonePhoto[]) => ZonePhoto[]) => void;
   maxImages: number;
   itemLabel: "product" | "service"; // for the "A product/service can have up to N photos." message only
 }) {

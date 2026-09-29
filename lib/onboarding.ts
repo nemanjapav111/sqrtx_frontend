@@ -1,4 +1,6 @@
 import { apiFetch, jsonBody } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
+import { refreshPublicPage } from "@/lib/refresh-public-page";
 import { getBillingStatus } from "@/lib/billing";
 import { getMyProfile, slugFromUrl } from "@/lib/business-profile";
 
@@ -19,8 +21,29 @@ export const completeStep = (step: "products" | "services") =>
   apiFetch<OnboardingState>("/onboarding/next", jsonBody("POST", { step }));
 
 /** The last page: saves the "about the company" text, records the terms/privacy acceptance and completes registration. */
-export const finishOnboarding = (aboutCompany: string) =>
-  apiFetch<OnboardingState>("/onboarding/finish", jsonBody("POST", { about_company: aboutCompany, terms_accepted: true }));
+export async function finishOnboarding(aboutCompany: string) {
+  const state = await apiFetch<OnboardingState>(
+    "/onboarding/finish",
+    jsonBody("POST", { about_company: aboutCompany, terms_accepted: true }),
+  );
+  await refreshMyPublicPage(); // the business is public from now on: the page must not be shown from a saved older copy
+  return state;
+}
+
+/**
+ * Makes the site forget its saved copy of the signed-in owner's public page (see lib/refresh-public-page.ts), so their
+ * next load shows their newest data. Call it after anything that changes that page (`previousSlug`: the address it had
+ * before, when the address was changed). Best effort: if it fails the page
+ * simply catches up by itself within a minute, so it must never fail the action it follows.
+ */
+export async function refreshMyPublicPage(previousSlug?: string) {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) await refreshPublicPage(data.session.access_token, previousSlug);
+  } catch {
+    // ignored on purpose, see above
+  }
+}
 
 // Which page each step lives on. Change a route here and everything that sends users to it follows.
 // "done" (registration finished) is the account page: the start of the owner area, with billing.

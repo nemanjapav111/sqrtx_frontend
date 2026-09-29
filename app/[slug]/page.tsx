@@ -22,5 +22,5 @@ export default async function BusinessHome({ params }: { params: Promise<{ slug:
   }
 
   const products = await getProducts(business.user_id);
-  return <ProductList products={products} />;
+  return <ProductList products={products} slug={slug.toLowerCase()} />;
 }

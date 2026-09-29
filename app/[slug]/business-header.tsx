@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LOGO_FIT_CLASS, logoDisplaySize } from "@/lib/logo";
+import PlaceholderPicture from "@/app/components/placeholder-picture";
 import type { PublicBusiness } from "@/lib/public-site";
+import BackToSqrtx from "./back-to-sqrtx";
 import HeaderLinks from "./header-links";
 import HeaderSearch from "./header-search";
 import VisitorIcon from "./visitor-icon";
@@ -22,29 +24,43 @@ import VisitorIcon from "./visitor-icon";
 // who is logged in (see visitor-icon.tsx).
 export default function BusinessHeader({ business, slug, categoryName }: { business: PublicBusiness; slug: string; categoryName: string | null }) {
   const { logo, provides } = business;
+  const logoSize = logo ? logoDisplaySize(logo.width, logo.height) : null;
   return (
     <header className="sticky top-0 z-30 bg-white">
-      <div className="flex items-center border-b border-[#b8b8b8]">
+      {/* The line under the bar goes across the window; what is in the bar stops at 1440px (the design's width) and is
+          centered, like the page below it, so on a wide window the logo and the account icon are not left at the window's
+          two edges far from the content. */}
+      <div className="border-b border-[#b8b8b8]">
+      <div className="mx-auto flex w-full max-w-360 items-center">
         <div className="flex min-w-0 flex-1 items-center gap-3.25 min-[1120px]:w-75.75 min-[1120px]:flex-none">
           <div className="flex h-17 shrink-0 items-center justify-start">
-            {logo && (
+            {/* A grey block shows until the logo has loaded, which needs its size (from the API). */}
+            {logo && logoSize && (
+              <PlaceholderPicture avif={logo.avif} webp={logo.webp} alt="" placeholder={logo.placeholder} className="shrink-0" style={logoSize} />
+            )}
+            {logo && !logoSize && (
               <picture className="contents">
                 <source srcSet={logo.avif} type="image/avif" />
                 {/* alt="" because the name is written right next to it */}
                 <img
                   src={logo.webp}
                   alt=""
-                  width={logo.width ?? undefined}
-                  height={logo.height ?? undefined}
-                  style={logoDisplaySize(logo.width, logo.height) ?? undefined}
                   className={LOGO_FIT_CLASS}
                 />
               </picture>
             )}
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-2.5 py-2 min-[1120px]:w-45 min-[1120px]:flex-none">
-            <h1 className="text-[16px] leading-[1.2] font-bold wrap-break-word">{business.company_name}</h1>
-            {categoryName && <p className="text-[13px] leading-[1.2] font-bold text-[#888] wrap-break-word">{categoryName}</p>}
+            {/* line-clamp: a long name or category is cut with "…" (the whole text is the tooltip) instead of growing the
+                bar, which stays on screen while the page scrolls: at most 2 x 19px + 10px + 16px, inside the 68px row. */}
+            <h1 title={business.company_name} className="line-clamp-2 text-[16px] leading-[1.2] font-bold wrap-break-word">
+              {business.company_name}
+            </h1>
+            {categoryName && (
+              <p title={categoryName} className="line-clamp-1 text-[13px] leading-[1.2] font-bold text-[#888] wrap-break-word">
+                {categoryName}
+              </p>
+            )}
           </div>
         </div>
 
@@ -56,10 +72,11 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
 
         <div className="flex shrink-0 items-center gap-4.5 pr-2.5 min-[1120px]:pr-4.25 min-[1120px]:pl-6.25">
           <Link href="/" className="hidden h-9 items-center px-4.75 text-[14px] leading-[17px] font-medium tracking-[0.98px] text-black min-[1120px]:flex">
-            ← sqrtx
+            <BackToSqrtx />
           </Link>
           <VisitorIcon />
         </div>
+      </div>
       </div>
 
       {/* Tablet only: the page links get their own row (54px). */}

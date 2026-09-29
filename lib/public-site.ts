@@ -14,16 +14,27 @@ export interface PublicBusiness {
   company_url: string;
   about_company: string | null;
   provides: "products" | "services" | "both";
+  // How to reach the business (the "View Contact" button of a product page shows these). Only the email is required.
+  contact_email: string;
+  phone: string | null;
+  hours: string | null;
+  formatted_address: string;
+  facebook_link: string | null;
+  instagram_link: string | null;
   // width and height: pixels of these files. null only for a logo saved before the API kept them.
-  logo: { avif: string; webp: string; width: number | null; height: number | null } | null;
+  // placeholder: a tiny WebP data URI that becomes the blurred preview, null for a logo saved before the API made them.
+  logo: { avif: string; webp: string; width: number | null; height: number | null; placeholder: string | null } | null;
 }
 
-// One image of a product; `urls.card` is the size for the product card (fits inside 604 x 604, shown at 302 x 302).
+// One image of a product; `urls.card` is the size for the product card (fits inside 604 x 604, shown at 302 x 302),
+// `urls.detail` the size for the product's own page (fits inside 1536 x 900).
 export interface PublicProductImage {
   id: string;
   is_primary: boolean;
+  // A tiny WebP data URI that becomes the blurred preview; null for an image saved before the API made them.
+  placeholder: string | null;
   sort_order: number;
-  urls: { card: { avif: string; webp: string } };
+  urls: { card: { avif: string; webp: string }; detail: { avif: string; webp: string } };
 }
 
 // What GET /product?user_id=... returns for each product. `price` can arrive as a string (a Postgres numeric) or null.
@@ -40,13 +51,19 @@ export interface PublicProduct {
 // so the page shows an error instead of pretending the business doesn't exist.
 // `revalidate`: Next keeps the answer for this many seconds, so a busy page doesn't ask the API on every visit. It also
 // bounds how long a page stays visible after a trial ends (the API hides it at once, the site catches up).
-async function getJson<T>(path: string, revalidate: number): Promise<T | null> {
+// `tags`: labels on the saved answer, so it can be thrown away on demand before the time is up (see
+// lib/refresh-public-page.ts): the owner's own changes show at once, while visitors keep getting saved copies.
+async function getJson<T>(path: string, revalidate: number, tags: string[] = []): Promise<T | null> {
   if (!API_URL) throw new Error("Missing NEXT_PUBLIC_API_URL (see .env.local).");
-  const response = await fetch(`${API_URL}${path}`, { next: { revalidate } });
+  const response = await fetch(`${API_URL}${path}`, { next: { revalidate, tags } });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`The API answered ${response.status} for ${path}`);
   return (await response.json()) as T;
 }
+
+// The labels of the saved answers. An address is lowercase everywhere it is stored, so the label is too.
+export const businessTag = (slug: string) => `business:${slug.toLowerCase()}`;
+export const productsTag = (userId: string) => `products:${userId}`;
 
 // An address that could never belong to a business (see the company URL rules in the API): no need to ask.
 export const isPossibleSlug = (slug: string) => /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(slug);
@@ -54,11 +71,31 @@ export const isPossibleSlug = (slug: string) => /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9
 // cache(): the layout and the page both ask for the same business in one request, and only one call is made.
 export const getBusiness = cache((slug: string) =>
   isPossibleSlug(slug.toLowerCase())
-    ? getJson<PublicBusiness>(`/business-profile/by-url/${encodeURIComponent(slug)}`, 60)
+    ? getJson<PublicBusiness>(`/business-profile/by-url/${encodeURIComponent(slug)}`, 60, [businessTag(slug)])
     : Promise.resolve(null),
 );
 
-export const getProducts = cache(async (userId: string) => (await getJson<PublicProduct[]>(`/product?user_id=${userId}`, 60)) ?? []);
+// What GET /product/:id returns: a product with ALL its images, in order (the list has them too, each with the same sizes).
+export interface PublicProductDetail extends PublicProduct {
+  user_id: string;
+}
+
+// A product id is a UUID: anything else could never be found, so it isn't even asked for (the API would answer 400).
+export const isProductId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+export const getProducts = cache(async (userId: string) => (await getJson<PublicProduct[]>(`/product?user_id=${userId}`, 60, [productsTag(userId)])) ?? []);
+
+// `userId`: the business the page is under (the caller must check the product really belongs to it).
+// The business's product list is what the visitor has just looked at and is already saved (see getProducts), and it holds
+// every detail of each product, so the product is taken from it: opening a product then doesn't wait for the API, which is
+// slow to answer (half a second or more) for a product nobody has opened in the last minute. Only when the list doesn't
+// have it (a product added in the last minute, before the saved list was renewed) is the single product asked for.
+export const getProduct = cache(async (id: string, userId: string): Promise<PublicProductDetail | null> => {
+  if (!isProductId(id)) return null;
+  const fromList = (await getProducts(userId)).find((product) => product.id === id);
+  if (fromList) return { ...fromList, user_id: userId };
+  return getJson<PublicProductDetail>(`/product/${id}`, 60, [productsTag(userId)]);
+});
 
 /** The name of a business category from its id ("supplements" -> "Vitamins & supplements"), or null if unknown. */
 export const getCategoryName = cache(async (id: string) => {
