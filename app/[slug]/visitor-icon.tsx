@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { InlineScript } from "@/app/components/inline-script";
+import { SAVED_LOGIN_KEY, hasSavedLogin } from "@/lib/saved-login";
 
 // The account icon at the right of the top bar (Figma "visitor_icon" opens "visitor_account_dropdown", node 495:51):
 // tapping or clicking it opens a small menu right under it. The design only shows the signed-OUT menu (Log In / Register,
 // real wording from the design); the signed-in one has no design yet, so its three rows (Account, Settings, Log out)
 // and their wording are a placeholder, built in the same box/row style as the designed menu.
+//
+// Who is signed in: the login library (lib/supabase.ts, ~61 KB) is NOT loaded for a visitor. A small green dot on the icon
+// (a placeholder colour and place, not in the design) shows a saved login, which is read straight from the browser's storage
+// (lib/saved-login.ts): by a script that runs before the first paint (so the cached page never shows the dot late), and again
+// in a layout effect for client-side navigations. Only a browser that holds a saved login loads the library, to confirm it
+// (it may have expired) and to log out; the dot follows what it says. The menu opens with the saved login as its answer: Account
+// and Settings are plain links, and "Log out" loads the library when it is pressed.
 // The box: white, 1px #b8b8b8 border, sharp corners, no shadow, with a small triangle pointing up at the icon.
 //
 // The panel and its pointer are ONE traced outline (a single <path>, the same way the Figma design builds it: a
@@ -70,12 +78,14 @@ function MenuRow({
   onClick,
   first,
   compact,
+  disabled,
 }: {
   href?: string;
   children: React.ReactNode;
   onClick?: () => void;
   first?: boolean;
   compact: boolean;
+  disabled?: boolean;
 }) {
   // Same hover grey as the register page's dropdowns (category-select.tsx, address-field.tsx): the field-hint grey
   // at low opacity, so it reads as "highlighted", not a different, unrelated colour. Desktop text matches the size
@@ -88,7 +98,7 @@ function MenuRow({
       {children}
     </Link>
   ) : (
-    <button type="button" onClick={onClick} className={`w-full cursor-pointer text-left ${cls}`}>
+    <button type="button" onClick={onClick} disabled={disabled} className={`w-full cursor-pointer text-left disabled:cursor-wait disabled:opacity-60 ${cls}`}>
       {children}
     </button>
   );
@@ -96,19 +106,43 @@ function MenuRow({
 
 export default function VisitorIcon() {
   const router = useRouter();
-  const [signedIn, setSignedIn] = useState(false);
   const [open, setOpen] = useState(false);
+  const [saved, setSaved] = useState(false); // is there a saved login: read when the menu is opened
+  const [confirmed, setConfirmed] = useState<boolean | null>(null); // what the login library said (null: not asked)
+  const [leaving, setLeaving] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  // The dot lives in an attribute of the root (see the script below), not in React state, so it can be there before React is.
+  const showDot = (on: boolean) => rootRef.current?.toggleAttribute("data-signed-in", on);
+
+  // Client-side navigations get no script (see inline-script.tsx): the same thing, before the page is painted.
+  useLayoutEffect(() => {
+    showDot(hasSavedLogin());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!cancelled) setSignedIn(!!data.session);
-    });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setSignedIn(!!session));
+    let subscription: { unsubscribe: () => void } | undefined;
+    // Only a browser with a saved login loads the library: to ask if the login is still good (it renews one that is only
+    // old and drops one that is gone), and to hear about signing in or out.
+    if (hasSavedLogin()) {
+      import("@/lib/supabase").then(({ supabase }) => {
+        if (cancelled) return;
+        const answer = (session: unknown) => {
+          showDot(!!session);
+          setConfirmed(!!session);
+        };
+        supabase.auth.getSession().then(({ data }) => !cancelled && answer(data.session));
+        subscription = supabase.auth.onAuthStateChange((_event, session) => answer(session)).data.subscription;
+      });
+    }
+    // Another tab signed in or out: the saved login changed.
+    const onStorage = () => showDot(hasSavedLogin());
+    window.addEventListener("storage", onStorage);
     return () => {
       cancelled = true;
-      data.subscription.unsubscribe();
+      subscription?.unsubscribe();
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
@@ -129,10 +163,16 @@ export default function VisitorIcon() {
     };
   }, [open]);
 
+  // The row stays (saying so) while the library loads and the login is dropped.
   async function logOut() {
-    setOpen(false);
-    await supabase.auth.signOut({ scope: "local" });
-    router.push("/login");
+    setLeaving(true);
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      await supabase.auth.signOut({ scope: "local" });
+      router.push("/login");
+    } catch {
+      setLeaving(false);
+    }
   }
 
   // Material "account_circle", 25px in the design, 8px in from the left of its 40px box
@@ -142,6 +182,7 @@ export default function VisitorIcon() {
     </svg>
   );
 
+  const signedIn = confirmed ?? saved;
   const rows = signedIn ? 3 : 2;
   const onNavigate = () => setOpen(false);
 
@@ -170,8 +211,8 @@ export default function VisitorIcon() {
               <MenuRow href="/account/settings" onClick={onNavigate} compact={compact}>
                 Settings
               </MenuRow>
-              <MenuRow onClick={logOut} compact={compact}>
-                Log out
+              <MenuRow onClick={logOut} disabled={leaving} compact={compact}>
+                {leaving ? "Logging out…" : "Log out"}
               </MenuRow>
             </>
           ) : (
@@ -202,17 +243,26 @@ export default function VisitorIcon() {
   }
 
   return (
-    <div ref={rootRef} className="relative flex size-10 items-center">
+    <div ref={rootRef} suppressHydrationWarning className="group relative flex size-10 items-center">
       <button
         type="button"
         aria-label="Your account"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setSaved(hasSavedLogin());
+          setOpen((v) => !v);
+        }}
         className="relative flex size-10 cursor-pointer items-center after:absolute after:-inset-0.5"
       >
         {icon}
+        {/* The signed-in dot, at the icon's lower right (the circle's edge at 45 degrees), ringed in white. Hidden until the
+            root has data-signed-in. */}
+        <span aria-hidden className="absolute top-[21.5px] left-[22px] hidden size-3 rounded-full border-2 border-white bg-[#22c55e] group-data-signed-in:block" />
       </button>
+      <InlineScript
+        code={`{try{if(localStorage.getItem(${JSON.stringify(SAVED_LOGIN_KEY)}))document.currentScript.parentElement.setAttribute("data-signed-in","")}catch(e){}}`}
+      />
 
       {open && (
         <>

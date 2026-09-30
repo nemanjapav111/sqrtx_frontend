@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
 import ArrowIcon from "@/app/register/arrow-icon";
-import { formatPrice } from "@/lib/products";
+import { formatPrice } from "@/lib/price";
 import type { PublicBusiness, PublicProductDetail } from "@/lib/public-site";
 import BackToProducts from "../../back-to-products";
 

@@ -9,7 +9,8 @@ import PendingOverlay from "@/app/components/pending-overlay";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { recall, remember } from "@/lib/memory-cache";
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
-import { formatPrice, getMyProductsPage, type MyProduct } from "@/lib/products";
+import { formatPrice } from "@/lib/price";
+import { getMyProductsPage, type MyProduct } from "@/lib/products";
 import { useAfterDelay } from "@/lib/use-after-delay";
 import { useRequireSession } from "@/lib/use-session";
 

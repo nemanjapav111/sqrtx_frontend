@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
-import { formatPrice } from "@/lib/products";
+import { formatPrice } from "@/lib/price";
 import { fetchProductsPage, type PublicProductCard, type PublicProductsPage } from "@/lib/public-products";
 import CategoryFilter from "./category-filter";
 import { useSearch } from "./search-context";

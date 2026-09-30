@@ -103,3 +103,28 @@ export const getCategoryName = cache(async (id: string) => {
   const categories = await getJson<{ id: string; name: string }[]>("/business-profile/categories", 300);
   return categories?.find((c) => c.id === id)?.name ?? null;
 });
+
+// ---------- for search engines (app/sitemap.ts, app/robots.ts) ----------
+
+// Where the site lives on the web: the addresses in the sitemap are complete ones.
+export const SITE_ORIGIN = "https://sqrtx.co";
+
+// How many products go into one sitemap file (the most the API gives in one page). A search engine takes at most 50,000
+// addresses per file, and each product adds at most two (its page and its business's page), so 10,000 stays well under.
+export const SITEMAP_PRODUCTS_PER_FILE = 10000;
+
+// What GET /product/sitemap returns: every product the public can see, with the address of its business.
+export interface SitemapPage {
+  items: { id: string; slug: string; updated_at: string }[];
+  total: number;
+}
+
+// One page of that list, kept for an hour: a new product reaches the sitemap within the hour, which is all a crawler needs.
+export const getSitemapPage = async (page: number) =>
+  (await getJson<SitemapPage>(`/product/sitemap?page=${page}&limit=${SITEMAP_PRODUCTS_PER_FILE}`, 3600)) ?? { items: [], total: 0 };
+
+// How many sitemap files there are (at least one: the fixed pages of the site are in it).
+export async function getSitemapCount() {
+  const { total } = await getSitemapPage(1);
+  return Math.max(1, Math.ceil(total / SITEMAP_PRODUCTS_PER_FILE));
+}

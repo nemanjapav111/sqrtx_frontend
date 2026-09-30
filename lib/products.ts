@@ -109,15 +109,6 @@ export const getMyProduct = (id: string) => apiFetch<MyProduct>(`/product/mine/$
 /** Deletes the product; the API also deletes its photos' files. */
 export const deleteProduct = (id: string) => apiFetch<unknown>(`/product/${id}`, { method: "DELETE" });
 
-// "$12000" or "$25": no thousands separator, cents only when there are some. No price: "Inquiry" (the word the
-// add-product form promises for a blank price). Shared by the public page and the owner's list.
-export function formatPrice(price: Product["price"]): string {
-  if (price === null || price === "") return "Inquiry";
-  const amount = Number(price);
-  if (!Number.isFinite(amount)) return "Inquiry";
-  return `$${Number.isInteger(amount) ? amount : amount.toFixed(2)}`;
-}
-
 const byOrder = (a: MyProductImage, b: MyProductImage) => a.sort_order - b.sort_order;
 
 /** The form's values for a saved product: its photos come as saved photos, in the order they are shown. */
