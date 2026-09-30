@@ -1,15 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
 import { formatPrice } from "@/lib/products";
-import type { PublicProduct } from "@/lib/public-site";
+import { fetchProductsPage, type PublicProductCard, type PublicProductsPage } from "@/lib/public-products";
 import CategoryFilter from "./category-filter";
 import { useSearch } from "./search-context";
 
 // The Products page content: the category filter ("ALL") and the products, each in a grey box with its picture. The
 // search box is in the top bar (business-header.tsx) and this list follows it.
+//
+// A business can have hundreds of products, so the list is paged: the server sends the first 24 (`initial`, with the
+// categories for the filter), and the browser asks the API for the rest ("Show more", or automatically when the end of the list
+// comes near), and for a search or a chosen category (the API does the searching, over ALL the products, not only the ones
+// loaded so far). Only what a card shows is sent (GET /product/summary in the API notes).
 //
 // Sizes (Figma 2063:8869 phone, 1957:532 tablet, 1424:452 desktop): a product is 350px wide (the full width on a phone
 // narrower than 382px) and at least 432px tall (the design's row height: a name on two lines fills it exactly). They
@@ -19,35 +24,99 @@ import { useSearch } from "./search-context";
 // be a size for three columns while only two fit, leaving the filter at the left edge of a block whose cards were centered. The filter sits at the left
 // edge of that block, 34px above the first row. On tablet and desktop the page has 30px around it.
 //
-// Not in the design, so placeholders: the words when there is nothing to show, and the filter's own popup (styled
-// like the account menu, category-filter.tsx). A card leads to the product's own page (product/[id]/, Figma 2108:344).
+// Not in the design, so placeholders: the words when there is nothing to show or something went wrong, "Show more", and the
+// filter's own popup (styled like the account menu, category-filter.tsx). A card leads to the product's own page (product/[id]/,
+// Figma 2108:344).
 
 const ALL = "";
+const SEARCH_DELAY_MS = 300;
 
-export default function ProductList({ products, slug }: { products: PublicProduct[]; slug: string }) {
+// What is on screen: the products of ONE search + category (`key`), as many pages of them as were asked for.
+interface View {
+  key: string;
+  items: PublicProductCard[];
+  total: number;
+  page: number;
+}
+const keyOf = (q: string, category: string) => `${q}|${category}`;
+
+export default function ProductList({ initial, userId, slug }: { initial: PublicProductsPage; userId: string; slug: string }) {
   const { query } = useSearch();
   const [category, setCategory] = useState(ALL);
+  const [search, setSearch] = useState("");
+  const [view, setView] = useState<View>({ key: keyOf("", ALL), items: initial.items, total: initial.total, page: 1 });
+  const [busy, setBusy] = useState(false); // a search / category is being loaded
+  const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
+  const [failed, setFailed] = useState(false);
+  const latest = useRef(0); // only the newest request may change the screen
 
-  // Every category the business uses, alphabetical, each once (however it is spelled in capitals).
-  const categories = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const p of products) if (!seen.has(p.category.toLowerCase())) seen.set(p.category.toLowerCase(), p.category);
-    return [...seen.values()].sort((a, b) => a.localeCompare(b));
-  }, [products]);
+  // What is searched is what was typed, a moment after the typing stopped.
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(query.trim()), SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const key = keyOf(search, category);
+
+  // A different search or category: its first page. The old products stay (a little faded) until the new ones are here.
+  useEffect(() => {
+    if (key === view.key) return;
+    const id = ++latest.current;
+    const controller = new AbortController();
+    (async () => {
+      setBusy(true);
+      setFailed(false);
+      try {
+        const page = await fetchProductsPage(userId, { q: search, category }, controller.signal);
+        if (id === latest.current) setView({ key, items: page.items, total: page.total, page: 1 });
+      } catch {
+        if (id === latest.current && !controller.signal.aborted) setFailed(true);
+      } finally {
+        if (id === latest.current) setBusy(false);
+      }
+    })();
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- view.key is compared, not watched: this runs for a new search/category
+  }, [key, userId, search, category]);
+
+  // The next page of what is on screen.
+  const showMore = useCallback(async () => {
+    if (moreBusy || busy || view.items.length >= view.total) return;
+    const id = ++latest.current;
+    setMoreBusy(true);
+    setFailed(false);
+    try {
+      const page = await fetchProductsPage(userId, { q: search, category, page: view.page + 1 });
+      if (id !== latest.current) return; // a newer search took over meanwhile
+      setView((now) => {
+        if (now.key !== view.key) return now;
+        const have = new Set(now.items.map((p) => p.id));
+        return { ...now, items: [...now.items, ...page.items.filter((p) => !have.has(p.id))], total: page.total, page: view.page + 1 };
+      });
+    } catch {
+      if (id === latest.current) setFailed(true);
+    } finally {
+      if (id === latest.current) setMoreBusy(false);
+    }
+  }, [moreBusy, busy, view, userId, search, category]);
+
+  // Loads the next page by itself when the end of the list is about to come into view (400px before it), so scrolling doesn't
+  // stop at a button. The "Show more" button stays for keyboards and for when this can't run.
+  const end = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = end.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const watcher = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && void showMore(), { rootMargin: "400px" });
+    watcher.observe(el);
+    return () => watcher.disconnect();
+  }, [showMore]);
 
   const filterOptions = useMemo(
-    () => [{ value: ALL, text: "All" }, ...categories.map((c) => ({ value: c, text: c }))],
-    [categories],
+    () => [{ value: ALL, text: "All" }, ...initial.categories.map((c) => ({ value: c, text: c }))],
+    [initial.categories],
   );
-
-  const shown = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return products.filter(
-      (p) =>
-        (category === ALL || p.category.toLowerCase() === category.toLowerCase()) &&
-        (needle === "" || p.product_name.toLowerCase().includes(needle) || p.category.toLowerCase().includes(needle)),
-    );
-  }, [products, query, category]);
+  const filtering = search !== "" || category !== ALL;
+  const hasMore = view.items.length < view.total;
 
   return (
     <main className="@container mx-auto flex w-full flex-col px-4 pb-2.5 md:px-7.5 md:pt-7.5">
@@ -56,28 +125,27 @@ export default function ProductList({ products, slug }: { products: PublicProduc
       <div className="mx-auto w-full max-w-87.5 @min-[740px]:max-w-185 @min-[1130px]:max-w-282.5">
         <CategoryFilter value={category} options={filterOptions} onChange={setCategory} />
 
-        {products.length === 0 && <p className="text-[14px] text-[#636363]">No products yet.</p>}
-        {products.length > 0 && shown.length === 0 && <p className="text-[14px] text-[#636363]">No products match your search.</p>}
+        {view.total === 0 && !busy && !failed && (
+          <p className="text-[14px] text-[#636363]">{filtering ? "No products match your search." : "No products yet."}</p>
+        )}
 
-        <ul className="flex flex-wrap justify-center gap-10">
-          {shown.map((product, index) => {
-            const image = product.images.find((i) => i.is_primary) ?? product.images[0];
-            return (
-              <li key={product.id} className="min-h-108 w-full @min-[350px]:w-87.5">
-                {/* The whole card (picture, name, price) leads to the product's own page (product/[id]). */}
-                <Link href={`/${slug}/product/${product.id}`} className="block">
+        <ul aria-busy={busy} className={`flex flex-wrap justify-center gap-10 transition-opacity duration-200 ${busy ? "opacity-50" : ""}`}>
+          {view.items.map((product, index) => (
+            <li key={product.id} className="min-h-108 w-full @min-[350px]:w-87.5">
+              {/* The whole card (picture, name, price) leads to the product's own page (product/[id]). */}
+              <Link href={`/${slug}/product/${product.id}`} className="block">
                 {/* The picture is shown whole (never cropped) inside a grey box with a soft shadow. */}
                 <div className="flex h-87.5 items-center justify-center bg-[#f9f9f9] p-6 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
-                  {image && (
+                  {product.image && (
                     <PlaceholderPicture
-                      avif={image.urls.card.avif}
-                      webp={image.urls.card.webp}
+                      avif={product.image.card.avif}
+                      webp={product.image.card.webp}
                       alt={product.product_name}
                       // The first few are on screen at once: load them at once. The rest wait until they come near.
                       loading={index < 3 ? "eager" : "lazy"}
                       className="size-full"
                       imgClassName="size-full object-contain"
-                      placeholder={image.placeholder}
+                      placeholder={product.image.placeholder}
                       // Only for an image with no blurred preview: the loading sweep covers the whole card (-inset-6
                       // undoes its p-6), no colour of its own, so the card's grey shows.
                       blockClassName="-inset-6"
@@ -86,11 +154,29 @@ export default function ProductList({ products, slug }: { products: PublicProduc
                 </div>
                 <h2 className="pt-3.25 pb-0.75 text-[16px] leading-5.5 font-medium text-[#111] wrap-break-word">{product.product_name}</h2>
                 <p className="text-[18px] leading-5.5 font-bold">{formatPrice(product.price)}</p>
-                </Link>
-              </li>
-            );
-          })}
+              </Link>
+            </li>
+          ))}
         </ul>
+
+        {/* The end of the list: what the observer above watches. */}
+        <div ref={end} className="flex flex-col items-center gap-2 pt-10 pb-6">
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => void showMore()}
+              disabled={moreBusy}
+              className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
+            >
+              {moreBusy ? "Loading…" : "Show more"}
+            </button>
+          )}
+          {failed && (
+            <p role="alert" className="text-[14px] text-red-600">
+              We couldn&apos;t load the products. Please try again.
+            </p>
+          )}
+        </div>
       </div>
     </main>
   );

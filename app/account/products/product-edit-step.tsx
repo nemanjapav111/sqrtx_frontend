@@ -57,6 +57,9 @@ export default function ProductEditStep({ id }: { id: string | null }) {
         // The form appears as soon as the product is here. The category list is the slowest answer and only the category box
         // needs it, so it fills in afterwards.
         const found = await productAsked;
+        // Remembered even if the visitor has already left the page (an answer that arrived is true whoever is looking).
+        const known = recall<Ready>(cacheKey)?.categories ?? [];
+        remember(cacheKey, { status: "ready", product: found, missing: !!id && !found, categories: known } satisfies Ready);
         if (cancelled) return;
         setLoad((now) => {
           const categories = now.status === "ready" ? now.categories : [];
@@ -67,12 +70,12 @@ export default function ProductEditStep({ id }: { id: string | null }) {
         });
 
         const categories = await categoriesAsked;
+        const saved = recall<Ready>(cacheKey);
+        if (saved) remember(cacheKey, { ...saved, categories });
         if (cancelled) return;
         setLoad((now) => {
           if (now.status !== "ready") return now;
-          const next = sameJson(now.categories, categories) ? now : { ...now, categories };
-          remember(cacheKey, next);
-          return next;
+          return sameJson(now.categories, categories) ? now : { ...now, categories };
         });
       } catch {
         // With the form already filled (from the last visit) a failed check is not worth an error box: it stays.

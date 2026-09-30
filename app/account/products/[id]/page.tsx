@@ -4,6 +4,12 @@ import ProductEditStep from "../product-edit-step";
 export const metadata = { title: "Edit product – sqrtx" };
 
 // Edits one of the owner's products: the registration page's fields, filled with what is saved.
+// The page is the same empty frame for every product (the product itself is loaded in the browser), so it is built once
+// and kept, instead of on every visit: an empty list means no id is built ahead, each is kept on its first visit.
+export function generateStaticParams() {
+  return [];
+}
+
 export default async function EditProduct({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return (

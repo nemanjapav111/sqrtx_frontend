@@ -115,6 +115,7 @@ export default function ProductDetail({
                   className="size-full"
                   imgClassName="size-full object-contain"
                   blockClassName="inset-0 bg-[#f9f9f9]"
+                  sweep={false}
                 />
               </div>
             )}
@@ -143,6 +144,7 @@ export default function ProductDetail({
                       className="size-full"
                       imgClassName="size-full object-cover"
                       blockClassName="inset-0 bg-[#f3f4f6]"
+                    sweep={false}
                     />
                   </button>
                 </li>

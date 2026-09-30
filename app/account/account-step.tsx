@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
@@ -39,9 +39,12 @@ function ButtonSkeleton() {
 }
 
 // Loads what the page shows, or sends the visitor away if they don't belong here (not logged in, or registration
-// not finished yet). `returned` is what the payment provider brought the user back with, if anything.
-export default function AccountStep({ returned }: { returned: "success" | "cancelled" | null }) {
+// not finished yet). `returned` is what the payment provider brought the user back with (?checkout=success or
+// ?checkout=cancelled), if anything: read here in the browser so the page itself can be static (see page.tsx).
+export default function AccountStep() {
   const router = useRouter();
+  const checkout = useSearchParams().get("checkout");
+  const returned = checkout === "success" || checkout === "cancelled" ? checkout : null;
   const session = useRequireSession();
   const [attempt, setAttempt] = useState(0); // "Try again" runs the loading again
   const [load, setLoad] = useState<Load>(() => recall<Ready>(CACHE_KEY) ?? { status: "loading" });

@@ -7,6 +7,15 @@ import ProductDetail from "./product-detail";
 // bottom bars and 404s a business that isn't public; this 404s a product that isn't shown to the public (the API says
 // so: its owner's registration isn't finished, the trial is over, the business no longer offers products) or that
 // belongs to another business than the address says.
+// Cacheable: no address is built ahead of time (an empty list), but each one is built on its FIRST visit and the finished
+// page is then kept and handed to every visitor (and to a CDN in front of the site) until it is renewed: after a minute (the
+// API answers it is built from are kept for 60 seconds, see lib/public-site.ts) or as soon as its owner saves something
+// (lib/refresh-public-page.ts clears the answers' labels, and with them this page). Without this the page was rendered again for every
+// single visit and sent "private, no-cache", which no CDN may keep.
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string; id: string }> }): Promise<Metadata> {
   const { slug, id } = await params;
   const business = await getBusiness(slug);

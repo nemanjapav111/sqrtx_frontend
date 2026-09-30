@@ -1,10 +1,10 @@
 // What a product's page shows the moment a card is clicked, while the server is still building the real page (a fraction of a
 // second). Without it Next keeps the OLD page on screen until the new one is ready, so a click seems to do nothing. It is
-// the real page's layout (product-detail.tsx, same boxes and sizes) drawn as plain grey blocks with the site's light sweep,
+// the real page's layout (product-detail.tsx, same boxes and sizes) drawn as plain grey blocks (no moving sweep),
 // so the page doesn't jump when the real one replaces it. The top bar and bottom bar are the layout's own and stay.
 function Block({ className }: { className: string }) {
   return (
-    <div aria-hidden className={`glass-shimmer relative overflow-hidden bg-[#f3f4f6] ${className}`} />
+    <div aria-hidden className={`bg-[#f3f4f6] ${className}`} />
   );
 }
 

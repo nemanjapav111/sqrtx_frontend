@@ -11,6 +11,15 @@ import { SearchProvider } from "./search-context";
 // links are in the top bar). Designed for phone, tablet and desktop (Figma 2063:8869, 1957:532, 1424:452). Only the
 // Products page (page.tsx) is designed and built so far: Services, Contact and About do not exist yet.
 // A business the API does not show (unknown address, registration not finished, trial or subscription ended) is a 404.
+// Cacheable: no address is built ahead of time (an empty list), but each one is built on its FIRST visit and the finished
+// page is then kept and handed to every visitor (and to a CDN in front of the site) until it is renewed: after a minute (the
+// API answers it is built from are kept for 60 seconds, see lib/public-site.ts) or as soon as its owner saves something
+// (lib/refresh-public-page.ts clears the answers' labels, and with them this page). Without this the page was rendered again for every
+// single visit and sent "private, no-cache", which no CDN may keep.
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const business = await getBusiness(slug);

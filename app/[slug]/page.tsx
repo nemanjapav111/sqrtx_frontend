@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getBusiness, getProducts } from "@/lib/public-site";
+import { getBusiness, getProductsPage } from "@/lib/public-site";
 import ProductList from "./product-list";
 
 // sqrtx.co/<address>: the business's public site opens on whichever of products or services it actually lists (see
@@ -8,6 +8,7 @@ import ProductList from "./product-list";
 // design (Figma 2063:8869, "Products Phone new") extended for tablet/desktop; there is no design at all yet for a
 // Services page, so a services-only business gets a plain placeholder instead (see below) rather than the empty,
 // mislabelled Products page ("No products yet.") this used to show it.
+// Only the FIRST page of products is built here (and kept, see generateStaticParams in the layout); the list asks for the rest.
 export default async function BusinessHome({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const business = await getBusiness(slug);
@@ -21,6 +22,6 @@ export default async function BusinessHome({ params }: { params: Promise<{ slug:
     );
   }
 
-  const products = await getProducts(business.user_id);
-  return <ProductList products={products} slug={slug.toLowerCase()} />;
+  const initial = await getProductsPage(business.user_id);
+  return <ProductList initial={initial} userId={business.user_id} slug={slug.toLowerCase()} />;
 }

@@ -94,12 +94,12 @@ function ProductsListInBrowser() {
         const state = await getOnboardingState();
         if (state.step !== "done") return router.replace(pathForStep(state.step)); // registration is not finished
         const result = await data;
+        const ready: Ready = { status: "ready", items: result.items, total: result.total, page: 1, categories: result.categories };
+        remember(listKey(search, category), ready); // even if the visitor has already left: an answer that arrived is true
         if (cancelled) return;
         // The category that was remembered may be gone (its last product was deleted): then show all.
         if (category && !result.categories.some((c) => c.toLowerCase() === category.toLowerCase())) return setCategory("");
         setMoreError(false);
-        const ready: Ready = { status: "ready", items: result.items, total: result.total, page: 1, categories: result.categories };
-        remember(listKey(search, category), ready);
         setLoad(ready);
       } catch {
         // With a list already on screen (from the last visit) a failed check is not worth an error box: it stays.

@@ -44,6 +44,7 @@ export default function PlaceholderPicture({
   imgClassName = "size-full",
   blurPx = 1,
   blockClassName,
+  sweep = true,
 }: {
   avif: string;
   webp: string;
@@ -65,6 +66,8 @@ export default function PlaceholderPicture({
   // picture inside a padded card, so the block can cover the whole card in the card's own colour and only the sweep
   // shows.
   blockClassName?: string;
+  // The light streak that moves over the loading block (no preview). Off: the block stays plain.
+  sweep?: boolean;
 }) {
   const preview = previewFrom(placeholder);
   const under = !!preview || !!poster; // something is drawn under the real picture until it has loaded
@@ -124,7 +127,7 @@ export default function PlaceholderPicture({
         !loaded && (
           <div
             aria-hidden
-            className={`glass-shimmer absolute overflow-hidden ${blockClassName ?? "inset-0 bg-[#f3f4f6]"}`}
+            className={`${sweep ? "glass-shimmer" : ""} absolute overflow-hidden ${blockClassName ?? "inset-0 bg-[#f3f4f6]"}`}
           />
         )
       )}

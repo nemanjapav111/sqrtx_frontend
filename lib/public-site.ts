@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { emptyProductsPage, productsPageQuery, type PublicProductsPage } from "@/lib/public-products";
 
 // Reading what visitors see (a business's public page), on the server. No login: these API routes are public. The
 // pages that use this are server components, so it doesn't use lib/api.ts (that one belongs to the logged-in browser).
@@ -83,19 +84,19 @@ export interface PublicProductDetail extends PublicProduct {
 // A product id is a UUID: anything else could never be found, so it isn't even asked for (the API would answer 400).
 export const isProductId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-export const getProducts = cache(async (userId: string) => (await getJson<PublicProduct[]>(`/product?user_id=${userId}`, 60, [productsTag(userId)])) ?? []);
+// The FIRST page of the business's product list (24 cards, with the categories for the filter): what the public page is built
+// from. The next pages, and any search or category, are asked for by the browser (lib/public-products.ts). Only what a card
+// shows is sent, see GET /product/summary in the API notes. Nothing found (a hidden business) is an empty page.
+export const getProductsPage = cache(
+  async (userId: string) =>
+    (await getJson<PublicProductsPage>(`/product/summary?${productsPageQuery(userId, {})}`, 60, [productsTag(userId)])) ?? emptyProductsPage,
+);
 
-// `userId`: the business the page is under (the caller must check the product really belongs to it).
-// The business's product list is what the visitor has just looked at and is already saved (see getProducts), and it holds
-// every detail of each product, so the product is taken from it: opening a product then doesn't wait for the API, which is
-// slow to answer (half a second or more) for a product nobody has opened in the last minute. Only when the list doesn't
-// have it (a product added in the last minute, before the saved list was renewed) is the single product asked for.
-export const getProduct = cache(async (id: string, userId: string): Promise<PublicProductDetail | null> => {
-  if (!isProductId(id)) return null;
-  const fromList = (await getProducts(userId)).find((product) => product.id === id);
-  if (fromList) return { ...fromList, user_id: userId };
-  return getJson<PublicProductDetail>(`/product/${id}`, 60, [productsTag(userId)]);
-});
+// `userId`: the business the page is under (the caller must check the product really belongs to it). One small request for
+// this one product (the product's own page needs its description and all its photos, which the light list doesn't have).
+export const getProduct = cache((id: string, userId: string) =>
+  isProductId(id) ? getJson<PublicProductDetail>(`/product/${id}`, 60, [productsTag(userId)]) : Promise.resolve(null),
+);
 
 /** The name of a business category from its id ("supplements" -> "Vitamins & supplements"), or null if unknown. */
 export const getCategoryName = cache(async (id: string) => {
