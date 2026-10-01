@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
-import { getOnboardingState, homePath } from "@/lib/onboarding";
+import { getHomePath } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
 
 // The landing page's "Log in" link. A visitor with no session goes to the login form, same as a plain link would.
@@ -20,8 +20,7 @@ export default function LoginLink({ className, children }: { className?: string;
       const { data } = await supabase.auth.getSession();
       if (!data.session) return router.push("/login");
       try {
-        const state = await getOnboardingState();
-        router.push(await homePath(state));
+        router.push(await getHomePath());
       } catch {
         // Couldn't tell where they belong (expired session, no connection, ...): the login form is the safe fallback.
         router.push("/login");

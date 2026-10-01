@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { getBusiness, getProduct } from "@/lib/public-site";
+import { notFound, permanentRedirect } from "next/navigation";
+import { idFromSegment, productSegment } from "@/lib/product-url";
+import { SITE_ORIGIN, getBusiness, getProduct } from "@/lib/public-site";
 import ProductDetail from "./product-detail";
 
-// A product's own page: sqrtx.co/<address>/product/<id>. The layout next to the list (../../layout.tsx) draws the top and
+// A product's own page: sqrtx.co/<address>/product/<name>-<id> (lib/product-url.ts: the id at the end finds the product, the name is
+// for people and search engines; a bare id, or an old name after a rename, is redirected to the current address, so a product has
+// one address only). The layout next to the list (../../layout.tsx) draws the top and
 // bottom bars and 404s a business that isn't public; this 404s a product that isn't shown to the public (the API says
 // so: its owner's registration isn't finished, the trial is over, the business no longer offers products) or that
 // belongs to another business than the address says.
@@ -17,19 +20,31 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string; id: string }> }): Promise<Metadata> {
-  const { slug, id } = await params;
+  const { slug, id: segment } = await params;
+  const id = idFromSegment(segment);
+  if (!id) return {};
   const business = await getBusiness(slug);
   if (!business) return {};
   const product = await getProduct(id, business.user_id);
   if (!product || product.user_id !== business.user_id) return {};
-  return { title: `${product.product_name} – ${business.company_name}`, description: product.description.slice(0, 160) };
+  return {
+    title: `${product.product_name} – ${business.company_name}`,
+    description: product.description.slice(0, 160),
+    // The product's one address, whichever form of it was asked for.
+    alternates: { canonical: `${SITE_ORIGIN}/${slug.toLowerCase()}/product/${productSegment(product.product_name, product.id)}` },
+  };
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string; id: string }> }) {
-  const { slug, id } = await params;
+  const { slug, id: segment } = await params;
+  const id = idFromSegment(segment);
+  if (!id) notFound();
   const business = await getBusiness(slug);
   if (!business) notFound();
   const product = await getProduct(id, business.user_id);
   if (!product || product.user_id !== business.user_id) notFound();
+  // Any other form of the address (the bare id, an old name, other capitals) goes to the current one.
+  const current = productSegment(product.product_name, product.id);
+  if (segment !== current) permanentRedirect(`/${slug.toLowerCase()}/product/${current}`);
   return <ProductDetail product={product} business={business} slug={slug.toLowerCase()} />;
 }

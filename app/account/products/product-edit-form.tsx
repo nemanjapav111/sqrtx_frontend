@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
 import PendingOverlay from "@/app/components/pending-overlay";
+import UploadProgress from "@/app/components/upload-progress";
 import ProductFields, { CONTROL_NAME } from "@/app/components/product-fields";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { forgetOwnerProducts } from "@/lib/memory-cache";
 import { refreshMyPublicPage } from "@/lib/onboarding";
-import { useAfterDelay } from "@/lib/use-after-delay";
+import { isSaved } from "@/lib/photos";
 import {
   createProduct,
   deleteProduct,
@@ -21,6 +22,7 @@ import {
   type ProductField,
   type ProductValues,
 } from "@/lib/products";
+import type { UploadStatus } from "@/lib/upload";
 
 const LIST_PATH = "/account/products";
 
@@ -29,7 +31,8 @@ const LIST_PATH = "/account/products";
 // saved copy of the public page, so the change shows there at once. Deleting asks first.
 // `editing` says which page this is right away (from the address), so the title doesn't change once the product has loaded.
 // `pending`, set by the step while it doesn't yet know the product or the category list: the form is shown anyway
-// (empty), under a PendingOverlay, and marked `inert` so it can't be used before that is known.
+// (empty) and marked `inert` so it can't be used before that is known. While it loads it is dimmed under the loading spinner box
+// (PendingOverlay), however long it takes; a failure shows the error box with "Try again" in the same place.
 // `onOutOfSync`: saving is several requests and can fail half way; the step then loads the product again and this form
 // shows what really is saved.
 export default function ProductEditForm({
@@ -63,9 +66,8 @@ export default function ProductEditForm({
   const inFlight = useRef(false); // the real "already working" guard: state would be stale for a second click in the same instant
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [upload, setUpload] = useState<UploadStatus | null>(null); // how the photos' upload is going, while saving
   const busy = phase !== "idle";
-  // Blocked (inert) at once, but only looks dimmed, with the "Loading" box, if it takes a moment (an error shows at once).
-  const showPending = useAfterDelay(pending === "loading", 200) || pending === "error";
 
   const bad =new Set(submitted ? invalidProductFields(values) : []);
   const invalid = (field: ProductField) => bad.has(field);
@@ -94,9 +96,10 @@ export default function ProductEditForm({
     setPhase("saving");
     try {
       try {
-        if (product) await saveProductEdits(product, values);
-        else await createProduct(values);
+        if (product) await saveProductEdits(product, values, setUpload);
+        else await createProduct(values, setUpload);
       } finally {
+        setUpload(null);
         forgetOwnerProducts(); // what the list and the product pages remembered is out of date, even if this only half worked
       }
       await refreshMyPublicPage();
@@ -148,7 +151,7 @@ export default function ProductEditForm({
           onSubmit={handleSubmit}
           noValidate
           inert={!!pending}
-          className={`flex w-full flex-col items-center transition-opacity duration-200 ${showPending ? "opacity-40" : ""}`}
+          className={`flex w-full flex-col items-center transition-opacity duration-200 ${pending ? "opacity-40" : ""}`}
         >
           <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-10 md:pb-8">
             <ProductFields values={values} onChange={setValues} invalid={invalid} categories={categories} />
@@ -164,11 +167,14 @@ export default function ProductEditForm({
 
           {/* Not in a design: messages under the button, in the same place as on the registration pages. */}
           <div className="min-h-9 w-full max-w-135 px-5 pt-3 text-center">
-            {phase === "saving" && (
-              <p role="status" className="text-[13px] font-medium text-[#4b5563]">
-                {editing ? "Saving your changes. This can take a moment." : "Uploading your product. This can take a moment."}
-              </p>
-            )}
+            {phase === "saving" &&
+              (upload ? (
+                <UploadProgress status={upload} what="photo" count={values.images.filter((image) => !isSaved(image)).length} />
+              ) : (
+                <p role="status" className="text-[13px] font-medium text-[#4b5563]">
+                  {editing ? "Saving your changes. This can take a moment." : "Uploading your product. This can take a moment."}
+                </p>
+              ))}
             {error && (
               <p role="alert" className="text-[14px] text-red-600">
                 {error}
@@ -213,7 +219,7 @@ export default function ProductEditForm({
             </div>
           )}
         </form>
-        {pending && showPending && <PendingOverlay state={pending} onRetry={onRetry} />}
+        {pending && <PendingOverlay state={pending} onRetry={onRetry} />}
       </div>
     </>
   );

@@ -1,8 +1,8 @@
 import { apiFetch, jsonBody } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { refreshPublicPage } from "@/lib/refresh-public-page";
-import { getBillingStatus } from "@/lib/billing";
-import { getMyProfile, slugFromUrl } from "@/lib/business-profile";
+import { getBootstrap, type Bootstrap } from "@/lib/bootstrap";
+import { slugFromUrl } from "@/lib/business-profile";
 
 // What GET /onboarding/me returns (see API.md in the backend).
 export type OnboardingStep = "business_profile" | "products" | "services" | "final" | "done";
@@ -59,17 +59,29 @@ export const pathForStep = (step: OnboardingStep) => STEP_PATHS[step];
 
 /**
  * Where a logged-in user belongs: the registration page they are on, or, once registration is finished, their own public
- * page (sqrtx.co/<their address>). Used after logging in and wherever a signed-in visitor is sent to "their page".
- * A finished user whose page is hidden (free trial over, not subscribed) goes to the account page instead, because their
- * public page would only say "not found" and the account page is where they subscribe. So does anyone whose profile or
- * billing can't be read right now.
+ * page (sqrtx.co/<their address>). A finished user whose page is hidden (free trial over, not subscribed) goes to the account
+ * page instead, because their public page would only say "not found" and the account page is where they subscribe.
+ */
+export function homePathFor({ onboarding, company_url, billing }: Bootstrap): string {
+  if (onboarding.step !== "done") return pathForStep(onboarding.step);
+  const slug = company_url ? slugFromUrl(company_url) : "";
+  return billing.has_access && slug ? `/${slug}` : pathForStep("done");
+}
+
+/** Asks the API where the signed-in user belongs (see homePathFor): one request. Throws if it can't be asked. */
+export async function getHomePath(): Promise<string> {
+  return homePathFor(await getBootstrap());
+}
+
+/**
+ * The same, for a page that already asked for the registration state: a user who is not finished belongs on their step's page
+ * without another request; a finished one is asked once (the bootstrap). Anyone whose answer can't be read right now goes to
+ * the account page.
  */
 export async function homePath(state: OnboardingState): Promise<string> {
   if (state.step !== "done") return pathForStep(state.step);
   try {
-    const [profile, billing] = await Promise.all([getMyProfile(), getBillingStatus()]);
-    const slug = profile ? slugFromUrl(profile.company_url) : "";
-    return billing.has_access && slug ? `/${slug}` : pathForStep("done");
+    return await getHomePath();
   } catch {
     return pathForStep("done");
   }

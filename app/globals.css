@@ -35,10 +35,47 @@ textarea {
   font-feature-settings: "calt" 0;
 }
 
+/* Where the scrollbar takes room (Windows, Linux with a mouse), a page that grows longer than the window gets a scrollbar of about
+   15px that squeezes everything to the left: the header, the cards, the centred block all jump (and the other way round when a page
+   gets shorter). Phones and Macs with overlay scrollbars take no room, so nothing happens there.
+   Most pages: the room is simply always kept (scrollbar-gutter). The business pages (the ones with data-site-header) cannot do that:
+   the line under their top bar has to go all the way across the window, and the kept strip is outside the page (the browser paints
+   it with the page's background colour only), so the line would stop 15px short. Instead the bar and the page are full width and
+   what is in them is padded on the right by the scrollbar's width minus the scrollbar that is there now: the content stays where it
+   is, whether the scrollbar is there or not. `--sbw` is the scrollbar's width, measured by the script in layout.tsx;
+   100vw - 100% is the width of the scrollbar that is there now (100vw counts it, the parent's width does not). */
+html:not(:has([data-site-header])) {
+  scrollbar-gutter: stable;
+}
+.keep-width {
+  padding-right: max(0px, calc(var(--sbw, 0px) - (100vw - 100%)));
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* A grey block standing in for text or a button that has not arrived yet: it "breathes" (fades softly down and back up, once every
+   2.2 seconds), so the page reads as alive but calm, with no spinner. Put `breathe` on the block; blocks that appear together
+   breathe together. Held still for people who ask their system for less motion. */
+.breathe {
+  animation: breathe 2.2s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .breathe {
+    animation: none;
+  }
 }
 
 /* A soft darker-grey streak that keeps sweeping across a light-grey placeholder, like a reflection gliding over

@@ -9,6 +9,7 @@ import LogoutButton from "@/app/components/logout-button";
 import ImageZone from "@/app/components/image-zone";
 import PageHeading from "@/app/components/page-heading";
 import PendingOverlay from "@/app/components/pending-overlay";
+import UploadProgress from "@/app/components/upload-progress";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { completeStep, pageAfter } from "@/lib/onboarding";
@@ -21,6 +22,7 @@ import {
   type ServiceField,
   type ServiceValues,
 } from "@/lib/services";
+import type { UploadStatus } from "@/lib/upload";
 import ArrowIcon from "../arrow-icon";
 
 // The form control that gets the cursor for each field that needs fixing.
@@ -58,6 +60,7 @@ export default function ServiceForm({
   const inFlight = useRef(false); // the real "already working" guard: state would be stale for a second click in the same instant
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null); // "... was added"
+  const [upload, setUpload] = useState<UploadStatus | null>(null); // how the photos' upload is going, while adding
   const busy = phase !== "idle";
 
   const bad = new Set(submitted ? invalidServiceFields(values) : []);
@@ -90,7 +93,7 @@ export default function ServiceForm({
 
     setPhase("adding");
     try {
-      const service = await createService(values);
+      const service = await createService(values, setUpload);
       // A category typed for the first time is offered from now on, on top so it is easy to find. Letter case
       // doesn't make a new category.
       setCategories((known) =>
@@ -103,6 +106,8 @@ export default function ServiceForm({
     } catch (err) {
       showError(err);
       return false;
+    } finally {
+      setUpload(null);
     }
   }
 
@@ -248,9 +253,13 @@ export default function ServiceForm({
 
           {/* The 70px between the two buttons in the design holds the messages, so they never move anything. */}
           <div className="flex h-17.5 w-full max-w-135 items-center justify-center px-5">
-            <p role="status" className="text-center text-[13px] font-medium text-[#4b5563]">
-              {phase === "adding" ? "Uploading your service. This can take a moment." : notice}
-            </p>
+            {phase === "adding" && upload ? (
+              <UploadProgress status={upload} what="photo" count={values.images.length} />
+            ) : (
+              <p role="status" className="text-center text-[13px] font-medium text-[#4b5563]">
+                {phase === "adding" ? "Uploading your service. This can take a moment." : notice}
+              </p>
+            )}
           </div>
 
           <button

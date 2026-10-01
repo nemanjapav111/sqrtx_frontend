@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getOnboardingState, homePath } from "@/lib/onboarding";
+import { getHomePath } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
 
 // For the login and register pages: someone whose browser still has a session doesn't need them, so they are sent to
@@ -22,8 +22,7 @@ export function useRedirectIfSignedIn(): boolean {
       if (!data.session || cancelled) return;
       setRedirecting(true);
       try {
-        const state = await getOnboardingState();
-        const path = await homePath(state);
+        const path = await getHomePath();
         if (!cancelled) router.replace(path); // replace: Back shouldn't return to the page they skipped
       } catch {
         if (!cancelled) setRedirecting(false);

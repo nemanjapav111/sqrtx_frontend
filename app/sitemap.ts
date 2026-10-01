@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_ORIGIN, getSitemapCount, getSitemapPage } from "@/lib/public-site";
+import { productPath } from "@/lib/product-url";
 
 // The sitemap: the list of addresses a search engine should visit. Without it a crawler finds only what it can reach by
 // clicking, and the products beyond a business's first 24 (which the page loads by "Show more") have no link it could follow.
@@ -29,6 +30,7 @@ export default async function sitemap(props: { id: Promise<string> }): Promise<M
       ? [SITE_ORIGIN, `${SITE_ORIGIN}/privacy`, `${SITE_ORIGIN}/terms`].map((url) => ({ url }))
       : []),
     ...[...businesses].map(([slug, lastModified]) => ({ url: `${SITE_ORIGIN}/${slug}`, lastModified })),
-    ...items.map(({ id: productId, slug, updated_at }) => ({ url: `${SITE_ORIGIN}/${slug}/product/${productId}`, lastModified: updated_at })),
+    // The one address of each product (its name and id), never the bare id, which would only redirect there.
+    ...items.map((product) => ({ url: `${SITE_ORIGIN}${productPath(product.slug, product)}`, lastModified: product.updated_at })),
   ];
 }

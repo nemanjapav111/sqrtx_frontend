@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import { apiUpload, type UploadStatus } from "@/lib/upload";
 import { priceOk } from "@/lib/products";
 import { isSaved, type ZonePhoto } from "@/lib/photos";
 
@@ -52,13 +53,13 @@ export function invalidServiceFields(v: ServiceValues): ServiceField[] {
 /** Every category that services use, most used first: the owner's own services and those of finished owners. */
 export const getServiceCategories = () => apiFetch<string[]>("/service/categories");
 
-/** Creates a service with its photos: multipart, the photos in the order shown (the first is the main one). */
-export function createService(v: ServiceValues) {
+/** Creates a service with its photos: multipart, the photos in the order shown (the first is the main one). `onProgress` hears how the upload goes. */
+export function createService(v: ServiceValues, onProgress?: (status: UploadStatus) => void) {
   const form = new FormData(); // no Content-Type: the browser adds it, with the boundary
   form.append("service_name", v.name.trim());
   form.append("category", v.category.trim());
   form.append("description", v.description.trim());
   if (v.price.trim() !== "") form.append("price", v.price.trim().replace(",", "."));
   for (const image of v.images) if (!isSaved(image)) form.append("images", image.file);
-  return apiFetch<Service>("/service", { method: "POST", body: form });
+  return apiUpload<Service>("/service", { method: "POST", body: form, onProgress });
 }

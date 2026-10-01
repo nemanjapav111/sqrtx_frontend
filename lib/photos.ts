@@ -48,10 +48,13 @@ const toBlob = (canvas: HTMLCanvasElement, type: string, quality: number) =>
  * rotation applied and no metadata, so no GPS position either). Returns the photo itself, untouched, when
  *   - it is already small and light (at most UPLOAD_MAX_SIDE and KEEP_AS_IS_BYTES), or
  *   - the browser can't read it (HEIC in most browsers: the server converts those), or
- *   - shrinking would not make it smaller.
- * Never throws.
+ *   - shrinking would not make it smaller, or
+ *   - `keepTransparency` is set (a logo, which may be see-through) and this browser can't make WebP: the JPEG on white it would
+ *     fall back to would change the logo, so the logo goes up as it is.
+ * With `keepIfLighterThan` (a logo) a file at most that heavy goes up untouched whatever its size in pixels: it uploads fast anyway, and
+ * every re-sizing is a small loss for a crisp logo. Never throws.
  */
-export async function shrinkPhoto(file: File): Promise<File> {
+export async function shrinkPhoto(file: File, options: { keepTransparency?: boolean; keepIfLighterThan?: number } = {}): Promise<File> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file); // applies the rotation stored in the photo
@@ -60,7 +63,8 @@ export async function shrinkPhoto(file: File): Promise<File> {
   }
   try {
     const longSide = Math.max(bitmap.width, bitmap.height);
-    if (longSide <= UPLOAD_MAX_SIDE && file.size <= KEEP_AS_IS_BYTES) return file;
+    const light = options.keepIfLighterThan !== undefined ? file.size <= options.keepIfLighterThan : longSide <= UPLOAD_MAX_SIDE && file.size <= KEEP_AS_IS_BYTES;
+    if (light) return file;
     const scale = Math.min(1, UPLOAD_MAX_SIDE / longSide); // never enlarged
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
@@ -75,6 +79,7 @@ export async function shrinkPhoto(file: File): Promise<File> {
 
     let blob = await toBlob(canvas, "image/webp", UPLOAD_QUALITY);
     if (blob?.type !== "image/webp") {
+      if (options.keepTransparency) return file;
       // This browser can't make WebP (some Safari versions return a PNG instead): a JPEG on white, which is fine for photos.
       context.globalCompositeOperation = "destination-over";
       context.fillStyle = "#fff";

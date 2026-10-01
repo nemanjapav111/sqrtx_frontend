@@ -59,7 +59,7 @@ export default function CategoryFilter({
         <svg aria-hidden viewBox="0 0 24 24" className="size-5 shrink-0" fill="none" stroke="#1e1e1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="m6 9 6 6 6-6" />
         </svg>
-        <span className="text-[12px] leading-[1.2] font-bold uppercase">{picked}</span>
+        <span className="text-[12px] leading-[1.2] font-bold">{picked}</span>
       </button>
 
       {open && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
@@ -25,17 +26,20 @@ const SECONDARY =
 // The billing part of the account page: where the free trial or subscription stands, the plans to choose from, and the
 // way to manage a subscription. Paying happens on the payment provider's own page (the browser is sent there): card
 // details never reach us. There is no design for it yet, so all wording is placeholder.
+// `returned` is what the payment provider brought the user back with (?checkout=success or ?checkout=cancelled), if anything. It
+// is read here, in the browser, because this part only exists once the data has arrived: the account page itself is built once
+// and never reads the address (see account/page.tsx).
 export default function BillingSection({
   billing,
   plans,
-  returned,
   onRefresh,
 }: {
   billing: BillingStatus;
   plans: BillingPlans;
-  returned: "success" | "cancelled" | null;
   onRefresh: () => Promise<void>;
 }) {
+  const checkout = useSearchParams().get("checkout");
+  const returned = checkout === "success" || checkout === "cancelled" ? checkout : null;
   const [busy, setBusy] = useState<PlanId | "portal" | null>(null);
   const inFlight = useRef(false); // the real "already working" guard: state would be stale for a second click in the same instant
   const [error, setError] = useState<string | null>(null);

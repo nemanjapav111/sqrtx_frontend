@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
 import PendingOverlay from "@/app/components/pending-overlay";
 import { supabase } from "@/lib/supabase";
-import { useAfterDelay } from "@/lib/use-after-delay";
 import { useRequireSession } from "@/lib/use-session";
 import ChangeEmailForm from "./change-email-form";
 import ChangePasswordForm from "./change-password-form";
@@ -36,9 +35,9 @@ export default function SettingsStep() {
   }, [session, attempt]);
 
   const pending = load.status === "ready" ? undefined : load.status;
-  // Blocked (inert) at once, but only looks dimmed, with the "Loading" box, if it takes a moment (an error shows at once).
+  // While it loads the two forms are shown empty, blocked (inert) and dimmed under the loading spinner box (PendingOverlay), however
+  // long it takes; a failure shows the error box with "Try again" in the same place.
   // Not remembered from the last visit like the account page: a pending email change is only known to Supabase's server.
-  const showPending = useAfterDelay(pending === "loading", 200) || pending === "error";
   const email = load.status === "ready" ? load.email : "";
   const pendingEmail = load.status === "ready" ? load.pendingEmail : null;
 
@@ -52,7 +51,7 @@ export default function SettingsStep() {
       <div className="relative flex w-full max-w-135 flex-col">
         <div
           inert={!!pending}
-          className={`flex w-full flex-col gap-12 px-5 pb-10 transition-opacity duration-200 md:pb-6 ${showPending ? "opacity-40" : ""}`}
+          className={`flex w-full flex-col gap-12 px-5 pb-10 transition-opacity duration-200 md:pb-6 ${pending ? "opacity-40" : ""}`}
         >
           {/* A fresh instance right as real data replaces the placeholder: ChangeEmailForm's `waitingFor` state only
               ever reads `pendingEmail` once, when it's created (see that file), so it needs to be re-created instead
@@ -62,7 +61,7 @@ export default function SettingsStep() {
           <ChangePasswordForm currentEmail={email} />
         </div>
 
-        {pending && showPending && (
+        {pending && (
           <PendingOverlay
             state={pending}
             onRetry={() => {

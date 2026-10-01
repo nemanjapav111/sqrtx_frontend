@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // A saved picture (AVIF first, WebP fallback, like API.md says) that never shows an empty hole while it downloads.
 //
 // (A `poster` can be given as well, see below.)
-// With a `placeholder` (the API's tiny 48 px WebP, a data URI that arrives with the page's data, so no request is
+// With a `placeholder` (the API's tiny 96 px WebP, a data URI that arrives with the page's data, so no request is
 // needed and it is already in the server-rendered HTML): it is drawn at once, softly blurred and scaled up, and the real
 // picture fades in over it when it has loaded ("blur-up"). The preview is removed once the fade is done, so it can't
 // show through a transparent logo. Anything that is not such a data URI (for example a placeholder in an older format)
@@ -17,16 +17,36 @@ import { useEffect, useRef, useState } from "react";
 // The image can finish loading before this component hydrates (it is server-rendered), and then `onLoad` never
 // fires: the effect catches that case. A picture that fails to load keeps whatever is behind it.
 //
+// Whatever is behind the picture (the blurred preview, the poster, or the loading block) stays until the browser has DECODED the
+// picture, not merely downloaded it (img.decode(), the way next/image removes its own blur and what MDN recommends): a picture that is
+// downloaded but not decoded is not painted, and without anything behind it that was a frame with an empty box, a flash of a few
+// milliseconds. The picture is drawn above what is behind it, so when it is ready in time it simply covers it and the placeholder is
+// never seen; when it is not, the placeholder shows those milliseconds instead of an empty box. A picture NEVER seen before then
+// fades in over it and comes into focus (the blur "developing", see FOCUS_BLUR_PX); one seen before (see `seen`) just replaces it, with no fade.
+//
 // `className`/`style` go on the box that holds everything, which must have a size of its own; the <img> fills it.
 // 400ms with a slow start and a slow end (ease-in-out): at 300ms and a fast start the picture seemed to pop out of the blur;
 // this reads as the blur "developing" into the photo.
 const FADE_MS = 400;
+// With a poster (the same photo, sharp, in a smaller size) there is no blur to "develop": the big picture only adds detail, so it fades
+// in faster. (At 400ms switching photos in a gallery felt like half a second of waiting for the detail.)
+const POSTER_FADE_MS = 200;
+// The "focus pull": over a blurred preview (no poster) the real picture does not only fade in, it also comes into focus: it starts
+// this blurry (CSS px) and sharpens while it fades, so the picture seems to resolve out of the preview instead of being laid over it.
+// Only the opacity and the blur change, both run on the GPU. Not with a poster (that is the same photo, sharp: nothing to focus) and
+// not for reduced motion (which gets no transition at all).
+const FOCUS_BLUR_PX = 8;
 
 // The pictures that have finished loading in this browser tab. Going to another page of the site and coming back draws
 // every picture again from the start; without this each one would replay its blurred preview and its fade, although the file
-// is in the browser's cache and nothing is downloaded. A picture in here is drawn as it is, at once. It is only ever filled in the
+// is in the browser's cache and nothing is downloaded. A picture in here is drawn without a fade: it replaces its placeholder as soon as it is decoded. It is only ever filled in the
 // browser (nothing loads on the server), so the server's first HTML and the browser's first drawing of it agree.
 const seen = new Set<string>();
+
+/** A picture that was loaded somewhere else on purpose (preloaded out of sight): when it is shown it replaces its placeholder at once, with no fade. */
+export const markSeen = (webp: string) => {
+  seen.add(webp);
+};
 
 // Only a WebP data URI is ever put in an <img src>: whatever the API sends, nothing else can end up there.
 const previewFrom = (placeholder: string | null | undefined) =>
@@ -42,7 +62,7 @@ export default function PlaceholderPicture({
   style,
   loading,
   imgClassName = "size-full",
-  blurPx = 1,
+  blurPx = 0.5,
   blockClassName,
   sweep = true,
 }: {
@@ -70,35 +90,60 @@ export default function PlaceholderPicture({
   sweep?: boolean;
 }) {
   const preview = previewFrom(placeholder);
-  const under = !!preview || !!poster; // something is drawn under the real picture until it has loaded
+  const under = !!preview || !!poster; // something is drawn under the real picture until it has been decoded
   const img = useRef<HTMLImageElement>(null);
   const posterImg = useRef<HTMLImageElement>(null);
   const [posterLoaded, setPosterLoaded] = useState(false);
-  // Loaded before (see `seen`): nothing to wait for or fade.
+  // The poster counts as ready only once the browser has DECODED it, not merely downloaded it: the blurred preview goes the moment it is
+  // ready, and a picture that is downloaded but not yet decoded is not painted, so between the two there was a frame with nothing (an
+  // empty box, a flash of a few milliseconds that showed on opening a product). decode() resolves when it can be painted at once; if it
+  // fails the preview simply stays.
+  const posterReady = () => {
+    const el = posterImg.current;
+    if (!el) return;
+    el.decode().then(() => setPosterLoaded(true), () => undefined);
+  };
+  // Loaded before (see `seen`): it does not fade in, it replaces what is behind it as soon as it is decoded.
   const [seenBefore] = useState(() => seen.has(webp));
-  const [loaded, setLoaded] = useState(seenBefore);
-  // The fade is over: the preview can go.
-  const [faded, setFaded] = useState(seenBefore);
+  const fade = !seenBefore;
+  const fadeMs = poster ? POSTER_FADE_MS : FADE_MS;
+  // The picture is decoded and can be painted at once (see the comment on top).
+  const [decoded, setDecoded] = useState(false);
+  // A fading picture: the fade is over, what is behind it can go.
+  const [faded, setFaded] = useState(false);
+  const decodedNow = useCallback(() => {
+    const el = img.current;
+    if (!el) return;
+    // decode() rejects if the picture cannot be decoded: whatever is behind it then stays.
+    el.decode().then(
+      () => {
+        seen.add(webp);
+        setDecoded(true);
+      },
+      () => undefined,
+    );
+  }, [webp]);
 
   useEffect(() => {
-    if (img.current?.complete && img.current.naturalWidth > 0) {
-      seen.add(webp);
-      setLoaded(true);
-    }
-  }, [webp]);
+    if (img.current?.complete && img.current.naturalWidth > 0) decodedNow();
+  }, [decodedNow]);
   useEffect(() => {
-    if (posterImg.current?.complete && posterImg.current.naturalWidth > 0) setPosterLoaded(true);
+    if (posterImg.current?.complete && posterImg.current.naturalWidth > 0) posterReady();
   }, [poster]);
   useEffect(() => {
-    if (!loaded || faded) return;
-    const timer = setTimeout(() => setFaded(true), FADE_MS + 50);
+    if (!decoded || !fade || faded) return;
+    const timer = setTimeout(() => setFaded(true), fadeMs + 50);
     return () => clearTimeout(timer);
-  }, [loaded, faded]);
+  }, [decoded, fade, faded, fadeMs]);
+  // What is behind the picture goes: at once when it is decoded, or when its fade is over.
+  const behindGone = decoded && (!fade || faded);
+  // The real picture is coming into focus (see FOCUS_BLUR_PX): from the moment it is rendered until its fade is over.
+  const focusing = !!preview && !poster && fade && !faded;
 
   return (
     <div className={`relative ${className ?? ""}`} style={style}>
       {under ? (
-        !faded && (
+        !behindGone && (
           <div aria-hidden className="absolute inset-0 overflow-hidden">
             {preview && !(poster && posterLoaded) && (
               // An <img> of the data URI, not a CSS background: it follows the picture's own fit (object-contain), so it
@@ -118,13 +163,13 @@ export default function PlaceholderPicture({
             {poster && (
               <picture className="absolute inset-0">
                 <source srcSet={poster.avif} type="image/avif" />
-                <img ref={posterImg} src={poster.webp} alt="" onLoad={() => setPosterLoaded(true)} className={imgClassName} />
+                <img ref={posterImg} src={poster.webp} alt="" onLoad={posterReady} className={imgClassName} />
               </picture>
             )}
           </div>
         )
       ) : (
-        !loaded && (
+        !decoded && (
           <div
             aria-hidden
             className={`${sweep ? "glass-shimmer" : ""} absolute overflow-hidden ${blockClassName ?? "inset-0 bg-[#f3f4f6]"}`}
@@ -137,16 +182,28 @@ export default function PlaceholderPicture({
           ref={img}
           src={webp}
           alt={alt}
-          loading={loading}
-          decoding="async"
-          onLoad={() => {
-            seen.add(webp);
-            setLoaded(true);
-          }}
-          className={`relative ${imgClassName} ${under && !seenBefore ? "transition-opacity ease-in-out" : ""} ${
-            under && !loaded ? "opacity-0" : ""
-          }`}
-          style={under && !seenBefore ? { transitionDuration: `${FADE_MS}ms` } : undefined}
+          // A picture seen before is never lazy either: its file is in the browser's cache, and a new lazy element is only started after
+          // the page has been laid out, a moment in which it would show an empty box.
+          loading={seenBefore ? "eager" : loading}
+          // A picture seen before is drawn again as a NEW element (going back to a page rebuilds it) and is decoded again, which took 8
+          // to 60 ms for a 604px card picture and more for a big one: "sync" asks the browser to decode before painting. (In Chrome
+          // and Safari that is already the default; "async" is what lets an empty box show.) One not seen yet keeps "async": its
+          // placeholder is on screen meanwhile and decoding must not hold the page. Either way it stays hidden behind nothing:
+          // the placeholder stays until decode() has finished (see the comment on top).
+          decoding={seenBefore ? "sync" : "async"}
+          onLoad={decodedNow}
+          // Only a fading picture is invisible until it is decoded, then fades in. One that is not fading is simply drawn: above
+          // the placeholder when it is ready, and not drawn at all (the placeholder shows) when it is not.
+          className={`relative ${imgClassName} ${
+            under && fade ? (focusing ? "transition-[opacity,filter] ease-in-out motion-reduce:transition-none" : "transition-opacity ease-in-out motion-reduce:transition-none") : ""
+          } ${under && fade && !decoded ? "opacity-0" : ""}`}
+          // While focusing it is blurred until decoded, then sharp (the transition between the two is the focus pull). clip-path keeps the
+          // blur from spreading past the box. Once the fade is over the filter is removed altogether (a filter of 0 would still keep a layer).
+          style={
+            under && fade
+              ? { transitionDuration: `${fadeMs}ms`, ...(focusing ? { filter: `blur(${decoded ? 0 : FOCUS_BLUR_PX}px)`, clipPath: "inset(0)" } : null) }
+              : undefined
+          }
         />
       </picture>
     </div>

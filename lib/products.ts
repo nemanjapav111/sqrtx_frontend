@@ -1,4 +1,5 @@
 import { apiFetch, jsonBody } from "@/lib/api";
+import { apiUpload, type UploadStatus } from "@/lib/upload";
 import { isSaved, type PickedPhoto, type ZonePhoto } from "@/lib/photos";
 
 // Re-exported so existing imports of these from lib/products keep working: the shrinking/thumbnail/validation
@@ -58,15 +59,15 @@ export function invalidProductFields(v: ProductValues): ProductField[] {
 /** Every category that products use, most used first: the owner's own products and those of finished owners. */
 export const getProductCategories = () => apiFetch<string[]>("/product/categories");
 
-/** Creates a product with its photos: multipart, the photos in the order shown (the first is the main one). */
-export function createProduct(v: ProductValues) {
+/** Creates a product with its photos: multipart, the photos in the order shown (the first is the main one). `onProgress` hears how the upload goes. */
+export function createProduct(v: ProductValues, onProgress?: (status: UploadStatus) => void) {
   const form = new FormData(); // no Content-Type: the browser adds it, with the boundary
   form.append("product_name", v.name.trim());
   form.append("category", v.category.trim());
   form.append("description", v.description.trim());
   if (v.price.trim() !== "") form.append("price", v.price.trim().replace(",", "."));
   for (const image of v.images) if (!isSaved(image)) form.append("images", image.file);
-  return apiFetch<Product>("/product", { method: "POST", body: form });
+  return apiUpload<Product>("/product", { method: "POST", body: form, onProgress });
 }
 
 // ---------- editing products that are already saved ----------
@@ -76,6 +77,8 @@ export interface MyProductImage {
   id: string;
   sort_order: number;
   is_primary: boolean;
+  // A tiny WebP data URI that becomes the blurred preview while the picture loads; null for an image saved before the API made them.
+  placeholder?: string | null;
   urls: { card: { avif: string; webp: string } };
 }
 
@@ -131,7 +134,7 @@ export function valuesFromProduct(p: MyProduct): ProductValues {
  * room for new ones); when none stay, the new ones go up first (so the product is never without a photo).
  * It is several requests, so it can fail half way: the caller reloads the product to show what really is saved.
  */
-export async function saveProductEdits(original: MyProduct, v: ProductValues): Promise<void> {
+export async function saveProductEdits(original: MyProduct, v: ProductValues, onProgress?: (status: UploadStatus) => void): Promise<void> {
   const changes: Record<string, unknown> = {};
   if (v.name.trim() !== original.product_name) changes.product_name = v.name.trim();
   if (v.category.trim() !== original.category) changes.category = v.category.trim();
@@ -152,7 +155,7 @@ export async function saveProductEdits(original: MyProduct, v: ProductValues): P
     if (picked.length === 0) return [] as { id: string }[];
     const form = new FormData();
     for (const photo of picked) form.append("images", photo.file);
-    return apiFetch<{ id: string }[]>(`/product-image/product/${original.id}`, { method: "POST", body: form });
+    return apiUpload<{ id: string }[]>(`/product-image/product/${original.id}`, { method: "POST", body: form, onProgress });
   };
   let created: { id: string }[];
   if (keptIds.size > 0) {

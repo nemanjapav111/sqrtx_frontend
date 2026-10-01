@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
 import Field from "@/app/components/field";
 import { GENERIC_ERROR, RATE_LIMIT_CODES, RATE_LIMIT_ERROR } from "@/lib/auth-messages";
-import { getOnboardingState, homePath } from "@/lib/onboarding";
+import { getHomePath } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
 import { useRedirectIfSignedIn } from "@/lib/use-redirect-if-signed-in";
 import { emailOk } from "@/lib/validation";
@@ -67,8 +67,7 @@ export default function LoginForm() {
 
       // Signed in. Ask the server how far this user got in registration and send them to that page.
       try {
-        const state = await getOnboardingState();
-        router.push(await homePath(state));
+        router.push(await getHomePath());
       } catch {
         setError(PROGRESS_ERROR);
       }

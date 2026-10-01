@@ -26,12 +26,12 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
   const { logo, provides } = business;
   const logoSize = logo ? logoDisplaySize(logo.width, logo.height) : null;
   return (
-    <header className="sticky top-0 z-30 bg-white">
-      {/* The line under the bar goes across the window; what is in the bar stops at 1440px (the design's width) and is
-          centered, like the page below it, so on a wide window the logo and the account icon are not left at the window's
-          two edges far from the content. */}
+    <header data-site-header className="sticky top-0 z-30 bg-white">
+      {/* The line under the bar goes across the window, and so does what is in the bar: the logo and the name at the window's
+          left edge, the account icon and "← sqrtx" at its right edge, as in the designs. Only on an extra wide window
+          (over 2200px) the bar's content stops and is centered, so the two ends are not left thousands of pixels apart. */}
       <div className="border-b border-[#b8b8b8]">
-      <div className="mx-auto flex w-full max-w-360 items-center">
+      <div className="keep-width mx-auto flex w-full max-w-550 items-center">
         <div className="flex min-w-0 flex-1 items-center gap-3.25 min-[1120px]:w-75.75 min-[1120px]:flex-none">
           <div className="flex h-17 shrink-0 items-center justify-start">
             {/* A grey block shows until the logo has loaded, which needs its size (from the API). */}
@@ -81,12 +81,12 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
 
       {/* Tablet only: the page links get their own row (54px). */}
       {/* max-[1120px] means "narrower than 1120px" (Tailwind's max-* is exclusive), the mirror of min-[1120px] (1120px and up). */}
-      <div className="hidden md:max-[1120px]:block">
+      <div className="keep-width hidden md:max-[1120px]:block">
         <HeaderLinks slug={slug} provides={provides} variant="tablet" />
       </div>
 
       {/* Phone and tablet: the search line. 20px above and below on the phone; on the tablet only below, centered and at most 390px wide. */}
-      <div className="py-5 md:pt-0 min-[1120px]:hidden">
+      <div className="keep-width py-5 md:pt-0 min-[1120px]:hidden">
         <div className="mx-auto max-w-97.5 px-4 md:px-5">
           <HeaderSearch variant="bar" />
         </div>

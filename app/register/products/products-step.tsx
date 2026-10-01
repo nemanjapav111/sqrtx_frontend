@@ -23,11 +23,15 @@ export default function ProductsStep() {
     let cancelled = false;
     (async () => {
       try {
+        // Asked for at the same time as the registration check, not after it (neither answer needs the other; see company-step.tsx).
+        // If the check sends the visitor elsewhere this answer is simply not used.
+        const categoriesAsked = getProductCategories(); // what products use, most used first
+        categoriesAsked.catch(() => undefined);
         const state = await getOnboardingState();
         // Coming back to this page from a later step is fine, as long as products are part of the user's path.
         // Before the profile is saved that path is just the first page, so this also sends them there.
         if (state.step === "done" || !state.steps.includes("products")) return router.replace(await homePath(state));
-        const categories = await getProductCategories(); // what products use, most used first
+        const categories = await categoriesAsked;
         if (!cancelled) setLoad({ status: "ready", categories });
       } catch {
         if (!cancelled) setLoad({ status: "error" });

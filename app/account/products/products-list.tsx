@@ -6,15 +6,16 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import CategoryFilter from "@/app/[slug]/category-filter";
 import BigLogo from "@/app/components/big-logo";
 import PendingOverlay from "@/app/components/pending-overlay";
+import PlaceholderPicture from "@/app/components/placeholder-picture";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { recall, remember } from "@/lib/memory-cache";
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
 import { formatPrice } from "@/lib/price";
 import { getMyProductsPage, type MyProduct } from "@/lib/products";
-import { useAfterDelay } from "@/lib/use-after-delay";
 import { useRequireSession } from "@/lib/use-session";
 
-type Ready = { status: "ready"; items: MyProduct[]; total: number; page: number; categories: string[] };
+// `key`: the search and category these products are for (see listKey), so a count left over from the LAST search is never taken for this one's.
+type Ready = { status: "ready"; key: string; items: MyProduct[]; total: number; page: number; categories: string[] };
 type Load = { status: "loading" } | { status: "error" } | Ready;
 
 // The first page of a search, as it was last time (see lib/memory-cache.ts): coming back from an edit page shows the list at
@@ -38,20 +39,71 @@ function readFilter(): { q: string; category: string } {
 }
 const subscribeToNothing = () => () => {};
 
+// Grey rows standing in for the products while they load: the same shape as a real row (a box with a small picture and two lines of
+// text), breathing (see `breathe` in globals.css).
+function SkeletonRows() {
+  return (
+    <>
+      {[0, 1, 2].map((n) => (
+        <li key={n} aria-hidden className="breathe flex items-center gap-4 border border-[#b8b8b8] p-2">
+          <div className="size-16 shrink-0 bg-[#e5e7eb]" />
+          <div className="flex flex-col gap-2">
+            <div className="h-4 w-40 rounded-sm bg-[#e5e7eb]" />
+            <div className="h-3.5 w-28 rounded-sm bg-[#e5e7eb]" />
+          </div>
+        </li>
+      ))}
+    </>
+  );
+}
+
 // The owner's list of their products (all of them, also the ones the public can't see), each leading to its edit page.
 // Built for hundreds of products: a search box (name or category), a category filter and "Show more" (20 at a time), all
 // done by the API, so the list never loads more than a page. No design for this page: it follows the account pages, and
-// its wording is placeholder. The page is shown at once, empty, under a PendingOverlay while the products load.
+// its wording is placeholder. The page is shown at once while the products load, with grey rows that breathe where they will be
+// (no spinner, no dimming, however long it takes); only a failure dims it and says so (PendingOverlay, with "Try again").
 export default function ProductsList() {
   // The remembered search only exists in the browser. Reading it while the page is built on the server would give a
   // different first picture than the browser's (a warning, and a flash of the wrong search text), so the list itself
-  // is only drawn in the browser; the title is drawn at once.
+  // is only drawn in the browser. What is on screen before that (the page's first HTML, from the first moment) is its loading
+  // state in the same sizes: the title, the "Add product" button and the search box, then grey placeholders for the filter, the number of products and the rows.
+  // The real page replaces it as soon as the browser's code has run.
   const inBrowser = useSyncExternalStore(subscribeToNothing, () => true, () => false);
   if (!inBrowser) {
     return (
       <>
         <BigLogo />
         <h1 className="pt-9.5 pb-10 text-[20px] font-semibold md:pt-6 md:pb-6">Your products</h1>
+        <div className="flex w-full max-w-135 flex-col">
+          <div className="flex w-full flex-col gap-5 px-5 pb-10 md:pb-6">
+            {/* The same two controls as the real page, there from the first moment ("Add product" already leads to its page; the
+                search box is for show until the real one replaces it, so nothing typed into it could be lost), then the grey
+                placeholders for the filter and the rows. */}
+            <Link
+              href="/account/products/new"
+              className="flex h-11 w-full items-center justify-center border-2 border-black bg-white text-[14px] font-bold"
+            >
+              Add product
+            </Link>
+            <input
+              type="search"
+              aria-label="Search your products"
+              placeholder="Search by name or category"
+              readOnly
+              tabIndex={-1}
+              className="h-11 w-full border border-black px-2 text-[16px] outline-none placeholder:text-[#8f8f8f]"
+            />
+            <div aria-hidden className="flex h-20.5 items-center justify-between gap-3">
+              <div className="mb-8.5 flex h-12 items-center pl-7">
+                <div className="breathe h-3 w-24 rounded-sm bg-[#e5e7eb]" />
+              </div>
+              <div className="breathe h-3.5 w-20 shrink-0 rounded-sm bg-[#e5e7eb]" />
+            </div>
+            <ul className="flex flex-col gap-3">
+              <SkeletonRows />
+            </ul>
+          </div>
+        </div>
       </>
     );
   }
@@ -95,7 +147,7 @@ function ProductsListInBrowser() {
         const state = await getOnboardingState();
         if (state.step !== "done") return router.replace(pathForStep(state.step)); // registration is not finished
         const result = await data;
-        const ready: Ready = { status: "ready", items: result.items, total: result.total, page: 1, categories: result.categories };
+        const ready: Ready = { status: "ready", key: listKey(search, category), items: result.items, total: result.total, page: 1, categories: result.categories };
         remember(listKey(search, category), ready); // even if the visitor has already left: an answer that arrived is true
         if (cancelled) return;
         // The category that was remembered may be gone (its last product was deleted): then show all.
@@ -131,11 +183,17 @@ function ProductsListInBrowser() {
   }
 
   const pending = load.status === "ready" ? undefined : load.status;
-  // Blocked (inert) at once, but only looks dimmed, with the "Loading" box, if it takes a moment (an error shows at once).
-  const showPending = useAfterDelay(pending === "loading", 200) || pending === "error";
+  const loading = pending === "loading";
+  const failed = pending === "error";
   const items = load.status === "ready" ? load.items : [];
   const total = load.status === "ready" ? load.total : 0;
   const filtering = search !== "" || category !== "";
+  // Whether the number of products is not known yet: while the page loads, and again from the moment a new search or category is
+  // asked for until its answer arrives (the list stays as it was meanwhile, but its number would be the old search's).
+  // Whether the list ON SCREEN is a filtered one. The empty message follows this, not `filtering`: after the search box is cleared the old
+  // (empty) result stays until the new answer arrives, and the message must not already say "You haven't added any products yet" over it.
+  const shownFiltered = load.status === "ready" && load.key !== listKey("", "");
+  const counting = load.status !== "ready" || load.key !== listKey(search, category) || typed.trim() !== search;
   const options = useMemo(
     () => [{ value: "", text: "All" }, ...(load.status === "ready" ? load.categories : []).map((c) => ({ value: c, text: c }))],
     [load],
@@ -149,7 +207,7 @@ function ProductsListInBrowser() {
       <div className="relative flex w-full max-w-135 flex-col">
         <div
           inert={!!pending}
-          className={`flex w-full flex-col gap-5 px-5 pb-10 transition-opacity duration-200 md:pb-6 ${showPending ? "opacity-40" : ""}`}
+          className={`flex w-full flex-col gap-5 px-5 pb-10 transition-opacity duration-200 md:pb-6 ${failed ? "opacity-40" : ""}`}
         >
           <Link
             href="/account/products/new"
@@ -169,7 +227,9 @@ function ProductsListInBrowser() {
           />
           <div className="flex items-center justify-between gap-3">
             <CategoryFilter value={category} options={options} onChange={setCategory} />
-            {load.status === "ready" && (
+            {counting ? (
+              <div aria-hidden className="breathe h-3.5 w-20 shrink-0 rounded-sm bg-[#e5e7eb]" />
+            ) : (
               <p role="status" className="text-right text-[13px] font-medium text-[#4b5563]">
                 {filtering ? `${total} found` : `${total} ${total === 1 ? "product" : "products"}`}
               </p>
@@ -178,12 +238,13 @@ function ProductsListInBrowser() {
 
           {load.status === "ready" && items.length === 0 && (
             <p className="text-[14px] text-[#636363]">
-              {filtering ? "No products match your search." : "You haven't added any products yet."}
+              {shownFiltered ? "No products match your search." : "You haven't added any products yet."}
             </p>
           )}
 
           <ul className="flex flex-col gap-3">
-            {items.map((product) => {
+            {loading && <SkeletonRows />}
+            {items.map((product, index) => {
               const image = [...product.images].sort((a, b) => a.sort_order - b.sort_order)[0];
               return (
                 <li key={product.id}>
@@ -193,8 +254,19 @@ function ProductsListInBrowser() {
                   >
                     <div className="size-16 shrink-0 bg-[#f9f9f9]">
                       {image && (
-                        // eslint-disable-next-line @next/next/no-img-element -- the API's files are already optimized (see API.md)
-                        <img src={image.urls.card.webp} alt="" loading="lazy" className="size-full object-contain" />
+                        // The same picture as the public page's cards: a blurred preview while it loads, none for one already
+                        // seen, and decoded before it is painted (see placeholder-picture.tsx). The rows in view load at once (a
+                        // lazy one is only started after the row has been laid out, a moment in which a picture that is already
+                        // in the browser's cache would still show an empty box); the rest wait until they come near.
+                        <PlaceholderPicture
+                          avif={image.urls.card.avif}
+                          webp={image.urls.card.webp}
+                          alt=""
+                          placeholder={image.placeholder}
+                          loading={index < 8 ? "eager" : "lazy"}
+                          className="size-full"
+                          imgClassName="size-full object-contain"
+                        />
                       )}
                     </div>
                     <div className="flex min-w-0 flex-col gap-1">
@@ -228,9 +300,9 @@ function ProductsListInBrowser() {
           )}
         </div>
 
-        {pending && showPending && (
+        {failed && (
           <PendingOverlay
-            state={pending}
+            state="error"
             onRetry={() => {
               setLoad({ status: "loading" });
               setAttempt((n) => n + 1);

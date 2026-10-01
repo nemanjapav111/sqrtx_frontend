@@ -17,80 +17,37 @@ import { SAVED_LOGIN_KEY, hasSavedLogin } from "@/lib/saved-login";
 // in a layout effect for client-side navigations. Only a browser that holds a saved login loads the library, to confirm it
 // (it may have expired) and to log out; the dot follows what it says. The menu opens with the saved login as its answer: Account
 // and Settings are plain links, and "Log out" loads the library when it is pressed.
-// The box: white, 1px #b8b8b8 border, sharp corners, no shadow, with a small triangle pointing up at the icon.
+// The menu is the same plain box as the category filter's (category-filter.tsx): white, 1px #b8b8b8 border, sharp corners, no
+// shadow, no pointer, the rows told apart by the same thin lines. (The design has a small triangle pointing up at the icon; it
+// was taken out on request, 2026-09-30, so that the two popups look alike.)
 //
-// The panel and its pointer are ONE traced outline (a single <path>, the same way the Figma design builds it: a
-// boolean union of the box and the pointer). It is drawn TWICE though, as two stacked <svg>s around the row content
-// rather than once: a plain white fill behind the rows, and the stroke alone again on top of the rows (see the
-// "menu" div below for why). Earlier this was two separate CSS boxes (a plain panel plus a rotated square for the
-// pointer) glued together with a negative margin: rotating an element always makes the browser paint it in a later
-// phase than a plain one, so the "rotated square" kept ending up on top of the panel instead of tucked behind it as
-// intended, drawing a stray line across the pointer where the panel's own border crossed it. One continuous shape
-// (even split into a fill copy and a stroke copy) can't have that problem.
-//
-// Rows and their text are smaller from 1120px up (desktop, the same breakpoint business-header.tsx switches on): a
-// mouse doesn't need the 44px touch target a phone/tablet does, and the design has no dropdown of its own to match
-// there anyway. So there are two panels below, not one: the same content, sized two ways, each shown by a plain
-// Tailwind breakpoint class (the same pattern business-header.tsx already uses for its tablet-only links row and its
-// desktop-only middle row) rather than a JS media-query check.
-const WIDTH = 203; // the design's width, in px (matches MENU_WIDTH below)
-const MENU_WIDTH = "w-50.75"; // 203px
-const ROW_HEIGHT = 44; // a tap target, matches the design
-const ROW_HEIGHT_DESKTOP = 36; // h-9, the same height as the desktop search box next to it (header-search.tsx)
-const POINTER_HEIGHT = 8;
-const POINTER_HALF_WIDTH = 7;
-// The icon sits a bit right of its 40px button's true centre (it has an 8px left margin and no matching right margin),
-// so the pointer's tip is aimed at the icon itself, not the button: 19.5px in from the button's (and so the menu's)
-// right edge.
-const TIP_X = WIDTH - 19.5;
+// Rows and their text are smaller from 1120px up (desktop, the same breakpoint business-header.tsx switches on): a mouse
+// doesn't need the 44px touch target a phone/tablet does, and the design has no dropdown of its own to match there anyway.
+// Plain Tailwind breakpoint classes, not a JS media-query check.
+const MENU_WIDTH = "w-50.75"; // 203px, the design's width
 
-// How far below the ROOT (the 40px button box) the menu starts. The icon itself is only 25px, centred in that 40px
-// box, so its own bottom edge sits 7.5px above the box's bottom edge; anchoring the gap to the box (as `top-full`
-// does) put the popup noticeably further from the icon than it looked like it should be. This anchors it to the
-// icon's actual bottom edge instead, with a small 4px gap up to the pointer's tip (which itself sits 0.5px inside
-// the svg's own top edge, see outlinePath).
+// How far below the ROOT (the 40px button box) the menu starts. The icon itself is only 25px, centred in that 40px box, so its
+// own bottom edge sits 7.5px above the box's bottom edge; the menu starts 4px under THAT edge (the gap the category popup has
+// under its row). Anchoring to the box (as `top-full` does) put the popup noticeably further from the icon.
 const ICON_BOTTOM = (40 - 25) / 2 + 25; // 32.5
-const MENU_TOP = ICON_BOTTOM + 4 - 0.5; // 36
-
-/** The combined outline of the panel and its pointer, as one path: box top edge, up to the tip, back down, then the
- * rest of the box. Traced 0.5px in from each edge so the 1px stroke isn't clipped by the SVG's own bounds. */
-function outlinePath(rows: number, rowHeight: number): string {
-  const boxTop = POINTER_HEIGHT;
-  const boxBottom = POINTER_HEIGHT + rows * rowHeight - 1;
-  const left = 0.5;
-  const right = WIDTH - 0.5;
-  const top = 0.5;
-  return [
-    `M ${left} ${boxTop}`,
-    `L ${TIP_X - POINTER_HALF_WIDTH} ${boxTop}`,
-    `L ${TIP_X} ${top}`,
-    `L ${TIP_X + POINTER_HALF_WIDTH} ${boxTop}`,
-    `L ${right} ${boxTop}`,
-    `L ${right} ${boxBottom}`,
-    `L ${left} ${boxBottom}`,
-    "Z",
-  ].join(" ");
-}
+const MENU_TOP = ICON_BOTTOM + 4; // 36.5
 
 function MenuRow({
   href,
   children,
   onClick,
   first,
-  compact,
   disabled,
 }: {
   href?: string;
   children: React.ReactNode;
   onClick?: () => void;
   first?: boolean;
-  compact: boolean;
   disabled?: boolean;
 }) {
-  // Same hover grey as the register page's dropdowns (category-select.tsx, address-field.tsx): the field-hint grey
-  // at low opacity, so it reads as "highlighted", not a different, unrelated colour. Desktop text matches the size
-  // of the nav links and "← sqrtx" beside it (header-links.tsx, business-header.tsx: both text-[14px]).
-  const cls = `flex items-center px-4.25 hover:bg-[#4b5563]/10 ${compact ? "h-9 text-[14px]" : "h-11 text-[16px]"} ${
+  // Same hover grey as the register page's dropdowns and the category popup (the field-hint grey at low opacity). Desktop text
+  // matches the size of the nav links and "← sqrtx" beside it (header-links.tsx, business-header.tsx: both text-[14px]).
+  const cls = `flex h-11 items-center px-4.25 text-[16px] hover:bg-[#4b5563]/10 min-[1120px]:h-9 min-[1120px]:text-[14px] ${
     first ? "" : "border-t border-[#b8b8b8]"
   }`;
   return href ? (
@@ -183,64 +140,7 @@ export default function VisitorIcon() {
   );
 
   const signedIn = confirmed ?? saved;
-  const rows = signedIn ? 3 : 2;
   const onNavigate = () => setOpen(false);
-
-  // One panel, sized either the phone/tablet way or the desktop way (see the file comment for why there are two).
-  function panel(compact: boolean) {
-    const rowHeight = compact ? ROW_HEIGHT_DESKTOP : ROW_HEIGHT;
-    const height = POINTER_HEIGHT + rows * rowHeight;
-    const path = outlinePath(rows, rowHeight);
-    return (
-      <div
-        role="menu"
-        style={{ top: MENU_TOP, height }}
-        className={`absolute right-0 z-40 ${MENU_WIDTH} ${compact ? "hidden min-[1120px]:block" : "min-[1120px]:hidden"}`}
-      >
-        {/* The panel's white fill, behind the rows. No stroke here: the border is drawn again, on top of the
-            rows (below), so a hovered row's own background never paints over it. */}
-        <svg aria-hidden width={WIDTH} height={height} viewBox={`0 0 ${WIDTH} ${height}`} className="absolute inset-0">
-          <path d={path} fill="white" />
-        </svg>
-        <div className="absolute inset-x-0 bottom-0 flex flex-col" style={{ top: POINTER_HEIGHT }}>
-          {signedIn ? (
-            <>
-              <MenuRow href="/account" onClick={onNavigate} first compact={compact}>
-                Account
-              </MenuRow>
-              <MenuRow href="/account/settings" onClick={onNavigate} compact={compact}>
-                Settings
-              </MenuRow>
-              <MenuRow onClick={logOut} disabled={leaving} compact={compact}>
-                {leaving ? "Logging out…" : "Log out"}
-              </MenuRow>
-            </>
-          ) : (
-            <>
-              <MenuRow href="/login" onClick={onNavigate} first compact={compact}>
-                Log In
-              </MenuRow>
-              <MenuRow href="/register" onClick={onNavigate} compact={compact}>
-                Register
-              </MenuRow>
-            </>
-          )}
-        </div>
-        {/* The same outline again, stroke only (no fill, so it hides nothing underneath). Plain, untransformed
-            siblings paint in DOM order, so being last here keeps the 1px border visible even where a row above
-            it is hovered. pointer-events-none so clicks still reach the rows underneath it. */}
-        <svg
-          aria-hidden
-          width={WIDTH}
-          height={height}
-          viewBox={`0 0 ${WIDTH} ${height}`}
-          className="pointer-events-none absolute inset-0"
-        >
-          <path d={path} fill="none" stroke="#b8b8b8" strokeWidth="1" />
-        </svg>
-      </div>
-    );
-  }
 
   return (
     <div ref={rootRef} suppressHydrationWarning className="group relative flex size-10 items-center">
@@ -265,10 +165,30 @@ export default function VisitorIcon() {
       />
 
       {open && (
-        <>
-          {panel(false)}
-          {panel(true)}
-        </>
+        <div role="menu" style={{ top: MENU_TOP }} className={`absolute right-0 z-40 flex flex-col border border-[#b8b8b8] bg-white ${MENU_WIDTH}`}>
+          {signedIn ? (
+            <>
+              <MenuRow href="/account" onClick={onNavigate} first>
+                Account
+              </MenuRow>
+              <MenuRow href="/account/settings" onClick={onNavigate}>
+                Settings
+              </MenuRow>
+              <MenuRow onClick={logOut} disabled={leaving}>
+                {leaving ? "Logging out…" : "Log out"}
+              </MenuRow>
+            </>
+          ) : (
+            <>
+              <MenuRow href="/login" onClick={onNavigate} first>
+                Log In
+              </MenuRow>
+              <MenuRow href="/register" onClick={onNavigate}>
+                Register
+              </MenuRow>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

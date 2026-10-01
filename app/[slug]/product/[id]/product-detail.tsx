@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import PlaceholderPicture from "@/app/components/placeholder-picture";
+import { useCallback, useEffect, useRef, useState } from "react";
+import PlaceholderPicture, { markSeen } from "@/app/components/placeholder-picture";
 import ArrowIcon from "@/app/register/arrow-icon";
 import { formatPrice } from "@/lib/price";
 import type { PublicBusiness, PublicProductDetail } from "@/lib/public-site";
 import BackToProducts from "../../back-to-products";
+import PhotoViewer from "./photo-viewer";
 
 // A product's own page, in the three sizes of the designs (Figma 2108:344 phone 360 x 840, 1988:1874 tablet 768 x 909,
 // 1560:134 desktop 1440 x 1024). The top bar is the site's own (the layout draws it); the back arrow to the products is
@@ -25,6 +26,7 @@ import BackToProducts from "../../back-to-products";
 //    and the button stays in view.
 //  - What "View contact" does: it opens the business's contact details in a box that floats under the button (there is no Contact page yet): phone,
 //    email, address (a map link), hours and social pages, no name (it is in the top bar already).
+//  - A click on the big photo opens it in the photo viewer (photo-viewer.tsx): the "full" size, as large as the window allows.
 //  - The chosen small photo has a thin black outline; the photo arrows go round (after the last comes the first) and only
 //    show when there is more than one photo; a product with one photo has no small ones.
 // Between the designs' widths it keeps its shape instead of stretching: the content never grows past 1440px and is centered,
@@ -43,6 +45,9 @@ export default function ProductDetail({
 }) {
   const images = [...product.images].sort((a, b) => a.sort_order - b.sort_order);
   const [selected, setSelected] = useState(0);
+  const [viewing, setViewing] = useState(false); // the photo viewer is open
+  const [fullWarm, setFullWarm] = useState<number | null>(null); // the photo whose full size is loaded out of sight (the pointer is on it)
+  const photo = useRef<HTMLButtonElement>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const contactRef = useRef<HTMLDivElement>(null);
   // The contact box floats over the page, so it closes like the account menu does: a click outside it, or Escape.
@@ -69,7 +74,11 @@ export default function ProductDetail({
   const [warm, setWarm] = useState<number[]>([]);
   const toLoad = new Set([...warm, (selected + 1) % images.length, (selected - 1 + images.length) % images.length]);
   toLoad.delete(selected);
-  const step = (by: number) => setSelected((i) => (i + by + images.length) % images.length);
+  const step = useCallback((by: number) => setSelected((i) => (i + by + images.length) % images.length), [images.length]);
+  const closeViewer = useCallback(() => {
+    setViewing(false);
+    photo.current?.focus(); // back to the photo that was clicked
+  }, []);
 
   return (
     <div className="flex w-full flex-1 flex-col">
@@ -102,6 +111,16 @@ export default function ProductDetail({
             {/* The photo is shown whole. key: a new photo starts its own loading picture instead of showing the old one. */}
             {shown && (
               <div className="h-full min-w-0 flex-1">
+                {/* A button, so the photo can be opened with the keyboard too. The full size starts loading as soon as the pointer is on it. */}
+                <button
+                  ref={photo}
+                  type="button"
+                  onClick={() => setViewing(true)}
+                  onPointerEnter={() => setFullWarm(selected)}
+                  onFocus={() => setFullWarm(selected)}
+                  aria-label="Enlarge photo"
+                  className="block size-full cursor-zoom-in"
+                >
                 <PlaceholderPicture
                   key={shown.id}
                   // The small version of this photo is already there (its square is on the page): shown sharp while the big
@@ -117,19 +136,22 @@ export default function ProductDetail({
                   blockClassName="inset-0 bg-[#f9f9f9]"
                   sweep={false}
                 />
+                </button>
               </div>
             )}
             {images.length > 1 && <PhotoArrow direction="next" onClick={() => step(1)} />}
           </div>
 
           {images.length > 1 && (
-            <ul className="flex flex-wrap justify-center gap-2.5 self-center px-4 md:px-0 min-[1120px]:max-w-148">
+            <ul className="flex flex-wrap justify-start gap-2.5 self-center px-4 md:px-0 min-[1120px]:max-w-148">
               {images.map((image, i) => (
                 <li key={image.id}>
                   <button
                     type="button"
                     onClick={() => setSelected(i)}
                     onPointerEnter={() => setWarm((now) => (now.includes(i) ? now : [...now, i]))}
+                    // A finger gives no "enter" before the tap: its first touch is the earliest sign it is about to choose this one.
+                    onPointerDown={() => setWarm((now) => (now.includes(i) ? now : [...now, i]))}
                     onFocus={() => setWarm((now) => (now.includes(i) ? now : [...now, i]))}
                     aria-label={`Show photo ${i + 1} of ${images.length}`}
                     aria-current={i === selected}
@@ -187,11 +209,20 @@ export default function ProductDetail({
             toLoad.has(i) && (
               <picture key={image.id}>
                 <source srcSet={image.urls.detail.avif} type="image/avif" />
-                <img src={image.urls.detail.webp} alt="" />
+                {/* Once it has loaded it counts as seen: choosing it then swaps it in at once instead of fading it in over its small version. */}
+                <img src={image.urls.detail.webp} alt="" onLoad={() => markSeen(image.urls.detail.webp)} />
               </picture>
             ),
         )}
+        {/* The full size of the photo the pointer is on, so the viewer has it (or most of it) by the time of the click. */}
+        {fullWarm !== null && images[fullWarm] && (
+          <picture key={`full-${images[fullWarm].id}`}>
+            <source srcSet={images[fullWarm].urls.full.avif} type="image/avif" />
+            <img src={images[fullWarm].urls.full.webp} alt="" onLoad={() => markSeen(images[fullWarm].urls.full.webp)} />
+          </picture>
+        )}
       </div>
+      {viewing && <PhotoViewer images={images} index={selected} name={product.product_name} onStep={step} onClose={closeViewer} />}
       </div>
     </div>
   );

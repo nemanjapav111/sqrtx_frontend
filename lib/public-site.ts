@@ -28,14 +28,14 @@ export interface PublicBusiness {
 }
 
 // One image of a product; `urls.card` is the size for the product card (fits inside 604 x 604, shown at 302 x 302),
-// `urls.detail` the size for the product's own page (fits inside 1536 x 900).
+// `urls.detail` the size for the product's own page (fits inside 1536 x 900), `urls.full` the one for the photo viewer (fits inside 1920 x 1920).
 export interface PublicProductImage {
   id: string;
   is_primary: boolean;
   // A tiny WebP data URI that becomes the blurred preview; null for an image saved before the API made them.
   placeholder: string | null;
   sort_order: number;
-  urls: { card: { avif: string; webp: string }; detail: { avif: string; webp: string } };
+  urls: { card: { avif: string; webp: string }; detail: { avif: string; webp: string }; full: { avif: string; webp: string } };
 }
 
 // What GET /product?user_id=... returns for each product. `price` can arrive as a string (a Postgres numeric) or null.
@@ -115,7 +115,7 @@ export const SITEMAP_PRODUCTS_PER_FILE = 10000;
 
 // What GET /product/sitemap returns: every product the public can see, with the address of its business.
 export interface SitemapPage {
-  items: { id: string; slug: string; updated_at: string }[];
+  items: { id: string; product_name: string; slug: string; updated_at: string }[];
   total: number;
 }
 

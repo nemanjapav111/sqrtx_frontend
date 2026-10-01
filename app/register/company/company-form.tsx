@@ -6,6 +6,7 @@ import BigLogo from "@/app/components/big-logo";
 import Field from "@/app/components/field";
 import PageHeading from "@/app/components/page-heading";
 import PendingOverlay from "@/app/components/pending-overlay";
+import UploadProgress from "@/app/components/upload-progress";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import {
@@ -16,6 +17,8 @@ import {
   invalidFields,
   isSlugAvailable,
   logoProblemOf,
+  LOGO_KEEP_AS_IS_BYTES,
+  logoTypeProblem,
   readImageSize,
   slugOk,
   updateProfile,
@@ -26,8 +29,9 @@ import {
   type ProfileValues,
 } from "@/lib/business-profile";
 import { forgetOwnerProfile } from "@/lib/memory-cache";
+import { shrinkPhoto } from "@/lib/photos";
+import type { UploadStatus } from "@/lib/upload";
 import { getOnboardingState, pageAfter, refreshMyPublicPage } from "@/lib/onboarding";
-import { useAfterDelay } from "@/lib/use-after-delay";
 import ArrowIcon from "../arrow-icon";
 import AddressField from "./address-field";
 import CategorySelect from "@/app/components/category-select";
@@ -77,7 +81,8 @@ function ProvidesBox({ name, label, checked, invalid, onChange }: { name: string
 // editing the profile after registration, /account/profile: "Save changes" goes back to the account page and the
 // site forgets its saved copy of the public page, so the change shows there at once).
 // `pending`, set by CompanyStep while it doesn't yet know which of those `profile` is: the form is shown anyway
-// (empty), under a PendingOverlay, and marked `inert` so it can't be used before that is known.
+// (empty) and marked `inert` so it can't be used before that is known. While it loads it is dimmed under the loading spinner box
+// (PendingOverlay), however long it takes; a failure shows the error box with "Try again" in the same place.
 export default function CompanyForm({
   profile,
   categories,
@@ -94,8 +99,6 @@ export default function CompanyForm({
   const router = useRouter();
   const editing = profile !== null;
   const account = variant === "account";
-  // Blocked (inert) at once, but only looks dimmed, with the "Loading" box, if it takes a moment (an error shows at once).
-  const showPending = useAfterDelay(pending === "loading", 200) || pending === "error";
   const [values, setValues] = useState<ProfileValues>(() => {
     if (!profile) return emptyValues;
     const saved = valuesFromProfile(profile);
@@ -107,6 +110,7 @@ export default function CompanyForm({
   // Red lines stay hidden until the user clicks Next once. After that they update as the user types.
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false); // only used to grey out the button
+  const [upload, setUpload] = useState<UploadStatus | null>(null); // how the logo's upload is going, while saving
   const inFlight = useRef(false); // the real "already sending" guard: state would be stale for a second submit in the same instant
   const [error, setError] = useState<string | null>(null);
 
@@ -117,13 +121,31 @@ export default function CompanyForm({
   const slugState = slugCheck?.slug === values.slug ? slugCheck.state : null;
   const slugTaken = slugState === "taken";
 
-  const logoIssue = logoProblemOf(values);
+  // The logo that was picked last, and whether it is still being shrunk (see pickLogo).
+  const picked = useRef<File | null>(null);
+  const [shrinking, setShrinking] = useState(false);
+  const logoIssue = logoProblemOf(values, shrinking);
 
-  // A new file: forget the old file's size, then read this one's. If the user picked another file meanwhile,
-  // this answer is for an old file and is dropped.
+  // A new file: it is shown at once, its size is read (the minimum size is about the picture the owner chose), and a big one is shrunk
+  // in the browser, the way product photos are (phone photos and big exports are 5 to 25 MB, a logo needs 220 x 136 px): the shrunk
+  // file replaces it as what is uploaded. A logo up to 3 MB is left alone, and so is one the browser can't make a WebP of (a
+  // see-through logo must not turn into a JPEG on white), so most logos are never re-compressed. If the user picked another file
+  // meanwhile, an answer about an old file is dropped. The Save button waits while the shrinking runs (a second at most).
   function pickLogo(file: File | null) {
+    picked.current = file;
     set({ logo: file, logoSize: null });
-    if (file) readImageSize(file).then((size) => setValues((v) => (v.logo === file ? { ...v, logoSize: size } : v)));
+    setShrinking(false);
+    if (!file) return;
+    readImageSize(file).then((size) => {
+      if (picked.current === file) setValues((v) => ({ ...v, logoSize: size }));
+    });
+    if (logoTypeProblem(file)) return; // not a usable kind of file: the message says so
+    setShrinking(true);
+    shrinkPhoto(file, { keepTransparency: true, keepIfLighterThan: LOGO_KEEP_AS_IS_BYTES }).then((ready) => {
+      if (picked.current !== file) return;
+      setShrinking(false);
+      if (ready !== file) setValues((v) => ({ ...v, logo: ready }));
+    });
   }
   const bad = new Set(submitted ? invalidFields(values, !!profile?.logo, categories) : []);
   const invalid = (field: FieldName) => bad.has(field) || (field === "slug" && slugTaken);
@@ -173,8 +195,9 @@ export default function CompanyForm({
     setSending(true);
     try {
       try {
-        await (editing ? updateProfile(values) : createProfile(values));
+        await (editing ? updateProfile(values, setUpload) : createProfile(values, setUpload));
       } finally {
+        setUpload(null);
         if (account) forgetOwnerProfile(); // what the account pages remembered of the profile is out of date, even if this half worked
       }
       await goToNextPage();
@@ -218,7 +241,7 @@ export default function CompanyForm({
           onSubmit={handleSubmit}
           noValidate
           inert={!!pending}
-          className={`flex w-full flex-col items-center transition-opacity duration-200 ${showPending ? "opacity-40" : ""}`}
+          className={`flex w-full flex-col items-center transition-opacity duration-200 ${pending ? "opacity-40" : ""}`}
         >
           <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5 md:pb-8">
             <Field
@@ -372,7 +395,7 @@ export default function CompanyForm({
 
           <button
             type="submit"
-            disabled={sending}
+            disabled={sending || shrinking}
             className="flex cursor-pointer items-center gap-1 bg-black px-17.25 py-2.75 font-bold text-white disabled:cursor-wait disabled:opacity-60"
           >
             {account ? (
@@ -385,6 +408,13 @@ export default function CompanyForm({
             )}
           </button>
 
+          {/* While the logo goes up: how far it is (not in the design). */}
+          {upload && (
+            <div className="w-full max-w-135 px-5 pt-5">
+              <UploadProgress status={upload} what="logo" />
+            </div>
+          )}
+
           {/* Problems from the server or the connection. Not in the design yet. */}
           {error && (
             <p role="alert" className="w-full max-w-135 px-5 pt-5 text-center text-[14px] text-red-600">
@@ -393,7 +423,7 @@ export default function CompanyForm({
           )}
           <div className="pb-17.5 md:pb-8" />
         </form>
-        {pending && showPending && <PendingOverlay state={pending} onRetry={onRetry} />}
+        {pending && <PendingOverlay state={pending} onRetry={onRetry} />}
       </div>
     </>
   );

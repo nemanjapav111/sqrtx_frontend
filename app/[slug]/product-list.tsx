@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
 import { formatPrice } from "@/lib/price";
+import { productPath } from "@/lib/product-url";
 import { fetchProductsPage, type PublicProductCard, type PublicProductsPage } from "@/lib/public-products";
 import CategoryFilter from "./category-filter";
 import { useSearch } from "./search-context";
@@ -129,11 +130,11 @@ export default function ProductList({ initial, userId, slug }: { initial: Public
           <p className="text-[14px] text-[#636363]">{filtering ? "No products match your search." : "No products yet."}</p>
         )}
 
-        <ul aria-busy={busy} className={`flex flex-wrap justify-center gap-10 transition-opacity duration-200 ${busy ? "opacity-50" : ""}`}>
+        <ul aria-busy={busy} className={`flex flex-wrap justify-start gap-10 transition-opacity duration-200 ${busy ? "opacity-50" : ""}`}>
           {view.items.map((product, index) => (
             <li key={product.id} className="min-h-108 w-full @min-[350px]:w-87.5">
               {/* The whole card (picture, name, price) leads to the product's own page (product/[id]). */}
-              <Link href={`/${slug}/product/${product.id}`} className="block">
+              <Link href={productPath(slug, product)} className="block">
                 {/* The picture is shown whole (never cropped) inside a grey box with a soft shadow. */}
                 <div className="flex h-87.5 items-center justify-center bg-[#f9f9f9] p-6 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
                   {product.image && (

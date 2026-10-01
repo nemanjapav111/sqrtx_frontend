@@ -1,5 +1,6 @@
 import { ApiError, apiFetch, jsonBody } from "@/lib/api";
 import type { PlaceDetails } from "@/lib/places";
+import { apiUpload, type UploadStatus } from "@/lib/upload";
 import { emailOk } from "@/lib/validation";
 
 // The business profile: what the form collects, how it is checked, and how it is sent to the API.
@@ -170,11 +171,21 @@ export const phoneOk = (phone: string) => {
 };
 
 // The API accepts JPEG, PNG, WebP, HEIC and HEIF up to 10 MB. Windows often reports HEIC files with no type, so the name is checked too.
+// A big logo is shrunk in the browser first (see shrinkPhoto), and the 10 MB is about what is then uploaded: while that is going on
+// (`shrinking`) only the type is checked.
 export const MAX_LOGO_BYTES = 10 * 1024 * 1024;
-export const logoProblem = (file: File): string | null => {
+// A logo up to this heavy is uploaded as it is (see shrinkPhoto): most logos are far lighter, and not touching them keeps them exactly
+// as the owner made them. Measured 2026-10-01: a heavier one (a phone photo, a huge export) shrunk to 2400 px as a WebP gives the same
+// final logo as the original, within 0.1 dB for photos and opaque logos.
+export const LOGO_KEEP_AS_IS_BYTES = 3 * 1024 * 1024;
+export const logoTypeProblem = (file: File): string | null => {
   const typeOk = /^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
-  if (!typeOk) return "Use a JPEG, PNG, WebP or HEIC photo.";
-  if (file.size > MAX_LOGO_BYTES) return "The photo is larger than 10 MB.";
+  return typeOk ? null : "Use a JPEG, PNG, WebP or HEIC photo.";
+};
+export const logoProblem = (file: File, shrinking = false): string | null => {
+  const wrongType = logoTypeProblem(file);
+  if (wrongType) return wrongType;
+  if (!shrinking && file.size > MAX_LOGO_BYTES) return "The photo is larger than 10 MB.";
   return null;
 };
 
@@ -190,8 +201,8 @@ export const logoSizeProblem = (size: ProfileValues["logoSize"]): string | null 
     : null;
 
 /** Why the newly chosen logo can't be used, or null. An unknown size passes: the browser can't read every format (HEIC). */
-export const logoProblemOf = (v: Pick<ProfileValues, "logo" | "logoSize">): string | null =>
-  v.logo ? (logoProblem(v.logo) ?? logoSizeProblem(v.logoSize)) : null;
+export const logoProblemOf = (v: Pick<ProfileValues, "logo" | "logoSize">, shrinking = false): string | null =>
+  v.logo ? (logoProblem(v.logo, shrinking) ?? logoSizeProblem(v.logoSize)) : null;
 
 /** The picture's size in pixels, or null when the browser can't decode it. */
 export async function readImageSize(file: File): Promise<ProfileValues["logoSize"]> {
@@ -287,7 +298,7 @@ function optionalFields(v: ProfileValues) {
 }
 
 /** First save: multipart with the logo. The API then moves the user to the next registration step. */
-export function createProfile(v: ProfileValues) {
+export function createProfile(v: ProfileValues, onProgress?: (status: UploadStatus) => void) {
   const place = v.place!;
   const form = new FormData(); // no Content-Type: the browser adds it, with the boundary
   const send: Record<string, string | number | null> = {
@@ -298,11 +309,11 @@ export function createProfile(v: ProfileValues) {
   };
   for (const [name, value] of Object.entries(send)) if (value !== null) form.append(name, String(value));
   form.append("logo", v.logo!);
-  return apiFetch("/business-profile/me", { method: "POST", body: form });
+  return apiUpload("/business-profile/me", { method: "POST", body: form, onProgress });
 }
 
 /** Later saves: JSON with every field, then a new logo only if one was chosen. */
-export async function updateProfile(v: ProfileValues) {
+export async function updateProfile(v: ProfileValues, onProgress?: (status: UploadStatus) => void) {
   const place = v.place!;
   // latitude and longitude must be sent together, and always are.
   await apiFetch(
@@ -312,6 +323,6 @@ export async function updateProfile(v: ProfileValues) {
   if (v.logo) {
     const form = new FormData();
     form.append("logo", v.logo);
-    await apiFetch("/business-profile/me/logo", { method: "PUT", body: form });
+    await apiUpload("/business-profile/me/logo", { method: "PUT", body: form, onProgress });
   }
 }
