@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { idFromSegment, productSegment } from "@/lib/product-url";
 import { SITE_ORIGIN, getBusiness, getProduct } from "@/lib/public-site";
-import ProductDetail from "./product-detail";
+import ItemDetail from "../../item-detail/item-detail";
 
 // A product's own page: sqrtx.co/<address>/product/<name>-<id> (lib/product-url.ts: the id at the end finds the product, the name is
 // for people and search engines; a bare id, or an old name after a rename, is redirected to the current address, so a product has
@@ -46,5 +46,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   // Any other form of the address (the bare id, an old name, other capitals) goes to the current one.
   const current = productSegment(product.product_name, product.id);
   if (segment !== current) permanentRedirect(`/${slug.toLowerCase()}/product/${current}`);
-  return <ProductDetail product={product} business={business} slug={slug.toLowerCase()} />;
+  const item = { name: product.product_name, price: product.price, description: product.description, images: product.images };
+  return <ItemDetail item={item} business={business} slug={slug.toLowerCase()} backTo={`/${slug.toLowerCase()}`} backLabel="Back to products" />;
 }

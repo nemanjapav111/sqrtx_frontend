@@ -41,6 +41,13 @@ export function productSegment(name: string, id: string): string {
 export const productPath = (businessSlug: string, product: { id: string; product_name: string }) =>
   `/${businessSlug}/product/${productSegment(product.product_name, product.id)}`;
 
+/** The last part of a service's address: "<name>-<id>", the same rules as a product's (the page for it is built from the design to come). */
+export const serviceSegment = (name: string, id: string): string => productSegment(name, id);
+
+/** The whole address of a service's page, from its business's address. */
+export const servicePath = (businessSlug: string, service: { id: string; service_name: string }) =>
+  `/${businessSlug}/service/${serviceSegment(service.service_name, service.id)}`;
+
 /** The product's id from the last part of an address ("<name>-<id>" or the bare id), or null if there is none. */
 export function idFromSegment(segment: string): string | null {
   const match = UUID_AT_END.exec(segment);

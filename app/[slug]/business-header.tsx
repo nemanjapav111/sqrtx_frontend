@@ -5,6 +5,7 @@ import type { PublicBusiness } from "@/lib/public-site";
 import BackToSqrtx from "./back-to-sqrtx";
 import HeaderLinks from "./header-links";
 import HeaderSearch from "./header-search";
+import { tabPath } from "./tabs";
 import VisitorIcon from "./visitor-icon";
 
 // The top bar, in the three sizes of the designs. It stays at the top while the page scrolls.
@@ -67,7 +68,7 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
         {/* Desktop only: the page links and the search box, centered between the logo and the right side. */}
         <div className="hidden min-w-0 flex-1 items-center justify-center gap-4.25 min-[1120px]:flex">
           <HeaderLinks slug={slug} provides={provides} variant="desktop" />
-          <HeaderSearch variant="desktop" />
+          <HeaderSearch variant="desktop" servicesPath={tabPath(slug, provides, "services")} />
         </div>
 
         <div className="flex shrink-0 items-center gap-4.5 pr-2.5 min-[1120px]:pr-4.25 min-[1120px]:pl-6.25">
@@ -88,7 +89,7 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
       {/* Phone and tablet: the search line. 20px above and below on the phone; on the tablet only below, centered and at most 390px wide. */}
       <div className="keep-width py-5 md:pt-0 min-[1120px]:hidden">
         <div className="mx-auto max-w-97.5 px-4 md:px-5">
-          <HeaderSearch variant="bar" />
+          <HeaderSearch variant="bar" servicesPath={tabPath(slug, provides, "services")} />
         </div>
       </div>
     </header>

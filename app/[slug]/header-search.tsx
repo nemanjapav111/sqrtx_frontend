@@ -23,21 +23,29 @@ function SearchIcon({ className, color, width }: { className: string; color: str
   );
 }
 
-export default function HeaderSearch({ variant }: { variant: "bar" | "desktop" }) {
+// `servicesPath`: where this business's services' list is (its own address, or /services, see tabs.ts's tabPath).
+export default function HeaderSearch({ variant, servicesPath }: { variant: "bar" | "desktop"; servicesPath: string }) {
   const { query, setQuery } = useSearch();
   const router = useRouter();
   const { slug } = useParams<{ slug: string }>();
-  const onProductPage = /^\/[^/]+\/product\//.test(usePathname());
+  const pathname = usePathname();
+  const onProductPage = /^\/[^/]+\/product\//.test(pathname);
+  const onServicePage = /^\/[^/]+\/service\//.test(pathname);
+  const onDetailPage = onProductPage || onServicePage;
+  // The list a detail page leads back to, and what the search looks through on the page the visitor is on.
+  const listPath = onServicePage ? servicesPath : `/${slug}`;
+  const forServices = onServicePage || pathname.toLowerCase() === servicesPath.toLowerCase();
+  const searchLabel = forServices ? "Search services" : "Search products";
   const type = (value: string) => {
     setQuery(value);
-    if (onProductPage) router.push(`/${slug}`);
+    if (onDetailPage) router.push(listPath);
   };
 
   if (variant === "bar") {
     const line = (
       <label className="flex h-11 min-w-0 flex-1 items-center gap-1 border-b border-[#b8b8b8] px-1.75">
         <SearchIcon className="size-5 shrink-0" color="#b8b8b8" width="2.5" />
-        <span className="sr-only">Search products</span>
+        <span className="sr-only">{searchLabel}</span>
         <input
           type="search"
           value={query}
@@ -48,11 +56,16 @@ export default function HeaderSearch({ variant }: { variant: "bar" | "desktop" }
         />
       </label>
     );
-    if (!onProductPage) return line;
+    if (!onDetailPage) return line;
     // The arrow's 44px box starts 6px from the screen's edge and overlaps the line by 1px, like the design.
     return (
       <div className="flex items-center">
-        <BackToProducts slug={slug} className="-mr-px -ml-2.5 flex size-11 shrink-0 items-center justify-center">
+        <BackToProducts
+          slug={slug}
+          to={listPath}
+          label={onServicePage ? "Back to services" : "Back to products"}
+          className="-mr-px -ml-2.5 flex size-11 shrink-0 items-center justify-center"
+        >
           <ArrowIcon className="h-5 w-5.5 rotate-180" strokeWidth={1.6} />
         </BackToProducts>
         {line}
@@ -71,7 +84,7 @@ export default function HeaderSearch({ variant }: { variant: "bar" | "desktop" }
     >
       <input
         type="search"
-        aria-label="Search products"
+        aria-label={searchLabel}
         placeholder="Find..."
         value={query}
         onChange={(e) => type(e.target.value)}

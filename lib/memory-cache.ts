@@ -24,6 +24,9 @@ export function forget(prefix = "") {
 /** Everything remembered about the owner's products (their list and each product's page): call it after anything saved or deleted one. */
 export const forgetOwnerProducts = () => forget("owner:product");
 
+/** Everything remembered about the owner's services (their list and each service's page): call it after anything saved or deleted one. */
+export const forgetOwnerServices = () => forget("owner:service");
+
 /** Everything remembered about the owner's profile (its form, and the account page that shows its address): call it after saving the profile. */
 export const forgetOwnerProfile = () => {
   forget("owner:profile");

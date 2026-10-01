@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { emptyProductsPage, productsPageQuery, type PublicProductsPage } from "@/lib/public-products";
+import { emptyServicesPage, servicesPageQuery, type PublicServicesPage } from "@/lib/public-services";
 
 // Reading what visitors see (a business's public page), on the server. No login: these API routes are public. The
 // pages that use this are server components, so it doesn't use lib/api.ts (that one belongs to the logged-in browser).
@@ -20,6 +21,13 @@ export interface PublicBusiness {
   phone: string | null;
   hours: string | null;
   formatted_address: string;
+  // The address in parts and where it is on the map (the Contact page shows them; coordinates is GeoJSON: [longitude, latitude]).
+  street_address: string | null;
+  city: string;
+  state_province: string | null;
+  postal_code: string | null;
+  country_code: string; // two letters, e.g. "US"
+  coordinates: { type: "Point"; coordinates: [number, number] } | null;
   facebook_link: string | null;
   instagram_link: string | null;
   // width and height: pixels of these files. null only for a logo saved before the API kept them.
@@ -65,6 +73,7 @@ async function getJson<T>(path: string, revalidate: number, tags: string[] = [])
 // The labels of the saved answers. An address is lowercase everywhere it is stored, so the label is too.
 export const businessTag = (slug: string) => `business:${slug.toLowerCase()}`;
 export const productsTag = (userId: string) => `products:${userId}`;
+export const servicesTag = (userId: string) => `services:${userId}`;
 
 // An address that could never belong to a business (see the company URL rules in the API): no need to ask.
 export const isPossibleSlug = (slug: string) => /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(slug);
@@ -90,6 +99,30 @@ export const isProductId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}
 export const getProductsPage = cache(
   async (userId: string) =>
     (await getJson<PublicProductsPage>(`/product/summary?${productsPageQuery(userId, {})}`, 60, [productsTag(userId)])) ?? emptyProductsPage,
+);
+
+// The FIRST page of the business's service list (24 rows, with the categories for the filter), the services' version of the above: see
+// GET /service/summary in the API notes. The next pages, and any search or category, are asked for by the browser.
+export const getServicesPage = cache(
+  async (userId: string) =>
+    (await getJson<PublicServicesPage>(`/service/summary?${servicesPageQuery(userId, {})}`, 60, [servicesTag(userId)])) ?? emptyServicesPage,
+);
+
+// What GET /service/:id returns: a service with ALL its images, in order (the same sizes as a product's).
+export interface PublicServiceDetail {
+  id: string;
+  service_name: string;
+  price: number | string | null;
+  category: string;
+  description: string;
+  user_id: string;
+  images: PublicProductImage[];
+}
+
+// `userId`: the business the page is under (the caller must check the service really belongs to it). One small request for this one
+// service (the service's own page needs its whole description and all its photos, which the light list doesn't have).
+export const getService = cache((id: string, userId: string) =>
+  isProductId(id) ? getJson<PublicServiceDetail>(`/service/${id}`, 60, [servicesTag(userId)]) : Promise.resolve(null),
 );
 
 // `userId`: the business the page is under (the caller must check the product really belongs to it). One small request for

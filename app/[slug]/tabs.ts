@@ -1,6 +1,5 @@
 // The pages of a business's public site, shared by the bottom bar (phone) and the links in the top bar (tablet and
-// desktop). Only Products exists so far: Services, Contact and About have no design and no route yet, so their links
-// lead to a 404 for now.
+// desktop). Products, Services and Contact exist so far: About has no design and no route yet, so its link leads to a 404 for now.
 export type TabKey = "products" | "services" | "contact" | "about";
 
 type Provides = "products" | "services" | "both";
@@ -28,6 +27,11 @@ export function primaryTab(provides: Provides): TabKey {
 export function tabsFor(provides: Provides): { key: TabKey; label: string; path: string }[] {
   const primary = primaryTab(provides);
   return ORDER.map((key) => ({ key, label: LABELS[key], path: key === primary ? "" : `/${key}` }));
+}
+
+/** The address of one of a business's pages, from its address: the primary tab is the business's own address. */
+export function tabPath(slug: string, provides: Provides, key: TabKey): string {
+  return `/${slug.toLowerCase()}${tabsFor(provides).find((tab) => tab.key === key)!.path}`;
 }
 
 /** The page you are on, from the address: the primary tab is the business address itself, the others are their own paths. */

@@ -20,10 +20,12 @@ export default function CategoryFilter({
   value,
   options,
   onChange,
+  spacing = "mb-8.5",
 }: {
   value: string;
   options: readonly CategoryFilterOption[]; // "All" first, then the available categories
   onChange: (value: string) => void;
+  spacing?: string; // the space below it (classes); the products' list uses the default, the services' rows have their own
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -48,7 +50,7 @@ export default function CategoryFilter({
   const picked = options.find((o) => o.value === value)?.text ?? value;
 
   return (
-    <div ref={rootRef} className="relative mb-8.5 flex h-12 w-fit items-center">
+    <div ref={rootRef} className={`relative ${spacing} flex h-12 w-fit items-center`}>
       <button
         type="button"
         aria-haspopup="listbox"

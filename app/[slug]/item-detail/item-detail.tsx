@@ -4,12 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import PlaceholderPicture, { markSeen } from "@/app/components/placeholder-picture";
 import ArrowIcon from "@/app/register/arrow-icon";
 import { formatPrice } from "@/lib/price";
-import type { PublicBusiness, PublicProductDetail } from "@/lib/public-site";
-import BackToProducts from "../../back-to-products";
+import type { PublicBusiness, PublicProductImage } from "@/lib/public-site";
+import BackToProducts from "../back-to-products";
 import PhotoViewer from "./photo-viewer";
 
-// A product's own page, in the three sizes of the designs (Figma 2108:344 phone 360 x 840, 1988:1874 tablet 768 x 909,
-// 1560:134 desktop 1440 x 1024). The top bar is the site's own (the layout draws it); the back arrow to the products is
+// A product's or a service's own page (the services' designs, Figma "Service Details Phone/Tablet/Desktop new" 2151:368, 2036:612,
+// 1673:194, are the products' ones with other words, so it is one component), in the three sizes of the designs (Figma 2108:344 phone
+// 360 x 840, 1988:1874 tablet 768 x 909, 1560:134 desktop 1440 x 1024). The top bar is the site's own (the layout draws it); the back arrow to the products is
 // in the search line on phone and tablet (header-search.tsx) and at the page's top left on desktop.
 //  - Phone: name (20px medium) and price (22px bold) at the left, the photo in a 360 x 450 box (shown whole, never cropped),
 //    the other photos as 80px squares (cropped to fill, three to a row), then the description and "View contact".
@@ -34,16 +35,28 @@ import PhotoViewer from "./photo-viewer";
 // with the window, and on a tablet the photos stop at 900px.
 // CSS gotcha (also in header-links.tsx): `md:` (768px up) and `min-[1120px]:` both match on a desktop and the md rule wins, so
 // what only tablet needs is written `md:max-[1120px]:` (768 up to, not including, 1120).
-export default function ProductDetail({
-  product,
+// What the page shows of a product or a service, and where the back arrow leads (the list the visitor came from).
+export interface DetailItem {
+  name: string;
+  price: number | string | null;
+  description: string;
+  images: PublicProductImage[];
+}
+
+export default function ItemDetail({
+  item,
   business,
   slug,
+  backTo,
+  backLabel,
 }: {
-  product: PublicProductDetail;
+  item: DetailItem;
   business: PublicBusiness;
   slug: string;
+  backTo: string;
+  backLabel: string;
 }) {
-  const images = [...product.images].sort((a, b) => a.sort_order - b.sort_order);
+  const images = [...item.images].sort((a, b) => a.sort_order - b.sort_order);
   const [selected, setSelected] = useState(0);
   const [viewing, setViewing] = useState(false); // the photo viewer is open
   const [fullWarm, setFullWarm] = useState<number | null>(null); // the photo whose full size is loaded out of sight (the pointer is on it)
@@ -87,7 +100,7 @@ export default function ProductDetail({
       <div className="relative mx-auto w-full max-w-360">
       {/* Desktop only (phone and tablet have the arrow in the search line). 20px from the content's edges, like the design;
           drawn with the site's own thin arrow instead of the design's bold "←" text character. */}
-      <BackToProducts slug={slug} className="absolute top-5 left-5 z-10 hidden size-11 items-center justify-center min-[1120px]:flex">
+      <BackToProducts slug={slug} to={backTo} label={backLabel} className="absolute top-5 left-5 z-10 hidden size-11 items-center justify-center min-[1120px]:flex">
         <ArrowIcon className="h-6 w-7 rotate-180" strokeWidth={1.6} />
       </BackToProducts>
 
@@ -95,10 +108,10 @@ export default function ProductDetail({
         {/* Name and price. Desktop: the top of the right column. */}
         <div className="flex flex-col gap-2.5 px-4 md:max-[1120px]:items-center md:max-[1120px]:px-10 md:max-[1120px]:text-center min-[1120px]:col-start-2 min-[1120px]:row-start-1 min-[1120px]:gap-3.75 min-[1120px]:pt-25 min-[1120px]:pr-10 min-[1120px]:pl-[clamp(40px,5.56vw,80px)] min-[1120px]:text-left">
           <h1 className="text-[20px] leading-6.05 font-medium text-black wrap-break-word min-[1120px]:text-[clamp(26px,calc(1.75vw+6.8px),32px)] min-[1120px]:leading-[1.21] min-[1120px]:font-bold">
-            {product.product_name}
+            {item.name}
           </h1>
           <p className="text-[22px] leading-6.65 font-bold text-black min-[1120px]:text-[20px] min-[1120px]:leading-6.05">
-            {formatPrice(product.price)}
+            {formatPrice(item.price)}
           </p>
         </div>
 
@@ -128,7 +141,7 @@ export default function ProductDetail({
                   poster={shown.urls.card}
                   avif={shown.urls.detail.avif}
                   webp={shown.urls.detail.webp}
-                  alt={product.product_name}
+                  alt={item.name}
                   loading="eager"
                   placeholder={shown.placeholder}
                   className="size-full"
@@ -180,7 +193,7 @@ export default function ProductDetail({
         <div className="flex w-full flex-col gap-3.75 px-4 pt-2.5 md:max-[1120px]:mx-auto md:max-[1120px]:max-w-170 md:max-[1120px]:px-5 min-[1120px]:col-start-2 min-[1120px]:row-start-2 min-[1120px]:flex-col-reverse min-[1120px]:justify-end min-[1120px]:pt-0 min-[1120px]:pr-10 min-[1120px]:pl-[clamp(40px,5.56vw,80px)]">
           {/* pre-line: the owner's own line breaks stay. */}
           <p className="pb-5 text-[16px] leading-5 whitespace-pre-line text-[#111] wrap-break-word min-[1120px]:max-w-140 min-[1120px]:pt-8.75 min-[1120px]:pb-0">
-            {product.description}
+            {item.description}
           </p>
           {/* relative: the contact box is placed against the button. It floats OVER the page (it doesn't push the description
               down, however many details the business gave); same white box, 1px #b8b8b8 line and sharp corners as the account menu. */}
@@ -222,7 +235,7 @@ export default function ProductDetail({
           </picture>
         )}
       </div>
-      {viewing && <PhotoViewer images={images} index={selected} name={product.product_name} onStep={step} onClose={closeViewer} />}
+      {viewing && <PhotoViewer images={images} index={selected} name={item.name} onStep={step} onClose={closeViewer} />}
       </div>
     </div>
   );

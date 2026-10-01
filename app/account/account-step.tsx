@@ -14,7 +14,7 @@ import { supabase } from "@/lib/supabase";
 import { useRequireSession } from "@/lib/use-session";
 import BillingSection from "./billing-section";
 
-type Ready = { status: "ready"; email: string; billing: BillingStatus; plans: BillingPlans; slug: string; offersProducts: boolean };
+type Ready = { status: "ready"; email: string; billing: BillingStatus; plans: BillingPlans; slug: string; offersProducts: boolean; offersServices: boolean };
 type Load = { status: "loading" } | { status: "error" } | Ready;
 
 // What was on the page last time (see lib/memory-cache.ts): shown at once when the page is opened again, while the API is asked
@@ -62,7 +62,8 @@ export default function AccountStep() {
         const [plans, auth] = await extra;
         const slug = company_url ? slugFromUrl(company_url) : "";
         const offersProducts = !!onboarding.provides && onboarding.provides !== "services";
-        const ready: Ready = { status: "ready", email: auth.data.session?.user.email ?? "", billing, plans, slug, offersProducts };
+        const offersServices = !!onboarding.provides && onboarding.provides !== "products";
+        const ready: Ready = { status: "ready", email: auth.data.session?.user.email ?? "", billing, plans, slug, offersProducts, offersServices };
         remember(CACHE_KEY, ready);
         if (!cancelled) setLoad(ready);
       } catch {
@@ -176,6 +177,19 @@ export default function AccountStep() {
                 className="flex h-11 w-full items-center justify-center border-2 border-black bg-white text-[14px] font-bold"
               >
                 Manage products
+              </Link>
+            </section>
+          )}
+
+          {/* The same for services (a business that offers both has both sections). */}
+          {load.status === "ready" && load.offersServices && (
+            <section className="flex flex-col gap-2">
+              <h2 className="text-[16px] font-semibold">Services</h2>
+              <Link
+                href="/account/services"
+                className="flex h-11 w-full items-center justify-center border-2 border-black bg-white text-[14px] font-bold"
+              >
+                Manage services
               </Link>
             </section>
           )}
