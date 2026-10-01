@@ -12,7 +12,7 @@ import { currentTab, tabsFor } from "./tabs";
 // The designs show no "you are here" marking on these links (every one is plain black); tried that as-is, but with
 // four identical-looking links it wasn't clear which page you were on, so the current one is underlined too, on top
 // of aria-current for screen readers. underline-offset/decoration-2, not the plain CSS default: sitting right against
-// the letters read as too tight to notice at a glance. About leads to a 404 for now.
+// the letters read as too tight to notice at a glance.
 export default function HeaderLinks({
   slug,
   provides,

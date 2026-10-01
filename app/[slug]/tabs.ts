@@ -1,5 +1,5 @@
 // The pages of a business's public site, shared by the bottom bar (phone) and the links in the top bar (tablet and
-// desktop). Products, Services and Contact exist so far: About has no design and no route yet, so its link leads to a 404 for now.
+// desktop). All four pages exist.
 export type TabKey = "products" | "services" | "contact" | "about";
 
 type Provides = "products" | "services" | "both";
@@ -34,10 +34,16 @@ export function tabPath(slug: string, provides: Provides, key: TabKey): string {
   return `/${slug.toLowerCase()}${tabsFor(provides).find((tab) => tab.key === key)!.path}`;
 }
 
-/** The page you are on, from the address: the primary tab is the business address itself, the others are their own paths. */
+/**
+ * The page you are on, from the address: the primary tab is the business address itself, the others are their own paths.
+ * A product's page (/<slug>/product/...) counts as Products and a service's page (/<slug>/service/...) as Services, so the
+ * tab of the list you came from stays marked.
+ */
 export function currentTab(pathname: string, slug: string, provides: Provides): TabKey {
   const base = `/${slug.toLowerCase()}`;
   const path = pathname.toLowerCase();
+  if (path.startsWith(`${base}/service/`)) return "services";
+  if (path.startsWith(`${base}/product/`)) return "products";
   const tabs = tabsFor(provides);
   return tabs.find((tab) => tab.path !== "" && path.startsWith(base + tab.path))?.key ?? primaryTab(provides);
 }

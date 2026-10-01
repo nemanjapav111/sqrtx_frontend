@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { emptyFeedCompaniesPage, emptyFeedPage, emptyFeedServicesPage, feedQuery, type FeedCompaniesPage, type FeedPage, type FeedServicesPage } from "@/lib/feed";
 import { emptyProductsPage, productsPageQuery, type PublicProductsPage } from "@/lib/public-products";
 import { emptyServicesPage, servicesPageQuery, type PublicServicesPage } from "@/lib/public-services";
 
@@ -74,6 +75,8 @@ async function getJson<T>(path: string, revalidate: number, tags: string[] = [])
 export const businessTag = (slug: string) => `business:${slug.toLowerCase()}`;
 export const productsTag = (userId: string) => `products:${userId}`;
 export const servicesTag = (userId: string) => `services:${userId}`;
+// The home page's list (all businesses' products): one label for every country's copy.
+export const feedTag = "feed";
 
 // An address that could never belong to a business (see the company URL rules in the API): no need to ask.
 export const isPossibleSlug = (slug: string) => /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(slug);
@@ -108,6 +111,20 @@ export const getServicesPage = cache(
     (await getJson<PublicServicesPage>(`/service/summary?${servicesPageQuery(userId, {})}`, 60, [servicesTag(userId)])) ?? emptyServicesPage,
 );
 
+// The FIRST page of the home page's list (the newest products of every business, in one country or in all of them), with the lists for the
+// two pickers: see GET /feed/products in the API notes. The next pages, and any search or filter, are asked for by the browser.
+export const getFeedPage = cache(async (country: string) => (await getJson<FeedPage>(`/feed/products?${feedQuery({ country })}`, 60, [feedTag])) ?? emptyFeedPage);
+
+// The same for the Companies page (GET /feed/companies).
+export const getFeedCompaniesPage = cache(
+  async (country: string) => (await getJson<FeedCompaniesPage>(`/feed/companies?${feedQuery({ country })}`, 60, [feedTag])) ?? emptyFeedCompaniesPage,
+);
+
+// The same for the Services page (GET /feed/services).
+export const getFeedServicesPage = cache(
+  async (country: string) => (await getJson<FeedServicesPage>(`/feed/services?${feedQuery({ country })}`, 60, [feedTag])) ?? emptyFeedServicesPage,
+);
+
 // What GET /service/:id returns: a service with ALL its images, in order (the same sizes as a product's).
 export interface PublicServiceDetail {
   id: string;
@@ -129,6 +146,15 @@ export const getService = cache((id: string, userId: string) =>
 // this one product (the product's own page needs its description and all its photos, which the light list doesn't have).
 export const getProduct = cache((id: string, userId: string) =>
   isProductId(id) ? getJson<PublicProductDetail>(`/product/${id}`, 60, [productsTag(userId)]) : Promise.resolve(null),
+);
+
+// A product asked for by its id ALONE (a product's page in the sqrtx marketplace, app/(sqrtx)/product/[id]: the address has no business in it)
+// and the business that owns it, by the owner's id. Their saved copies carry the home page's label: the owner's save clears it
+// (lib/refresh-public-page.ts), and the business is not known before the product has been read.
+export const getProductAnywhere = cache((id: string) => (isProductId(id) ? getJson<PublicProductDetail>(`/product/${id}`, 60, [feedTag]) : Promise.resolve(null)));
+export const getServiceAnywhere = cache((id: string) => (isProductId(id) ? getJson<PublicServiceDetail>(`/service/${id}`, 60, [feedTag]) : Promise.resolve(null)));
+export const getBusinessByUserId = cache((userId: string) =>
+  isProductId(userId) ? getJson<PublicBusiness>(`/business-profile/${userId}`, 60, [feedTag]) : Promise.resolve(null),
 );
 
 /** The name of a business category from its id ("supplements" -> "Vitamins & supplements"), or null if unknown. */

@@ -7,16 +7,15 @@ import { currentTab, tabsFor, type TabKey } from "./tabs";
 
 // The bottom bar of the PHONE design (Figma "footer_links", 2015:215): five equal cells in a 44px bar fixed to the
 // bottom of the screen. The page you are on is the dark cell. From 768px up it is not shown: the tablet and desktop
-// designs have the same links in the top bar instead (header-links.tsx). Only Products exists so far: the other
-// three (Services for a business that also lists products, plus Contact and About) have no design and no route yet,
-// so those links lead to a "not found" page until they are built. "← sqrtx" is the way back to sqrtx itself.
-const Icon = ({ children }: { children: React.ReactNode }) => (
+// designs have the same links in the top bar instead (header-links.tsx). All four pages exist (Products, Services, Contact,
+// About); a link to a page the business does not have leads to the "not found" page. "← sqrtx" is the way back to sqrtx itself.
+export const Icon = ({ children }: { children: React.ReactNode }) => (
   <svg aria-hidden viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
     {children}
   </svg>
 );
 
-const ICONS: Record<TabKey, React.ReactNode> = {
+export const ICONS: Record<TabKey, React.ReactNode> = {
   products: (
     <Icon>
       <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
@@ -44,7 +43,7 @@ const ICONS: Record<TabKey, React.ReactNode> = {
   ),
 };
 
-const CELL = "flex h-11 flex-1 flex-col items-center justify-center text-[11px] leading-[17px] font-medium";
+export const CELL = "flex h-11 flex-1 flex-col items-center justify-center text-[11px] leading-[17px] font-medium";
 
 export default function BusinessFooter({ slug, provides }: { slug: string; provides: "products" | "services" | "both" }) {
   const current = currentTab(usePathname(), slug, provides);

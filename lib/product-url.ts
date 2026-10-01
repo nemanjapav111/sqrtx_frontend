@@ -41,6 +41,21 @@ export function productSegment(name: string, id: string): string {
 export const productPath = (businessSlug: string, product: { id: string; product_name: string }) =>
   `/${businessSlug}/product/${productSegment(product.product_name, product.id)}`;
 
+/** A product's page in the sqrtx marketplace (app/(sqrtx)/product/[id]): the address has no business in it, the id at the end finds the product. */
+export const marketProductPath = (product: { id: string; product_name: string }) => `/product/${productSegment(product.product_name, product.id)}`;
+
+/** A service's page in the sqrtx marketplace (app/(sqrtx)/service/[id]), the services' version of marketProductPath. */
+export const marketServicePath = (service: { id: string; service_name: string }) => `/service/${serviceSegment(service.service_name, service.id)}`;
+
+/** The business's address (the part after sqrtx.co/) from its saved company URL, or null when it isn't one. */
+export function slugOfCompanyUrl(url: string): string | null {
+  try {
+    return new URL(url).pathname.replace(/^\/+|\/+$/g, "") || null;
+  } catch {
+    return null;
+  }
+}
+
 /** The last part of a service's address: "<name>-<id>", the same rules as a product's (the page for it is built from the design to come). */
 export const serviceSegment = (name: string, id: string): string => productSegment(name, id);
 

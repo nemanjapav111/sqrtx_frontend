@@ -26,7 +26,7 @@ import { useSearch } from "./search-context";
 //    32/39 bold and the price 20/24 bold.
 // The filter is the same one as on the Products page, at the left edge of the first row: 34px above the photo on a phone, and 20px
 // above the first row's own 10px on tablet and desktop (the photo is 78px below the filter's top in both).
-// The photo is the API's detail size (1536 x 900): a row shows it large, and the card size would be soft on a sharp screen.
+// The photo is the API's list size (fits inside 1000 x 750, made for this row: it shows the photo cropped to fill 328 x 300, and the card size (604) would be soft on a sharp screen; the detail size (1536 x 900) is twice the bytes).
 // Around the rows: 16px at the sides on a phone and 10px on a tablet (the design has no wider margin), 20px above the filter on a tablet and
 // 30px on a desktop (the design's content starts 20px under the bar, and the desktop's row has 10px of its own).
 // Not in the design, so placeholders: the words when there is nothing to show or something went wrong, "Show more", and the filter's popup.
@@ -147,8 +147,8 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
                   <div className="h-75 w-full overflow-hidden bg-[#f3f4f6]">
                     {service.image && (
                       <PlaceholderPicture
-                        avif={service.image.detail.avif}
-                        webp={service.image.detail.webp}
+                        avif={service.image.list.avif}
+                        webp={service.image.list.webp}
                         alt=""
                         // The first rows are on screen at once: load them at once. The rest wait until they come near.
                         loading={index < 2 ? "eager" : "lazy"}

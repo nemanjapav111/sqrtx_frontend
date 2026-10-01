@@ -31,6 +31,10 @@ const MENU_WIDTH = "w-50.75"; // 203px, the design's width
 // under its row). Anchoring to the box (as `top-full` does) put the popup noticeably further from the icon.
 const ICON_BOTTOM = (40 - 25) / 2 + 25; // 32.5
 const MENU_TOP = ICON_BOTTOM + 4; // 36.5
+// On the home page's black bar (`light`) the menu is further from the icon, 16.3px under it (48.8 from the top of the 40px box): the same
+// distance the country picker's list has from its pin and code there (it starts 4px under a 44px button whose content ends 12.3px above
+// the button's bottom edge). The owner found the 4px too tight on that bar (2026-10-02); the business pages keep the 4px.
+const MENU_TOP_LIGHT = ICON_BOTTOM + 16.3; // 48.8
 
 function MenuRow({
   href,
@@ -61,7 +65,8 @@ function MenuRow({
   );
 }
 
-export default function VisitorIcon() {
+// `light`: for a dark bar (the home page's black one): the icon is white and the signed-in dot is ringed in black.
+export default function VisitorIcon({ light = false }: { light?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false); // is there a saved login: read when the menu is opened
@@ -134,7 +139,7 @@ export default function VisitorIcon() {
 
   // Material "account_circle", 25px in the design, 8px in from the left of its 40px box
   const icon = (
-    <svg viewBox="0 0 24 24" className="ml-2 size-6.25" fill="#1d1b20" aria-hidden>
+    <svg viewBox="0 0 24 24" className="ml-2 size-6.25" fill={light ? "#ffffff" : "#1d1b20"} aria-hidden>
       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM7.07 18.28c.43-.9 3.05-1.78 4.93-1.78s4.5.88 4.93 1.78A7.93 7.93 0 0 1 12 20a7.93 7.93 0 0 1-4.93-1.72zm11.29-1.45c-1.43-1.74-4.9-2.33-6.36-2.33s-4.93.59-6.36 2.33A7.95 7.95 0 0 1 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 1.82-.62 3.49-1.64 4.83zM12 6c-1.94 0-3.5 1.56-3.5 3.5S10.06 13 12 13s3.5-1.56 3.5-3.5S13.94 6 12 6zm0 5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
     </svg>
   );
@@ -158,14 +163,14 @@ export default function VisitorIcon() {
         {icon}
         {/* The signed-in dot, at the icon's lower right (the circle's edge at 45 degrees), ringed in white. Hidden until the
             root has data-signed-in. */}
-        <span aria-hidden className="absolute top-[21.5px] left-[22px] hidden size-3 rounded-full border-2 border-white bg-[#22c55e] group-data-signed-in:block" />
+        <span aria-hidden className={`absolute top-[21.5px] left-[22px] hidden size-3 rounded-full border-2 bg-[#22c55e] group-data-signed-in:block ${light ? "border-black" : "border-white"}`} />
       </button>
       <InlineScript
         code={`{try{if(localStorage.getItem(${JSON.stringify(SAVED_LOGIN_KEY)}))document.currentScript.parentElement.setAttribute("data-signed-in","")}catch(e){}}`}
       />
 
       {open && (
-        <div role="menu" style={{ top: MENU_TOP }} className={`absolute right-0 z-40 flex flex-col border border-[#b8b8b8] bg-white ${MENU_WIDTH}`}>
+        <div role="menu" style={{ top: light ? MENU_TOP_LIGHT : MENU_TOP }} className={`absolute right-0 z-40 flex flex-col border border-[#b8b8b8] bg-white ${MENU_WIDTH}`}>
           {signedIn ? (
             <>
               <MenuRow href="/account" onClick={onNavigate} first>

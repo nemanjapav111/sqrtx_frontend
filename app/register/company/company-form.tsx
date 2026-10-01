@@ -10,6 +10,7 @@ import UploadProgress from "@/app/components/upload-progress";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import {
+  COMPANY_NAME_MAX_LENGTH,
   SITE_HOST,
   cleanSlug,
   createProfile,
@@ -46,6 +47,7 @@ const CONTROL_NAME: Record<FieldName, string> = {
   phone: "phone",
   facebook: "facebook",
   instagram: "instagram",
+  about: "about",
   slug: "slug",
   provides: "products",
   logo: "logo",
@@ -147,7 +149,7 @@ export default function CompanyForm({
       if (ready !== file) setValues((v) => ({ ...v, logo: ready }));
     });
   }
-  const bad = new Set(submitted ? invalidFields(values, !!profile?.logo, categories) : []);
+  const bad = new Set(submitted ? invalidFields(values, !!profile?.logo, categories, account) : []);
   const invalid = (field: FieldName) => bad.has(field) || (field === "slug" && slugTaken);
 
   // When the user leaves the box: ask the server if the name is free. Shows a green check mark or "taken".
@@ -185,7 +187,7 @@ export default function CompanyForm({
     setError(null);
 
     // Send the cursor to the first field that needs fixing. A name we already know is taken counts too.
-    const first = invalidFields(values, !!profile?.logo, categories)[0] ?? (slugTaken ? "slug" : undefined);
+    const first = invalidFields(values, !!profile?.logo, categories, account)[0] ?? (slugTaken ? "slug" : undefined);
     if (first) {
       (form.elements.namedItem(CONTROL_NAME[first]) as HTMLElement | null)?.focus();
       return;
@@ -249,8 +251,8 @@ export default function CompanyForm({
               name="companyName"
               type="text"
               autoComplete="organization"
-              hint="This will be displayed next to your company logo."
-              maxLength={255}
+              hint={`This will be displayed next to your company logo (up to ${COMPANY_NAME_MAX_LENGTH} characters).`}
+              maxLength={COMPANY_NAME_MAX_LENGTH}
               value={values.companyName}
               onChange={(v) => set({ companyName: v })}
               invalid={invalid("companyName")}
@@ -323,6 +325,28 @@ export default function CompanyForm({
               onChange={(v) => set({ instagram: v })}
               invalid={invalid("instagram")}
             />
+            {/* Only when the owner edits the profile: during registration the last page asks for this text. Not in a design. */}
+            {account && (
+              <div className="flex w-full flex-col gap-2.25">
+                <label htmlFor="about" className="text-[14px] font-semibold">
+                  About*
+                </label>
+                <textarea
+                  id="about"
+                  name="about"
+                  aria-invalid={invalid("about")}
+                  aria-describedby="about-hint"
+                  value={values.about}
+                  onChange={(e) => set({ about: e.target.value })}
+                  className={`h-75 w-full resize-none border p-1 text-[16px] text-[#111] outline-none focus:shadow-[0_0_0_1px_black] ${
+                    invalid("about") ? "border-red-600 focus:shadow-[0_0_0_1px_#dc2626]" : "border-black"
+                  }`}
+                />
+                <p id="about-hint" className="text-[13px] font-medium text-[#4b5563]">
+                  Shown on your public About page. An empty line starts a new paragraph.
+                </p>
+              </div>
+            )}
             <Field
               label="Your URL*"
               name="slug"

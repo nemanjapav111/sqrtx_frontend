@@ -32,6 +32,12 @@ const RESERVED_SLUGS = [
   "subscription", "support", "terms", "trial", "user", "users", "verify", "www",
 ];
 
+// The name is shown on at most TWO lines in the public page's top bar (180px of 16px bold text on a phone, the width in the design).
+// Measured 2026-10-01 with the site's font and word wrapping: 42 to 45 characters fit for Title Case and lowercase names, 31 to 33 for
+// CAPITALS, 22 for the widest letters. 40 keeps ordinary names whole; what does not fit in two lines is cut with "…" in the bar
+// (business-header.tsx), which never grows. The API has the same number.
+export const COMPANY_NAME_MAX_LENGTH = 40;
+
 export type Provides = "products" | "services" | "both";
 
 // What the API returns for GET /business-profile/me (only the parts the form uses).
@@ -53,6 +59,7 @@ export interface BusinessProfile {
   instagram_link: string | null;
   company_url: string;
   provides: Provides;
+  about_company: string | null; // the text of the public About page (written on the last registration page)
   // width and height: pixels of these files. null only for a logo saved before the API kept them (see API.md).
   logo: { avif: string; webp: string; width: number | null; height: number | null } | null;
 }
@@ -68,6 +75,7 @@ export interface ProfileValues {
   hours: string;
   facebook: string;
   instagram: string;
+  about: string; // only edited after registration (the last registration page asks for it)
   slug: string;
   products: boolean;
   services: boolean;
@@ -85,6 +93,7 @@ export const emptyValues: ProfileValues = {
   hours: "",
   facebook: "",
   instagram: "",
+  about: "",
   slug: "",
   products: false,
   services: false,
@@ -113,6 +122,7 @@ export function valuesFromProfile(p: BusinessProfile): ProfileValues {
     hours: p.hours ?? "",
     facebook: p.facebook_link ?? "",
     instagram: p.instagram_link ?? "",
+    about: p.about_company ?? "",
     slug: slugFromUrl(p.company_url),
     products: p.provides !== "services",
     services: p.provides !== "products",
@@ -139,6 +149,7 @@ export type FieldName =
   | "phone"
   | "facebook"
   | "instagram"
+  | "about"
   | "slug"
   | "provides"
   | "logo";
@@ -234,16 +245,24 @@ export const providesOf = (v: Pick<ProfileValues, "products" | "services">): Pro
  * The fields that need fixing, in page order (so the first can get the cursor).
  * `hasSavedLogo`: in edit mode an already saved logo satisfies the "logo is required" rule.
  * `categories`: the category must be one of these (the API refuses anything else).
+ * `aboutRequired`: the About text must not be empty (when the owner edits the profile after registration; during registration it is
+ * written on the last page).
  */
-export function invalidFields(v: ProfileValues, hasSavedLogo: boolean, categories: readonly BusinessCategory[]): FieldName[] {
+export function invalidFields(
+  v: ProfileValues,
+  hasSavedLogo: boolean,
+  categories: readonly BusinessCategory[],
+  aboutRequired = false,
+): FieldName[] {
   const bad: FieldName[] = [];
-  if (v.companyName.trim() === "" || v.companyName.length > 255) bad.push("companyName");
+  if (v.companyName.trim() === "" || v.companyName.length > COMPANY_NAME_MAX_LENGTH) bad.push("companyName");
   if (!categories.some((c) => c.id === v.category)) bad.push("category");
   if (!v.place) bad.push("place");
   if (!emailOk(v.contactEmail)) bad.push("contactEmail");
   if (!phoneOk(v.phone)) bad.push("phone");
   if (v.facebook.trim() !== "" && !urlOk(v.facebook)) bad.push("facebook");
   if (v.instagram.trim() !== "" && !urlOk(v.instagram)) bad.push("instagram");
+  if (aboutRequired && v.about.trim() === "") bad.push("about");
   if (!slugOk(v.slug)) bad.push("slug");
   if (!providesOf(v)) bad.push("provides");
   if (v.logo ? logoProblemOf(v) : !hasSavedLogo) bad.push("logo");
@@ -318,7 +337,14 @@ export async function updateProfile(v: ProfileValues, onProgress?: (status: Uplo
   // latitude and longitude must be sent together, and always are.
   await apiFetch(
     "/business-profile/me",
-    jsonBody("PATCH", { ...textFields(v), ...optionalFields(v), latitude: place.latitude, longitude: place.longitude }),
+    jsonBody("PATCH", {
+      ...textFields(v),
+      ...optionalFields(v),
+      // The API never accepts an empty About text: it is sent only when there is some (it is shown only after registration).
+      ...(v.about.trim() !== "" && { about_company: v.about.trim() }),
+      latitude: place.latitude,
+      longitude: place.longitude,
+    }),
   );
   if (v.logo) {
     const form = new FormData();

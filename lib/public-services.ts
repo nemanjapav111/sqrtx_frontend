@@ -6,7 +6,7 @@
 export const PUBLIC_SERVICES_PAGE_SIZE = 24;
 
 // What a row of the list shows, and nothing more: the first part of the description (cut by the API, `description_cut` says it was
-// longer) and the main photo in the detail size (the row shows it large), see the API notes.
+// longer) and the main photo in the list size (fits inside 1000 x 750; the row shows it cropped to fill its box), see the API notes.
 export interface PublicServiceRow {
   id: string;
   service_name: string;
@@ -14,7 +14,7 @@ export interface PublicServiceRow {
   category: string;
   description: string;
   description_cut: boolean;
-  image: { detail: { avif: string; webp: string }; placeholder: string | null } | null;
+  image: { list: { avif: string; webp: string }; placeholder: string | null } | null;
 }
 
 export interface PublicServicesPage {

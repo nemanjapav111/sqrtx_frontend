@@ -43,18 +43,23 @@ export interface DetailItem {
   images: PublicProductImage[];
 }
 
+// `company`: only on a product's page in the sqrtx marketplace (Figma "sqrtx Product Details Phone/Tablet/Desktop new"), where the page has no
+// business top bar to say whose product it is: the business's logo, name, kind and place with a "Visit" button. On desktop it is the first thing
+// of the right column (above the name); on phone and tablet it comes last, under "View contact".
 export default function ItemDetail({
   item,
   business,
   slug,
   backTo,
   backLabel,
+  company,
 }: {
   item: DetailItem;
   business: PublicBusiness;
   slug: string;
   backTo: string;
   backLabel: string;
+  company?: React.ReactNode;
 }) {
   const images = [...item.images].sort((a, b) => a.sort_order - b.sort_order);
   const [selected, setSelected] = useState(0);
@@ -107,6 +112,7 @@ export default function ItemDetail({
       <main className="flex w-full flex-col gap-2.5 pt-4.75 pb-10 min-[1120px]:grid min-[1120px]:grid-cols-[minmax(0,740fr)_minmax(0,680fr)] min-[1120px]:grid-rows-[auto_1fr] min-[1120px]:items-start min-[1120px]:gap-x-0 min-[1120px]:gap-y-3.75 min-[1120px]:px-2.5 min-[1120px]:pt-0 min-[1120px]:pb-16">
         {/* Name and price. Desktop: the top of the right column. */}
         <div className="flex flex-col gap-2.5 px-4 md:max-[1120px]:items-center md:max-[1120px]:px-10 md:max-[1120px]:text-center min-[1120px]:col-start-2 min-[1120px]:row-start-1 min-[1120px]:gap-3.75 min-[1120px]:pt-25 min-[1120px]:pr-10 min-[1120px]:pl-[clamp(40px,5.56vw,80px)] min-[1120px]:text-left">
+          {company && <div className="hidden min-[1120px]:block">{company}</div>}
           <h1 className="text-[20px] leading-6.05 font-medium text-black wrap-break-word min-[1120px]:text-[clamp(26px,calc(1.75vw+6.8px),32px)] min-[1120px]:leading-[1.21] min-[1120px]:font-bold">
             {item.name}
           </h1>
@@ -115,8 +121,8 @@ export default function ItemDetail({
           </p>
         </div>
 
-        {/* The photos. Desktop: the whole left column (a 40px gap at its left, 70px above). */}
-        <div className="flex w-full flex-col gap-2.5 md:max-[1120px]:mx-auto md:max-[1120px]:max-w-225 min-[1120px]:col-start-1 min-[1120px]:row-span-2 min-[1120px]:row-start-1 min-[1120px]:gap-5 min-[1120px]:pt-17.5 min-[1120px]:pl-10">
+        {/* The photos. Desktop: the whole left column (a 40px gap at its left, 96px above: the back arrow sits above it with room to spare). */}
+        <div className="flex w-full flex-col gap-2.5 md:max-[1120px]:mx-auto md:max-[1120px]:max-w-225 min-[1120px]:col-start-1 min-[1120px]:row-span-2 min-[1120px]:row-start-1 min-[1120px]:gap-5 min-[1120px]:pt-24 min-[1120px]:pl-10">
           <div className="flex h-112.5 w-full items-center min-[1120px]:gap-6.25">
             {images.length > 1 && (
               <PhotoArrow direction="previous" onClick={() => step(-1)} />
@@ -212,6 +218,8 @@ export default function ItemDetail({
               </div>
             )}
           </div>
+          {/* Phone and tablet: the business comes last (50px under the button on a phone, 20px on a tablet, on top of the 15px between rows). */}
+          {company && <div className="pt-12.5 pb-10 md:max-[1120px]:pt-5 min-[1120px]:hidden">{company}</div>}
         </div>
       </main>
       {/* Loads the big versions of the photos listed above, out of sight (an image that isn't shown still loads, and through

@@ -2,7 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { purgeBusinessCache } from "@/lib/cloudflare-purge";
-import { businessTag, isPossibleSlug, productsTag, servicesTag } from "@/lib/public-site";
+import { businessTag, feedTag, isPossibleSlug, productsTag, servicesTag } from "@/lib/public-site";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -49,6 +49,7 @@ export async function refreshPublicPage(accessToken: string, previousSlug?: stri
   if (old) updateTag(businessTag(old));
   updateTag(productsTag(user_id));
   updateTag(servicesTag(user_id));
+  updateTag(feedTag); // the home page lists every business's newest products
 
   // The CDN's copies cost a limited call, so there the old address is only dropped if it really is nobody's now (it is the
   // address this owner just left; one somebody else holds is not theirs to clear).

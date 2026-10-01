@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBusiness, type PublicBusiness } from "@/lib/public-site";
 import ContactForm from "./contact-form";
+import MapEmbed from "./map-embed";
 
 // sqrtx.co/<address>/contact: the business's contact details, a map and a form to write to it (Figma "Contact Phone new" 2157:611,
 // "Contact Tablet new" 2036:761, "Contact Desktop new" 1681:347, measured 2026-10-01). The layout next to this file draws the top and
@@ -15,6 +16,7 @@ import ContactForm from "./contact-form";
 // not shown. Not in the design: the lines are links (phone, email, the address's map), and the heading says "Contact us" (the designs
 // have a typo, "Contac us").
 // The map is OpenStreetMap's own embedded map with a marker at the business's position (free, no key; the page it loads is openstreetmap.org's).
+// It is heavy (about 345 KB of script before any map picture), so it loads only when the visitor presses "Show map" (map-embed.tsx).
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -99,15 +101,7 @@ function Map({ business }: { business: PublicBusiness }) {
   const dLat = 0.006;
   const box = [lon - dLon, lat - dLat, lon + dLon, lat + dLat].map((n) => n.toFixed(5)).join("%2C");
   const src = `https://www.openstreetmap.org/export/embed.html?bbox=${box}&layer=mapnik&marker=${lat.toFixed(5)}%2C${lon.toFixed(5)}`;
-  return (
-    <iframe
-      src={src}
-      title={`Map: ${business.formatted_address}`}
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      className="h-62.5 w-full border-0 @min-[1030px]:w-125 @min-[1030px]:shrink-0"
-    />
-  );
+  return <MapEmbed src={src} title={`Map: ${business.formatted_address}`} />;
 }
 
 // The two icons of the design, drawn as thin outlines at its sizes (its own vector shapes did not come with the capture).
