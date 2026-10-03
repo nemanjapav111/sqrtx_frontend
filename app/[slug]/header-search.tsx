@@ -1,8 +1,6 @@
 "use client";
 
 import { useParams, usePathname, useRouter } from "next/navigation";
-import ArrowIcon from "@/app/register/arrow-icon";
-import BackToProducts from "./back-to-products";
 import { useSearch } from "./search-context";
 
 // The search box of the top bar, in the two looks the designs have.
@@ -56,21 +54,8 @@ export default function HeaderSearch({ variant, servicesPath }: { variant: "bar"
         />
       </label>
     );
-    if (!onDetailPage) return line;
-    // The arrow's 44px box starts 6px from the screen's edge and overlaps the line by 1px, like the design.
-    return (
-      <div className="flex items-center">
-        <BackToProducts
-          slug={slug}
-          to={listPath}
-          label={onServicePage ? "Back to services" : "Back to products"}
-          className="-mr-px -ml-2.5 flex size-11 shrink-0 items-center justify-center"
-        >
-          <ArrowIcon className="h-5 w-5.5 rotate-180" strokeWidth={1.6} />
-        </BackToProducts>
-        {line}
-      </div>
-    );
+    // (The way back to the list is on the product's or service's page itself, with words: item-detail.tsx.)
+    return line;
   }
 
   return (

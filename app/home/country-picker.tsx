@@ -69,17 +69,17 @@ export default function CountryPicker({ countries, variant, className = "" }: { 
           bar
             ? "h-11 w-full flex-col text-[11px] leading-[17px] font-medium text-black"
             : desktop
-              ? "h-11 gap-1.75 text-[16px] leading-[1.21] font-bold text-white"
+              ? "h-11 gap-1.5 text-[14px] leading-[1.21] font-bold text-white"
               : "h-11 gap-1.75 text-[14px] leading-[17px] font-semibold text-white"
         }`}
       >
-        <svg aria-hidden viewBox="0 0 24 24" className={`shrink-0 ${desktop ? "size-4.5" : bar ? "size-4" : "size-3.5"}`} fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+        <svg aria-hidden viewBox="0 0 24 24" className={`shrink-0 ${desktop ? "size-4" : bar ? "size-4" : "size-3.5"}`} fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
           <circle cx="12" cy="10" r="3" />
         </svg>
         <span className="inline-flex items-center gap-0.5">
-          <span className={`inline-block text-center ${desktop ? "w-8.5" : bar ? "w-6" : "w-7.5"}`}>{label}</span>
-          <svg aria-hidden viewBox="0 0 24 24" className={`shrink-0 ${desktop ? "size-3.5" : "size-3"}`} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <span className={`inline-block text-center ${desktop ? "w-7.5" : bar ? "w-6" : "w-7.5"}`}>{label}</span>
+          <svg aria-hidden viewBox="0 0 24 24" className="size-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <path d="m6 9 6 6 6-6" />
           </svg>
         </span>

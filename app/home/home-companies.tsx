@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CategoryFilter from "@/app/[slug]/category-filter";
 import { fetchFeedCompaniesPage, type FeedCategory, type FeedCompaniesPage, type FeedCompanyItem } from "@/lib/feed";
-import CompanyInfo, { VisitLink } from "./company-info";
+import CompanyInfo from "./company-info";
 import { useHome } from "./home-context";
 
 // The Companies page's list (Figma "sqrtx Companies Phone/Tablet/Desktop new"): the newest businesses, one block each: its company block (logo,
-// name, kind of business, city: company-info.tsx), a "Visit" button to its own page and the first 5 lines of its About text, 12px under it.
+// name, kind of business, city and a chevron, all one link to its own page: company-info.tsx; the design's separate "Visit" link is gone) and the first 5 lines of its About text under it.
 // Above the first one the filter ("ALL" = the business categories of the businesses in the chosen country). The same column on every size:
 // at most 700px wide and centered, the blocks 34px apart on a phone and 30px on a tablet and desktop. Searching (the company's name and its
 // About text), the filter and the country (the bars' picker) ask the API for the first page of what was chosen; the next pages come by "Show
@@ -120,10 +120,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
         <ul aria-busy={busy} className={`flex flex-col gap-8.5 transition-opacity duration-200 md:gap-7.5 ${busy ? "opacity-50" : ""}`}>
           {view.items.map((company) => (
             <li key={company.slug} className="flex flex-col gap-3">
-              <div className="flex w-fit max-w-full flex-col gap-0.75">
-                <CompanyInfo slug={company.slug} name={company.company_name} typeName={company.company_type} city={company.city} logo={company.logo} className="pb-1.5" />
-                <VisitLink slug={company.slug} />
-              </div>
+              <CompanyInfo card slug={company.slug} name={company.company_name} typeName={company.company_type} city={company.city} logo={company.logo} />
               {/* 5 lines, then "…" (the API sends the first 500 characters). Line breaks the owner typed are kept. */}
               {company.about && <p className="line-clamp-5 text-[16px] leading-5 whitespace-pre-line text-[#111] wrap-break-word">{company.about}</p>}
             </li>

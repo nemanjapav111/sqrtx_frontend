@@ -7,7 +7,7 @@ import { currentTab, tabsFor } from "./tabs";
 
 // The page links of the top bar on tablet and desktop (the phone has them in the bottom bar instead).
 //  - "tablet" (Figma 2015:206): its own row under the logo, centered, followed by "← sqrtx".
-//  - "desktop" (Figma 1424:463): the four links in the middle of the bar; "← sqrtx" is a separate button at the right
+//  - "desktop" (Figma 1424:463): the four links in the middle of the bar; "← sqrtx" is a separate button, in the window's far left corner (business-header.tsx)
 //    (see business-header.tsx).
 // The designs show no "you are here" marking on these links (every one is plain black); tried that as-is, but with
 // four identical-looking links it wasn't clear which page you were on, so the current one is underlined too, on top

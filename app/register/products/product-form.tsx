@@ -45,6 +45,7 @@ export default function ProductForm({
   const [submitted, setSubmitted] = useState(false);
   const [phase, setPhase] = useState<"idle" | "adding" | "moving">("idle"); // only used for the buttons and messages
   const inFlight = useRef(false); // the real "already working" guard: state would be stale for a second click in the same instant
+  const leaving = useRef(false); // the next page has been asked for: the button stays off until this page is gone (it came back to life for a moment before)
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null); // "... was added"
   const [upload, setUpload] = useState<UploadStatus | null>(null); // how the photos' upload is going, while adding
@@ -60,8 +61,10 @@ export default function ProductForm({
     try {
       await action();
     } finally {
-      inFlight.current = false;
-      setPhase("idle");
+      if (!leaving.current) {
+        inFlight.current = false;
+        setPhase("idle");
+      }
     }
   }
 
@@ -112,6 +115,7 @@ export default function ProductForm({
     try {
       const state = await completeStep("products");
       router.push(pageAfter(state, "products"));
+      leaving.current = true;
     } catch (err) {
       showError(err);
     }

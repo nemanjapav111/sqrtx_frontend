@@ -33,6 +33,7 @@ export default function RegisterForm({
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false); // only used to grey out the button
   const inFlight = useRef(false); // the real "already sending" guard: state would be stale for a second submit in the same instant
+  const leaving = useRef(false); // the next page has been asked for: the button stays off until this page is gone (it came back to life for a moment before)
   const [error, setError] = useState<string | null>(null);
   const [emailTaken, setEmailTaken] = useState(false); // this address already has an account
 
@@ -82,14 +83,17 @@ export default function RegisterForm({
         setError(ERROR_MESSAGES[error.code ?? ""] ?? GENERIC_ERROR);
       } else if (data.session) {
         router.push(NEXT_STEP); // email confirmation is off in Supabase: already signed in
+        leaving.current = true;
       } else {
         onSent(email.trim(), password); // new account, confirmation email sent
       }
     } catch {
       setError(GENERIC_ERROR);
     } finally {
-      inFlight.current = false;
-      setSending(false);
+      if (!leaving.current) {
+        inFlight.current = false;
+        setSending(false);
+      }
     }
   }
 

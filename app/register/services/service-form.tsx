@@ -3,18 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
-import CategorySelect from "@/app/components/category-select";
-import Field from "@/app/components/field";
 import LogoutButton from "@/app/components/logout-button";
-import ImageZone from "@/app/components/image-zone";
 import PageHeading from "@/app/components/page-heading";
 import PendingOverlay from "@/app/components/pending-overlay";
+import ServiceFields, { CONTROL_NAME } from "@/app/components/service-fields";
 import UploadProgress from "@/app/components/upload-progress";
 import { ApiError } from "@/lib/api";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { completeStep, pageAfter } from "@/lib/onboarding";
 import {
-  MAX_SERVICE_IMAGES,
   createService,
   emptyService,
   invalidServiceFields,
@@ -24,15 +21,6 @@ import {
 } from "@/lib/services";
 import type { UploadStatus } from "@/lib/upload";
 import ArrowIcon from "../arrow-icon";
-
-// The form control that gets the cursor for each field that needs fixing.
-const CONTROL_NAME: Record<ServiceField, string> = {
-  name: "serviceName",
-  price: "price",
-  category: "category",
-  images: "images",
-  description: "description",
-};
 
 // The "Add service" page of registration. Owners can add as many services as they like, one after another, and
 // adding services is optional: "Next" and "Skip for now" both move on to the next step.
@@ -50,7 +38,6 @@ export default function ServiceForm({
 }) {
   const router = useRouter();
   const [values, setValues] = useState<ServiceValues>(emptyService);
-  const set = (change: Partial<ServiceValues>) => setValues((v) => ({ ...v, ...change }));
   // The categories services use, offered in the category box (a service with a new one adds it).
   const [categories, setCategories] = useState(knownCategories);
 
@@ -58,6 +45,7 @@ export default function ServiceForm({
   const [submitted, setSubmitted] = useState(false);
   const [phase, setPhase] = useState<"idle" | "adding" | "moving">("idle"); // only used for the buttons and messages
   const inFlight = useRef(false); // the real "already working" guard: state would be stale for a second click in the same instant
+  const leaving = useRef(false); // the next page has been asked for: the button stays off until this page is gone (it came back to life for a moment before)
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null); // "... was added"
   const [upload, setUpload] = useState<UploadStatus | null>(null); // how the photos' upload is going, while adding
@@ -73,8 +61,10 @@ export default function ServiceForm({
     try {
       await action();
     } finally {
-      inFlight.current = false;
-      setPhase("idle");
+      if (!leaving.current) {
+        inFlight.current = false;
+        setPhase("idle");
+      }
     }
   }
 
@@ -125,6 +115,7 @@ export default function ServiceForm({
     try {
       const state = await completeStep("services");
       router.push(pageAfter(state, "services"));
+      leaving.current = true;
     } catch (err) {
       showError(err);
     }
@@ -187,60 +178,7 @@ export default function ServiceForm({
           className={`flex w-full flex-col items-center ${pending ? "opacity-40" : ""}`}
         >
           <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5 md:pb-8">
-            <Field
-              label="Service name*"
-              name="serviceName"
-              type="text"
-              maxLength={255}
-              value={values.name}
-              onChange={(v) => set({ name: v })}
-              invalid={invalid("name")}
-            />
-            <Field
-              label="Price"
-              name="price"
-              type="text"
-              inputMode="decimal"
-              prefix="$"
-              hint={'Displays "Inquiry" if left blank.'}
-              maxLength={13}
-              value={values.price}
-              onChange={(v) => set({ price: v })}
-              invalid={invalid("price")}
-            />
-            <CategorySelect
-              label="Category*"
-              placeholder="Select or create a category"
-              options={categories}
-              allowCreate
-              maxRows={5}
-              smallPlaceholder
-              value={values.category}
-              invalid={invalid("category")}
-              onChange={(v) => set({ category: v })}
-            />
-            <ImageZone
-              images={values.images}
-              invalid={invalid("images")}
-              onChange={(update) => setValues((v) => ({ ...v, images: update(v.images) }))}
-              maxImages={MAX_SERVICE_IMAGES}
-              itemLabel="service"
-            />
-            <div className="flex w-full flex-col gap-2.25">
-              <label htmlFor="service-description" className="text-[14px] font-semibold">
-                Description*
-              </label>
-              <textarea
-                id="service-description"
-                name="description"
-                aria-invalid={invalid("description")}
-                value={values.description}
-                onChange={(e) => set({ description: e.target.value })}
-                className={`h-75 w-full resize-none border p-1 text-[16px] text-[#111] outline-none focus:shadow-[0_0_0_1px_black] ${
-                  invalid("description") ? "border-red-600 focus:shadow-[0_0_0_1px_#dc2626]" : "border-black"
-                }`}
-              />
-            </div>
+            <ServiceFields values={values} onChange={setValues} invalid={invalid} categories={categories} />
           </div>
 
           <button

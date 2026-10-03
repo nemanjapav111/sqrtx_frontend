@@ -1,5 +1,6 @@
 // The pages of a business's public site, shared by the bottom bar (phone) and the links in the top bar (tablet and
-// desktop). All four pages exist.
+// desktop). A business shows the links of the pages it offers: Products only if it provides products, Services only if it provides services
+// (a business that ticked only Services has no Products link; its own address is its Services page), always Contact and About.
 export type TabKey = "products" | "services" | "contact" | "about";
 
 type Provides = "products" | "services" | "both";
@@ -22,16 +23,21 @@ export function primaryTab(provides: Provides): TabKey {
   return provides === "services" ? "services" : "products";
 }
 
-/** All four tabs in order, each with the address it lives at relative to the business's own address (blank for the
- * primary tab, "/services" etc. for the rest). */
-export function tabsFor(provides: Provides): { key: TabKey; label: string; path: string }[] {
+// Every tab with the address it lives at relative to the business's own address (blank for the primary tab, "/services" etc. for the rest),
+// the ones the business does not offer too (an address can still be asked for, see tabPath).
+function allTabs(provides: Provides): { key: TabKey; label: string; path: string }[] {
   const primary = primaryTab(provides);
   return ORDER.map((key) => ({ key, label: LABELS[key], path: key === primary ? "" : `/${key}` }));
 }
 
+/** The tabs to show, in order: only the pages the business offers (and Contact and About), each with its address relative to the business's own. */
+export function tabsFor(provides: Provides): { key: TabKey; label: string; path: string }[] {
+  return allTabs(provides).filter((tab) => !(tab.key === "products" && provides === "services") && !(tab.key === "services" && provides === "products"));
+}
+
 /** The address of one of a business's pages, from its address: the primary tab is the business's own address. */
 export function tabPath(slug: string, provides: Provides, key: TabKey): string {
-  return `/${slug.toLowerCase()}${tabsFor(provides).find((tab) => tab.key === key)!.path}`;
+  return `/${slug.toLowerCase()}${allTabs(provides).find((tab) => tab.key === key)!.path}`;
 }
 
 /**

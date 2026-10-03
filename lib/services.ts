@@ -2,19 +2,27 @@ import { apiFetch, jsonBody } from "@/lib/api";
 import { apiUpload, type UploadStatus } from "@/lib/upload";
 import { priceOk } from "@/lib/products";
 import { isSaved, type PickedPhoto, type ZonePhoto } from "@/lib/photos";
+import type { ServicePriceType } from "@/lib/price";
 
 export { priceOk };
 
 // The API allows 1 to 30 images per service, JPEG, PNG, WebP, HEIC or HEIF, up to 10 MB each (see API.md).
 export const MAX_SERVICE_IMAGES = 30;
 
+// The two short optional facts of a service (the API's limits, see API.md): how long it takes and where the business works.
+export const SERVICE_DURATION_MAX_LENGTH = 60;
+export const SERVICE_AREA_MAX_LENGTH = 120;
+
 // A service as the API returns it (only the parts this site uses).
 export interface Service {
   id: string;
   service_name: string;
   price: number | string | null; // a Postgres numeric: reads may come back as a string
+  price_type: ServicePriceType;
   category: string;
   description: string;
+  duration: string | null;
+  service_area: string | null;
 }
 
 // A photo the user picked, waiting to be uploaded with the service. The id only tells the photos apart on screen.
@@ -23,17 +31,35 @@ export type ServiceImage = ZonePhoto;
 // Everything the user types or picks in the service form.
 export interface ServiceValues {
   name: string;
-  price: string; // as typed; empty means "Inquiry"
+  price: string; // as typed; empty means "Price on request"
+  priceType: ServicePriceType; // what the price means (a blank price has none)
   category: string;
   description: string;
+  duration: string; // optional: how long it takes
+  serviceArea: string; // optional: where the business works
   images: ServiceImage[]; // in the order shown: the first one is the main photo
 }
 
-export const emptyService: ServiceValues = { name: "", price: "", category: "", description: "", images: [] };
+export const emptyService: ServiceValues = {
+  name: "",
+  price: "",
+  priceType: "exact",
+  category: "",
+  description: "",
+  duration: "",
+  serviceArea: "",
+  images: [],
+};
 
 // The form is untouched: nothing typed, nothing picked.
 export const isEmptyService = (v: ServiceValues) =>
-  !v.name.trim() && !v.price.trim() && !v.category.trim() && !v.description.trim() && v.images.length === 0;
+  !v.name.trim() &&
+  !v.price.trim() &&
+  !v.category.trim() &&
+  !v.description.trim() &&
+  !v.duration.trim() &&
+  !v.serviceArea.trim() &&
+  v.images.length === 0;
 
 export type ServiceField = "name" | "price" | "category" | "images" | "description";
 
@@ -45,6 +71,7 @@ export function invalidServiceFields(v: ServiceValues): ServiceField[] {
   if (!v.category.trim() || v.category.length > 255) bad.push("category");
   if (v.images.length === 0 || v.images.length > MAX_SERVICE_IMAGES) bad.push("images");
   if (!v.description.trim()) bad.push("description"); // the API requires it
+  // (the duration and the area are optional, and their boxes stop typing at their limits)
   return bad;
 }
 
@@ -60,6 +87,9 @@ export function createService(v: ServiceValues, onProgress?: (status: UploadStat
   form.append("category", v.category.trim());
   form.append("description", v.description.trim());
   if (v.price.trim() !== "") form.append("price", v.price.trim().replace(",", "."));
+  form.append("price_type", v.priceType);
+  if (v.duration.trim()) form.append("duration", v.duration.trim());
+  if (v.serviceArea.trim()) form.append("service_area", v.serviceArea.trim());
   for (const image of v.images) if (!isSaved(image)) form.append("images", image.file);
   return apiUpload<Service>("/service", { method: "POST", body: form, onProgress });
 }
@@ -116,7 +146,16 @@ export function valuesFromService(p: MyService): ServiceValues {
     url: image.urls.card.webp,
     name: `Photo ${i + 1}`,
   }));
-  return { name: p.service_name, price, category: p.category, description: p.description, images };
+  return {
+    name: p.service_name,
+    price,
+    priceType: p.price_type ?? "exact",
+    category: p.category,
+    description: p.description,
+    duration: p.duration ?? "",
+    serviceArea: p.service_area ?? "",
+    images,
+  };
 }
 
 /**
@@ -135,7 +174,10 @@ export async function saveServiceEdits(original: MyService, v: ServiceValues, on
   if (v.description.trim() !== original.description) changes.description = v.description.trim();
   const price = v.price.trim() === "" ? null : Number(v.price.trim().replace(",", "."));
   const oldPrice = original.price === null || original.price === "" ? null : Number(original.price);
-  if (price !== oldPrice) changes.price = price; // null clears it: "Inquiry"
+  if (price !== oldPrice) changes.price = price; // null clears it: "Price on request"
+  if (v.priceType !== (original.price_type ?? "exact")) changes.price_type = v.priceType;
+  if (v.duration.trim() !== (original.duration ?? "")) changes.duration = v.duration.trim() || null; // null clears it
+  if (v.serviceArea.trim() !== (original.service_area ?? "")) changes.service_area = v.serviceArea.trim() || null;
   if (Object.keys(changes).length > 0) await apiFetch(`/service/${original.id}`, jsonBody("PATCH", changes));
 
   const keptIds = new Set(v.images.filter(isSaved).map((image) => image.id));

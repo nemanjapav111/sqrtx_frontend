@@ -28,11 +28,17 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
   const logoSize = logo ? logoDisplaySize(logo.width, logo.height) : null;
   return (
     <header data-site-header className="sticky top-0 z-30 bg-white">
-      {/* The line under the bar goes across the window, and so does what is in the bar: the logo and the name at the window's
-          left edge, the account icon and "← sqrtx" at its right edge, as in the designs. Only on an extra wide window
-          (over 2200px) the bar's content stops and is centered, so the two ends are not left thousands of pixels apart. */}
-      <div className="border-b border-[#b8b8b8]">
-      <div className="keep-width mx-auto flex w-full max-w-550 items-center">
+      {/* The line under the bar goes across the window. What is in the bar goes across it too on a phone and a tablet (the logo and the name at
+          the window's left edge, the account icon at its right, as in the designs); on desktop it sits in the same 1190px box as the products'
+          rows (30px at its sides), so the logo lines up with the first column and the account icon with the last; only "← sqrtx" stays in the corner. The bar is 69px high (68 and the line), the same as the sqrtx bar (home/home-header.tsx). */}
+      <div className="relative border-b border-[#b8b8b8]">
+      {/* Desktop only: the way back to sqrtx, in the window's far left corner (on phone and tablet it is in the pages' bar). It is not part of
+          the 1190px box below, so on a window narrower than 1320px that box starts further in (pl-24), clear of this link. */}
+      <Link href="/" className="absolute top-0 left-0 hidden h-17 items-center px-4.75 text-[14px] leading-[17px] font-medium tracking-[0.98px] text-black min-[1120px]:flex">
+        <BackToSqrtx />
+      </Link>
+      <div className="keep-width">
+      <div className="mx-auto flex w-full items-center min-[1120px]:max-w-297.5 min-[1120px]:px-7.5 min-[1120px]:max-[1319px]:pl-24">
         <div className="flex min-w-0 flex-1 items-center gap-3.25 min-[1120px]:w-75.75 min-[1120px]:flex-none">
           <div className="flex h-17 shrink-0 items-center justify-start">
             {/* A grey block shows until the logo has loaded, which needs its size (from the API). */}
@@ -71,12 +77,10 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
           <HeaderSearch variant="desktop" servicesPath={tabPath(slug, provides, "services")} />
         </div>
 
-        <div className="flex shrink-0 items-center gap-4.5 pr-2.5 min-[1120px]:pr-4.25 min-[1120px]:pl-6.25">
-          <Link href="/" className="hidden h-9 items-center px-4.75 text-[14px] leading-[17px] font-medium tracking-[0.98px] text-black min-[1120px]:flex">
-            <BackToSqrtx />
-          </Link>
+        <div className="flex shrink-0 items-center gap-4.5 pr-2.5 min-[1120px]:-mr-1.75 min-[1120px]:pr-0 min-[1120px]:pl-6.25">
           <VisitorIcon />
         </div>
+      </div>
       </div>
       </div>
 

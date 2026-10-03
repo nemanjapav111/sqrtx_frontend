@@ -6,6 +6,7 @@
 }
 
 @theme inline {
+  --font-weight-bold: 650;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   /* Soft grey: the same warm grey the Claude desktop app uses (its bg-300 is #F0EEE6, its bg-400 is #E8E6DC).
@@ -55,6 +56,16 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* Type (Inter, app/fonts.ts): large text gets Inter's finer "display" cut, and all text is set a hair tighter, which is how Inter is meant to be
+     used (its default spacing is made for tiny text); headings are tighter still. `bold` is 650 instead of 700 (the theme above): the
+     page used 700 for names, prices, buttons and labels alike and read heavy; this keeps the hierarchy and loses the shouting. */
+  font-optical-sizing: auto;
+  letter-spacing: -0.006em;
+}
+h1,
+h2,
+h3 {
+  letter-spacing: -0.022em;
 }
 
 /* A grey block standing in for text or a button that has not arrived yet: it "breathes" (fades softly down and back up, once every

@@ -36,7 +36,14 @@ export default async function MarketServicePage({ params }: { params: Promise<{ 
   if (segment !== current) permanentRedirect(`/service/${current}`);
 
   const categoryName = await getCategoryName(business.business_category);
-  const item = { name: service.service_name, price: service.price, description: service.description, images: service.images };
+  const item = {
+    name: service.service_name,
+    price: service.price,
+    priceType: service.price_type,
+    description: service.description,
+    images: service.images,
+    service: { duration: service.duration, area: service.service_area },
+  };
   return (
     <ItemDetail
       item={item}
@@ -44,7 +51,7 @@ export default async function MarketServicePage({ params }: { params: Promise<{ 
       slug={slug}
       backTo="/services"
       backLabel="Back to services"
-      company={<CompanyCard business={business} slug={slug} categoryName={categoryName} />}
+      company={<CompanyCard business={business} slug={slug} categoryName={categoryName} label="Offered by" />}
     />
   );
 }

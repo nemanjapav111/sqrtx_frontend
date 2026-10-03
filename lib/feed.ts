@@ -1,6 +1,7 @@
 // The home page's list: the products of ALL the businesses, newest first, one page at a time (GET /feed/products, see API.md in the
 // backend). Used by the server (the first page, lib/public-site.ts) and by the browser (search, filters and "Show more"), so it holds
 // nothing that only works on one of them.
+import type { ServicePriceType } from "@/lib/price";
 
 // How many products a page holds. 24 is a whole number of rows for one, two and three columns.
 export const FEED_PAGE_SIZE = 24;
@@ -10,13 +11,21 @@ export const FEED_PAGE_SIZE = 24;
 export const COUNTRY_COOKIE = "sqrtx_country";
 export const ALL_COUNTRIES = ""; // the value of "all countries" in the page's own state (the cookie says "all")
 
+// A business's logo, as the Services and Companies pages' rows have it (the home page's cards do not show it).
+export interface FeedLogo {
+  avif: string;
+  webp: string;
+  width: number | null;
+  height: number | null;
+  placeholder: string | null;
+}
+
 export interface FeedItem {
   id: string;
   product_name: string;
   price: number | string | null; // a Postgres numeric: reads may come back as a string
   slug: string; // the business's address (sqrtx.co/<slug>)
   company_name: string;
-  logo: { avif: string; webp: string; width: number | null; height: number | null; placeholder: string | null } | null;
   image: { card: { avif: string; webp: string }; placeholder: string | null } | null;
 }
 
@@ -41,13 +50,14 @@ export interface FeedServiceItem {
   id: string;
   service_name: string;
   price: number | string | null;
+  price_type: ServicePriceType; // what the price means: exact, from, per hour, per visit
   description: string;
   description_cut: boolean;
   slug: string;
   company_name: string;
   company_type: string | null;
   city: string;
-  logo: FeedItem["logo"];
+  logo: FeedLogo | null;
   image: { list: { avif: string; webp: string }; placeholder: string | null } | null;
 }
 export interface FeedServicesPage extends Omit<FeedPage, "items"> {
@@ -62,7 +72,7 @@ export interface FeedCompanyItem {
   company_type: string | null;
   city: string;
   about: string | null;
-  logo: FeedItem["logo"];
+  logo: FeedLogo | null;
 }
 export interface FeedCompaniesPage extends Omit<FeedPage, "items"> {
   items: FeedCompanyItem[];

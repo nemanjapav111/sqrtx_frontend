@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
-import { formatPrice } from "@/lib/price";
+import { formatServicePrice } from "@/lib/price";
 import { servicePath } from "@/lib/product-url";
 import { fetchServicesPage, type PublicServiceRow, type PublicServicesPage } from "@/lib/public-services";
 import CategoryFilter from "./category-filter";
@@ -17,7 +17,7 @@ import { useSearch } from "./search-context";
 //
 // Sizes (Figma "Services Phone new" 2122:619, "Services Tablet new" 2027:396, "Services Desktop new" 1642:161; measured 2026-10-01
 // from the captured designs). A row, by the width of the content (container queries, not the window's, like the products' list):
-//  - phone: one column. The photo (full width, 300px tall, cropped to fill, no rounded corners), 20px below it the name (Inter bold
+//  - phone: one column. The photo (full width, 300px tall, shown whole in the products' frame: white, 1.5px light stroke, 24px around the photo; owner's choice 2026-10-02, it used to be cropped to fill), 20px below it the name (Inter bold
 //    24/29), the price (Inter semibold 18/22, 6px under the name), 10px under that the black button (192 x 41, "See More" Inter
 //    bold 16), 10px under that the description (Inter 16/20, #111, 8 lines then "…"). 42px between a description's last line and the next photo.
 //  - tablet, from 700px of content: two columns 328 : 400 (the content shrinks them a little when it is narrower than 728),
@@ -26,7 +26,7 @@ import { useSearch } from "./search-context";
 //    32/39 bold and the price 20/24 bold.
 // The filter is the same one as on the Products page, at the left edge of the first row: 34px above the photo on a phone, and 20px
 // above the first row's own 10px on tablet and desktop (the photo is 78px below the filter's top in both).
-// The photo is the API's list size (fits inside 1000 x 750, made for this row: it shows the photo cropped to fill 328 x 300, and the card size (604) would be soft on a sharp screen; the detail size (1536 x 900) is twice the bytes).
+// The photo is the API's list size (fits inside 1000 x 750, made for this row: the photo shows whole inside the frame's 280 x 252 (phone) or 352 x 252 (desktop) and the card size (604) would be soft on a sharp screen; the detail size (1536 x 900) is twice the bytes).
 // Around the rows: 16px at the sides on a phone and 10px on a tablet (the design has no wider margin), 20px above the filter on a tablet and
 // 30px on a desktop (the design's content starts 20px under the bar, and the desktop's row has 10px of its own).
 // Not in the design, so placeholders: the words when there is nothing to show or something went wrong, "Show more", and the filter's popup.
@@ -144,7 +144,8 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
               >
                 {/* The photo is a second way to the same page as the button: left out of the keyboard's way and of the screen reader's. */}
                 <Link href={href} tabIndex={-1} aria-hidden className="block @min-[700px]:p-2.5">
-                  <div className="h-75 w-full overflow-hidden bg-[#f3f4f6]">
+                  {/* The photo is shown whole (never cropped) in the same white box with a 1.5px light stroke as the products' cards (the list size fits inside 1000 x 750). */}
+                  <div className="flex h-75 w-full items-center justify-center bg-white p-6 ring-[1.5px] ring-black/15 ring-inset">
                     {service.image && (
                       <PlaceholderPicture
                         avif={service.image.list.avif}
@@ -153,9 +154,9 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
                         // The first rows are on screen at once: load them at once. The rest wait until they come near.
                         loading={index < 2 ? "eager" : "lazy"}
                         className="size-full"
-                        imgClassName="size-full object-cover"
+                        imgClassName="size-full object-contain"
                         placeholder={service.image.placeholder}
-                        blockClassName="inset-0 bg-[#f3f4f6]"
+                        blockClassName="-inset-6"
                       />
                     )}
                   </div>
@@ -165,7 +166,7 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
                   <div className="flex flex-col gap-1.5">
                     <h2 className="text-[24px] leading-[1.21] font-bold text-black wrap-break-word @min-[1030px]:text-[32px]">{service.service_name}</h2>
                     <p className="text-[18px] leading-[1.21] font-semibold text-black @min-[1030px]:text-[20px] @min-[1030px]:font-bold">
-                      {formatPrice(service.price)}
+                      {formatServicePrice(service.price, service.price_type)}
                     </p>
                   </div>
                   <Link

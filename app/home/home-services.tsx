@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CategoryFilter from "@/app/[slug]/category-filter";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
 import { fetchFeedServicesPage, type FeedCategory, type FeedServiceItem, type FeedServicesPage } from "@/lib/feed";
-import { formatPrice } from "@/lib/price";
+import { formatServicePrice } from "@/lib/price";
 import { marketServicePath } from "@/lib/product-url";
 import CompanyInfo from "./company-info";
 import { useHome } from "./home-context";
@@ -141,12 +141,13 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
                   typeName={service.company_type}
                   city={service.city}
                   logo={service.logo}
-                  className="pb-2.5 @min-[700px]:col-start-2 @min-[700px]:row-start-1 @min-[700px]:px-2.5 @min-[700px]:pt-2.5 @min-[700px]:pb-1.5"
+                  className="pb-2.5 @min-[700px]:col-start-2 @min-[700px]:row-start-1 @min-[700px]:px-2.5 @min-[700px]:pt-2.5 @min-[700px]:pb-3"
                 />
 
                 {/* The photo is a second way to the same page as the button: left out of the keyboard's way and of the screen reader's. */}
                 <Link href={href} tabIndex={-1} aria-hidden className="block @min-[700px]:col-start-1 @min-[700px]:row-span-2 @min-[700px]:row-start-1 @min-[700px]:p-2.5">
-                  <div className="h-75 w-full overflow-hidden bg-[#f3f4f6]">
+                  {/* The photo is shown whole (never cropped) in the same white box with a 1.5px light stroke as the products' cards (the list size fits inside 1000 x 750). */}
+                  <div className="flex h-75 w-full items-center justify-center bg-white p-6 ring-[1.5px] ring-black/15 ring-inset">
                     {service.image && (
                       <PlaceholderPicture
                         avif={service.image.list.avif}
@@ -155,9 +156,9 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
                         // The first rows are on screen at once: load them at once. The rest wait until they come near.
                         loading={index < 2 ? "eager" : "lazy"}
                         className="size-full"
-                        imgClassName="size-full object-cover"
+                        imgClassName="size-full object-contain"
                         placeholder={service.image.placeholder}
-                        blockClassName="inset-0 bg-[#f3f4f6]"
+                        blockClassName="-inset-6"
                       />
                     )}
                   </div>
@@ -166,7 +167,7 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
                 <div className="flex min-w-0 flex-col gap-2.5 pt-2.5 @min-[700px]:col-start-2 @min-[700px]:row-start-2 @min-[700px]:px-2.5 @min-[700px]:pt-0 @min-[700px]:pb-2.5">
                   <div className="flex flex-col gap-1.5">
                     <h2 className="text-[24px] leading-[1.21] font-bold text-black wrap-break-word @min-[1030px]:text-[32px]">{service.service_name}</h2>
-                    <p className="text-[18px] leading-[1.21] font-semibold text-black @min-[1030px]:text-[20px] @min-[1030px]:font-bold">{formatPrice(service.price)}</p>
+                    <p className="text-[18px] leading-[1.21] font-semibold text-black @min-[1030px]:text-[20px] @min-[1030px]:font-bold">{formatServicePrice(service.price, service.price_type)}</p>
                   </div>
                   <Link
                     href={href}

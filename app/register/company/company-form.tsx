@@ -114,6 +114,7 @@ export default function CompanyForm({
   const [sending, setSending] = useState(false); // only used to grey out the button
   const [upload, setUpload] = useState<UploadStatus | null>(null); // how the logo's upload is going, while saving
   const inFlight = useRef(false); // the real "already sending" guard: state would be stale for a second submit in the same instant
+  const leaving = useRef(false); // the next page has been asked for: the button stays off until this page is gone (it came back to life for a moment before)
   const [error, setError] = useState<string | null>(null);
 
   // What we know about the page name in the "Your URL" box. The answer belongs to one specific name,
@@ -174,9 +175,11 @@ export default function CompanyForm({
     if (account) {
       await refreshMyPublicPage(savedSlug && savedSlug !== values.slug ? savedSlug : undefined);
       router.push("/account");
+      leaving.current = true;
       return;
     }
     router.push(pageAfter(await getOnboardingState(), "business_profile"));
+    leaving.current = true;
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -206,8 +209,10 @@ export default function CompanyForm({
     } catch (err) {
       await handleError(err, form);
     } finally {
-      inFlight.current = false;
-      setSending(false);
+      if (!leaving.current) {
+        inFlight.current = false;
+        setSending(false);
+      }
     }
   }
 

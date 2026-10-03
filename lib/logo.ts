@@ -15,8 +15,13 @@ export const LOGO_FIT_CLASS = "block h-auto max-h-17 w-auto max-w-27.5";
  * Set it on the <img> so the space is reserved before the picture loads and nothing on the page jumps.
  * Returns null when the size is unknown (a logo saved before the API kept sizes): the picture then sizes itself.
  */
-export function logoDisplaySize(width: number | null, height: number | null): { width: number; height: number } | null {
+export function logoDisplaySize(
+  width: number | null,
+  height: number | null,
+  maxWidth = LOGO_MAX_WIDTH,
+  maxHeight = LOGO_MAX_HEIGHT,
+): { width: number; height: number } | null {
   if (!width || !height) return null;
-  const scale = Math.min(1, LOGO_MAX_WIDTH / width, LOGO_MAX_HEIGHT / height);
+  const scale = Math.min(1, maxWidth / width, maxHeight / height);
   return { width: width * scale, height: height * scale };
 }

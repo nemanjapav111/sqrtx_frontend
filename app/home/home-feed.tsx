@@ -5,20 +5,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CategoryFilter from "@/app/[slug]/category-filter";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
 import { fetchFeedPage, type FeedCategory, type FeedItem, type FeedPage } from "@/lib/feed";
-import { LOGO_FIT_CLASS, logoDisplaySize } from "@/lib/logo";
 import { formatPrice } from "@/lib/price";
 import { marketProductPath } from "@/lib/product-url";
 import { useHome } from "./home-context";
 
 // The home page's list (Figma "sqrtx Phone new", 2167): the newest products of every business, the same cards as a business's own Products
 // page (product-list.tsx: a grey box with the picture shown whole, the name, the price, 350px wide, wrapping into one, two or three
-// columns) with the business's LOGO in the card's top-left corner (110 x 68, as in the design), and above the first row the filter ("ALL",
-// 34px above): the business categories. Searching, the filter and the country (the bottom bar's picker) ask the API for the first page of
+// columns) with the BUSINESS'S NAME under the product's (no logo: logos differ too much in shape and quality to sit on a photo, and cost a
+// request each; they are on the Companies page and on a product's own page), and above the first row the filter ("ALL", 34px above): the
+// business categories. Searching, the filter and the country (the bottom bar's picker) ask the API for the first page of
 // what was chosen; the next pages come by "Show more" or by themselves when the end of the list is near. The API sends no total (it would
 // count every product on every request), only whether there is a next page.
 //
-// A card leads to the product's own page in the marketplace (app/(sqrtx)/product/[id]), the logo to the business's page (a separate link beside the card's, not inside it: a link
-// inside a link is not allowed). Not in the design, so placeholders: the words for an empty list or an error, and "Show more".
+// A card leads to the product's own page in the marketplace (app/(sqrtx)/product/[id]). Not in the design, so placeholders: the words for an empty list or an error, and "Show more".
 
 const ALL = "";
 const SEARCH_DELAY_MS = 300;
@@ -129,11 +128,11 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
 
         <ul aria-busy={busy} className={`flex flex-wrap justify-start gap-10 transition-opacity duration-200 ${busy ? "opacity-50" : ""}`}>
           {view.items.map((product, index) => (
-            <li key={product.id} className="relative min-h-108 w-full @min-[350px]:w-87.5">
-              {/* The whole card (picture, name, price) leads to the product's own page in the marketplace (its business's name and logo are there). */}
+            <li key={product.id} className="min-h-108 w-full @min-[350px]:w-87.5">
+              {/* The whole card (picture, name, price) leads to the product's own page in the marketplace (its business's logo and page are there). */}
               <Link href={marketProductPath(product)} className="block">
-                {/* The picture is shown whole (never cropped) inside a grey box with a soft shadow. */}
-                <div className="flex h-87.5 items-center justify-center bg-[#f9f9f9] p-6 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
+                {/* The picture is shown whole (never cropped) inside a white box with square corners, a 1.5px light grey stroke, no shadow, no hover effect, no rounded corners (owner's choice, 2026-10-02). The stroke is a ring (an inset box-shadow), not a border. */}
+                <div className="flex h-87.5 items-center justify-center bg-white p-6 ring-[1.5px] ring-black/15 ring-inset">
                   {product.image && (
                     <PlaceholderPicture
                       avif={product.image.card.avif}
@@ -148,10 +147,12 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
                     />
                   )}
                 </div>
-                <h2 className="pt-3.25 pb-0.75 text-[16px] leading-5.5 font-medium text-[#111] wrap-break-word">{product.product_name}</h2>
+                <h2 className="pt-3.25 text-[16px] leading-5.5 font-medium text-[#111] wrap-break-word">{product.product_name}</h2>
+                {/* Who sells it, right under the name (not last: it read as an afterthought): smaller and a darker grey than the name's neighbours
+                    (#5f6368 on white is 6:1, a light grey is not readable outside). Plain text: the card is already one link. */}
+                <p className="line-clamp-1 pb-1 text-[14px] leading-5 text-[#5f6368] wrap-break-word">{product.company_name}</p>
                 <p className="text-[18px] leading-5.5 font-bold">{formatPrice(product.price)}</p>
               </Link>
-              {product.logo && <BusinessLogo product={product} />}
             </li>
           ))}
         </ul>
@@ -176,24 +177,5 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
         </div>
       </div>
     </main>
-  );
-}
-
-// The business's logo in the card's top-left corner (110 x 68 at most, fitted inside, never cropped or enlarged, as on the business's own
-// page): a link to the business's page.
-function BusinessLogo({ product }: { product: FeedItem }) {
-  const logo = product.logo!;
-  const size = logoDisplaySize(logo.width, logo.height);
-  return (
-    <Link href={`/${product.slug}`} aria-label={`${product.company_name}: all its products`} className="absolute top-0 left-0 flex h-17 w-27.5 items-start justify-start">
-      {size ? (
-        <PlaceholderPicture avif={logo.avif} webp={logo.webp} alt="" placeholder={logo.placeholder} className="shrink-0" style={size} />
-      ) : (
-        <picture className="contents">
-          <source srcSet={logo.avif} type="image/avif" />
-          <img src={logo.webp} alt="" className={LOGO_FIT_CLASS} />
-        </picture>
-      )}
-    </Link>
   );
 }

@@ -60,14 +60,14 @@ export function HomeFooter({ countries }: { countries: readonly string[] }) {
 
 /**
  * The links of the top bar (the phone has them in the bottom bar): "tablet" (Figma "sqrtx links": 44px high, 23px apart, in their own row,
- * see home-header.tsx) and "desktop" ("Frame 3": 28px apart, 17px in from the sides, in the middle of the bar). Both Inter bold 14px, white;
+ * see home-header.tsx) and "desktop" (17px apart and 17px in from the left, exactly like a business's links, header-links.tsx; the design's "Frame 3" has them 28px apart). Both Inter bold 14px, white;
  * the current page is underlined (the design underlines it too).
  */
 export function HomeLinks({ variant }: { variant: "tablet" | "desktop" }) {
   const desktop = variant === "desktop";
   const current = useCurrent();
   return (
-    <nav aria-label="Pages" className={desktop ? "flex items-center gap-7 px-4.25 py-1.25" : "flex items-center gap-5.75"}>
+    <nav aria-label="Pages" className={desktop ? "flex items-center gap-4.25 py-1.25 pl-4.25" : "flex items-center gap-5.75"}>
       {PAGES.map((page) => (
         <Link
           key={page.key}

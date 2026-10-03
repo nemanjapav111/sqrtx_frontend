@@ -1,16 +1,18 @@
 // The public list of a business's services, one page at a time (GET /service/summary, see API.md in the backend): the services' version
 // of lib/public-products.ts. Used by the server (the first page, lib/public-site.ts) and by the browser (search, category and
 // "Show more"), so it holds nothing that only works on one of them.
+import type { ServicePriceType } from "@/lib/price";
 
 // How many services a page holds. (A row is large, so this is a lot of scrolling already; 24 matches the products' page size.)
 export const PUBLIC_SERVICES_PAGE_SIZE = 24;
 
 // What a row of the list shows, and nothing more: the first part of the description (cut by the API, `description_cut` says it was
-// longer) and the main photo in the list size (fits inside 1000 x 750; the row shows it cropped to fill its box), see the API notes.
+// longer) and the main photo in the list size (fits inside 1000 x 750; the row shows it whole in a framed box), see the API notes.
 export interface PublicServiceRow {
   id: string;
   service_name: string;
   price: number | string | null; // a Postgres numeric: reads may come back as a string
+  price_type: ServicePriceType; // what the price means: exact, from, per hour, per visit
   category: string;
   description: string;
   description_cut: boolean;

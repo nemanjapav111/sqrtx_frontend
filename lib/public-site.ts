@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { emptyFeedCompaniesPage, emptyFeedPage, emptyFeedServicesPage, feedQuery, type FeedCompaniesPage, type FeedPage, type FeedServicesPage } from "@/lib/feed";
 import { emptyProductsPage, productsPageQuery, type PublicProductsPage } from "@/lib/public-products";
+import type { ServicePriceType } from "@/lib/price";
 import { emptyServicesPage, servicesPageQuery, type PublicServicesPage } from "@/lib/public-services";
 
 // Reading what visitors see (a business's public page), on the server. No login: these API routes are public. The
@@ -130,8 +131,11 @@ export interface PublicServiceDetail {
   id: string;
   service_name: string;
   price: number | string | null;
+  price_type: ServicePriceType; // what the price means: exact, from, per hour, per visit
   category: string;
   description: string;
+  duration: string | null; // how long it takes (optional)
+  service_area: string | null; // where the business works (optional)
   user_id: string;
   images: PublicProductImage[];
 }
@@ -168,22 +172,23 @@ export const getCategoryName = cache(async (id: string) => {
 // Where the site lives on the web: the addresses in the sitemap are complete ones.
 export const SITE_ORIGIN = "https://sqrtx.co";
 
-// How many products go into one sitemap file (the most the API gives in one page). A search engine takes at most 50,000
-// addresses per file, and each product adds at most two (its page and its business's page), so 10,000 stays well under.
-export const SITEMAP_PRODUCTS_PER_FILE = 10000;
+// How many entries go into one sitemap file (the most the API gives in one page). A search engine takes at most 50,000 addresses per
+// file, and an entry adds at most four (a business has its page, Contact, About and Services), so 10,000 stays well under.
+export const SITEMAP_ENTRIES_PER_FILE = 10000;
 
-// What GET /product/sitemap returns: every product the public can see, with the address of its business.
+// What GET /sitemap returns: every business, product and service the public can see, with the address of its business and what the
+// business offers (the pages it has follow from that: see app/sitemap.ts).
 export interface SitemapPage {
-  items: { id: string; product_name: string; slug: string; updated_at: string }[];
+  items: { kind: "business" | "product" | "service"; id: string; name: string; slug: string; provides: "products" | "services" | "both"; updated_at: string }[];
   total: number;
 }
 
 // One page of that list, kept for an hour: a new product reaches the sitemap within the hour, which is all a crawler needs.
 export const getSitemapPage = async (page: number) =>
-  (await getJson<SitemapPage>(`/product/sitemap?page=${page}&limit=${SITEMAP_PRODUCTS_PER_FILE}`, 3600)) ?? { items: [], total: 0 };
+  (await getJson<SitemapPage>(`/sitemap?page=${page}&limit=${SITEMAP_ENTRIES_PER_FILE}`, 3600)) ?? { items: [], total: 0 };
 
 // How many sitemap files there are (at least one: the fixed pages of the site are in it).
 export async function getSitemapCount() {
   const { total } = await getSitemapPage(1);
-  return Math.max(1, Math.ceil(total / SITEMAP_PRODUCTS_PER_FILE));
+  return Math.max(1, Math.ceil(total / SITEMAP_ENTRIES_PER_FILE));
 }

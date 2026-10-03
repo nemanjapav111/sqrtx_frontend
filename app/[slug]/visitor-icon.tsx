@@ -26,6 +26,38 @@ import { SAVED_LOGIN_KEY, hasSavedLogin } from "@/lib/saved-login";
 // Plain Tailwind breakpoint classes, not a JS media-query check.
 const MENU_WIDTH = "w-50.75"; // 203px, the design's width
 
+// "View my page" (first row of the signed-in menu): where the signed-in owner's own public page is, asked once and kept while the page is open.
+// The answer is the same one the login uses to decide where a finished owner belongs (lib/onboarding.ts getHomePath): their page when it is
+// public, otherwise the account page (a hidden page would only say "not found") or a registration step; the row is only there for a page.
+// undefined: not asked yet, null: there is none to show. It is also kept in the tab's session storage (a reload shows it at once, and is
+// checked again in the background) and asked for as soon as the page knows the visitor is signed in, not only when the menu is opened:
+// asked on opening it arrived after the menu was already on screen, a moment late.
+const MY_PAGE_KEY = "sqrtx:my-page";
+let myPageCache: string | null | undefined;
+let myPageAsked = false; // asked on this page load already
+function readMyPage(): string | null | undefined {
+  if (myPageCache !== undefined) return myPageCache;
+  try {
+    const kept = sessionStorage.getItem(MY_PAGE_KEY);
+    return kept === null ? undefined : kept === "" ? null : kept;
+  } catch {
+    return undefined;
+  }
+}
+function keepMyPage(path: string | null) {
+  myPageCache = path;
+  try {
+    sessionStorage.setItem(MY_PAGE_KEY, path ?? "");
+  } catch {}
+}
+function forgetMyPage() {
+  myPageCache = undefined;
+  myPageAsked = false;
+  try {
+    sessionStorage.removeItem(MY_PAGE_KEY);
+  } catch {}
+}
+
 // How far below the ROOT (the 40px button box) the menu starts. The icon itself is only 25px, centred in that 40px box, so its
 // own bottom edge sits 7.5px above the box's bottom edge; the menu starts 4px under THAT edge (the gap the category popup has
 // under its row). Anchoring to the box (as `top-full` does) put the popup noticeably further from the icon.
@@ -72,6 +104,7 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
   const [saved, setSaved] = useState(false); // is there a saved login: read when the menu is opened
   const [confirmed, setConfirmed] = useState<boolean | null>(null); // what the login library said (null: not asked)
   const [leaving, setLeaving] = useState(false);
+  const [myPage, setMyPage] = useState<string | null | undefined>(() => (typeof window === "undefined" ? undefined : readMyPage()));
   const rootRef = useRef<HTMLDivElement>(null);
 
   // The dot lives in an attribute of the root (see the script below), not in React state, so it can be there before React is.
@@ -92,6 +125,7 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
         if (cancelled) return;
         const answer = (session: unknown) => {
           showDot(!!session);
+          if (!session) forgetMyPage(); // the login is gone (it expired, or was ended in another tab): the kept page is no one's
           setConfirmed(!!session);
         };
         supabase.auth.getSession().then(({ data }) => !cancelled && answer(data.session));
@@ -131,6 +165,7 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
     try {
       const { supabase } = await import("@/lib/supabase");
       await supabase.auth.signOut({ scope: "local" });
+      forgetMyPage(); // the next person to sign in in this tab has their own page
       router.push("/login");
     } catch {
       setLeaving(false);
@@ -145,6 +180,28 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
   );
 
   const signedIn = confirmed ?? saved;
+
+  // As soon as the visitor is known to be signed in: ask once per page load where their own page is (this loads the API helpers, which a plain
+  // visitor never does). If it can't be asked now, what was kept stays (or the row is simply left out).
+  useEffect(() => {
+    if (!signedIn || myPageAsked) return;
+    myPageAsked = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getHomePath } = await import("@/lib/onboarding");
+        const path = await getHomePath();
+        keepMyPage(path === "/account" || path.startsWith("/register") ? null : path);
+      } catch {
+        myPageAsked = false; // try again next time
+        return;
+      }
+      if (!cancelled) setMyPage(myPageCache);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [signedIn]);
   const onNavigate = () => setOpen(false);
 
   return (
@@ -173,7 +230,12 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
         <div role="menu" style={{ top: light ? MENU_TOP_LIGHT : MENU_TOP }} className={`absolute right-0 z-40 flex flex-col border border-[#b8b8b8] bg-white ${MENU_WIDTH}`}>
           {signedIn ? (
             <>
-              <MenuRow href="/account" onClick={onNavigate} first>
+              {myPage && (
+                <MenuRow href={myPage} onClick={onNavigate} first>
+                  View my page
+                </MenuRow>
+              )}
+              <MenuRow href="/account" onClick={onNavigate} first={!myPage}>
                 Account
               </MenuRow>
               <MenuRow href="/account/settings" onClick={onNavigate}>

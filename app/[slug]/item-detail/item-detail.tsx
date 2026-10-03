@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PlaceholderPicture, { markSeen } from "@/app/components/placeholder-picture";
 import ArrowIcon from "@/app/register/arrow-icon";
-import { formatPrice } from "@/lib/price";
+import { formatPrice, formatServicePrice } from "@/lib/price";
 import type { PublicBusiness, PublicProductImage } from "@/lib/public-site";
 import BackToProducts from "../back-to-products";
 import PhotoViewer from "./photo-viewer";
 
 // A product's or a service's own page (the services' designs, Figma "Service Details Phone/Tablet/Desktop new" 2151:368, 2036:612,
 // 1673:194, are the products' ones with other words, so it is one component), in the three sizes of the designs (Figma 2108:344 phone
-// 360 x 840, 1988:1874 tablet 768 x 909, 1560:134 desktop 1440 x 1024). The top bar is the site's own (the layout draws it); the back arrow to the products is
-// in the search line on phone and tablet (header-search.tsx) and at the page's top left on desktop.
+// 360 x 840, 1988:1874 tablet 768 x 909, 1560:134 desktop 1440 x 1024). The top bar is the site's own (the layout draws it); the way back to the list is
+// an arrow with the words "Back to products" / "Back to services" (owner's request 2026-10-02: the design's bare arrow in the search line was easy to
+// miss), first on the page on phone and tablet and at its top left on desktop.
 //  - Phone: name (20px medium) and price (22px bold) at the left, the photo in a 360 x 450 box (shown whole, never cropped),
 //    the other photos as 80px squares (cropped to fill, three to a row), then the description and "View contact".
 //  - Tablet (768px up): the same in one centered column, the photo across the whole width, name and price centered, the
@@ -19,8 +20,10 @@ import PhotoViewer from "./photo-viewer";
 //  - Desktop (1120px up; the design is 1440 wide, 1120 is where the two columns still fit): the photos at the left with
 //    "<" ">" arrows on the big photo, and at the right the name (32px bold), the price (20px bold), "View contact" and the
 //    description (all 560px wide).
-// The "View contact" button is smaller than the design's (36px high and 14px text instead of 42px and 16px, wording in
-// lower case): the owner found the drawn one oversized.
+// The "View contact" button is the page's main button (black, white 16px bold text, 44px high, the same black as the lists' "See More"; full width on a
+// phone), on products and services alike (owner's choice 2026-10-02: it used to be a small outlined one, and what it does is unchanged).
+// A service also shows its facts (item.service): how long it takes and where the business works (the owner's two optional lines), and the
+// business's hours and address, which were only in the contact box; under the photos on phone and tablet, between the button and the text on desktop.
 // Where I chose (not in the designs):
 //  - "View contact" comes AFTER the description on phone and tablet (the design's tablet has it before) and right under the
 //    price on desktop (as designed): a reader finishes the text and then acts, except on desktop where the column is short
@@ -39,8 +42,10 @@ import PhotoViewer from "./photo-viewer";
 export interface DetailItem {
   name: string;
   price: number | string | null;
+  priceType?: string; // a service's: what the price means (the API's price_type); a product has none and a blank price reads "Inquiry"
   description: string;
   images: PublicProductImage[];
+  service?: { duration: string | null; area: string | null }; // present on a service's page: its facts
 }
 
 // `company`: only on a product's page in the sqrtx marketplace (Figma "sqrtx Product Details Phone/Tablet/Desktop new"), where the page has no
@@ -103,13 +108,20 @@ export default function ItemDetail({
       {/* The content is at most 1440px wide (the design's) and centered; everything of the page is placed against THIS box,
           so on a wider window nothing is left behind at the window's edge. */}
       <div className="relative mx-auto w-full max-w-360">
-      {/* Desktop only (phone and tablet have the arrow in the search line). 20px from the content's edges, like the design;
-          drawn with the site's own thin arrow instead of the design's bold "←" text character. */}
-      <BackToProducts slug={slug} to={backTo} label={backLabel} className="absolute top-5 left-5 z-10 hidden size-11 items-center justify-center min-[1120px]:flex">
-        <ArrowIcon className="h-6 w-7 rotate-180" strokeWidth={1.6} />
-      </BackToProducts>
+      <main className="flex w-full flex-col gap-2.5 pt-1.5 pb-10 min-[1120px]:grid min-[1120px]:grid-cols-[minmax(0,740fr)_minmax(0,680fr)] min-[1120px]:grid-rows-[auto_1fr] min-[1120px]:items-start min-[1120px]:gap-x-0 min-[1120px]:gap-y-3.75 min-[1120px]:px-2.5 min-[1120px]:pt-0 min-[1120px]:pb-16">
+        {/* The way back: the site's thin arrow and the words ("Back to products" / "Back to services"), first on the page on phone and tablet
+            (it used to be an arrow in the search line, which is plain now) and, on desktop, in the page's top left corner (20px from the content's
+            edges, as the design had its arrow; absolute, so it is not a grid cell: the main box is not positioned, the box around it is). */}
+        <BackToProducts
+          slug={slug}
+          to={backTo}
+          label={backLabel}
+          className="flex h-11 items-center gap-2 self-start px-4 text-[14px] leading-[17px] font-medium text-black md:px-6 min-[1120px]:absolute min-[1120px]:top-5 min-[1120px]:left-5 min-[1120px]:z-10 min-[1120px]:px-2.5"
+        >
+          <ArrowIcon className="h-4 w-4.5 shrink-0 rotate-180" strokeWidth={1.6} />
+          {backLabel}
+        </BackToProducts>
 
-      <main className="flex w-full flex-col gap-2.5 pt-4.75 pb-10 min-[1120px]:grid min-[1120px]:grid-cols-[minmax(0,740fr)_minmax(0,680fr)] min-[1120px]:grid-rows-[auto_1fr] min-[1120px]:items-start min-[1120px]:gap-x-0 min-[1120px]:gap-y-3.75 min-[1120px]:px-2.5 min-[1120px]:pt-0 min-[1120px]:pb-16">
         {/* Name and price. Desktop: the top of the right column. */}
         <div className="flex flex-col gap-2.5 px-4 md:max-[1120px]:items-center md:max-[1120px]:px-10 md:max-[1120px]:text-center min-[1120px]:col-start-2 min-[1120px]:row-start-1 min-[1120px]:gap-3.75 min-[1120px]:pt-25 min-[1120px]:pr-10 min-[1120px]:pl-[clamp(40px,5.56vw,80px)] min-[1120px]:text-left">
           {company && <div className="hidden min-[1120px]:block">{company}</div>}
@@ -117,7 +129,7 @@ export default function ItemDetail({
             {item.name}
           </h1>
           <p className="text-[22px] leading-6.65 font-bold text-black min-[1120px]:text-[20px] min-[1120px]:leading-6.05">
-            {formatPrice(item.price)}
+            {item.service ? formatServicePrice(item.price, item.priceType) : formatPrice(item.price)}
           </p>
         </div>
 
@@ -195,20 +207,43 @@ export default function ItemDetail({
         </div>
 
         {/* The description and "View contact". Desktop: below the price in the right column, with the button FIRST (the
-            reversed column puts the button and the contact details above the text). */}
+            reversed column puts the button and the contact details above the text). A service's facts come first on phone and tablet
+            (before the text, which can be long) and on desktop between the button and the text: the order classes do that in the reversed column. */}
         <div className="flex w-full flex-col gap-3.75 px-4 pt-2.5 md:max-[1120px]:mx-auto md:max-[1120px]:max-w-170 md:max-[1120px]:px-5 min-[1120px]:col-start-2 min-[1120px]:row-start-2 min-[1120px]:flex-col-reverse min-[1120px]:justify-end min-[1120px]:pt-0 min-[1120px]:pr-10 min-[1120px]:pl-[clamp(40px,5.56vw,80px)]">
+          {item.service && (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2.5 border-y border-[#e5e7eb] py-3.5 text-[14px] leading-5 text-black min-[1120px]:order-1 min-[1120px]:max-w-140">
+              {item.service.duration && <Row label="Duration">{item.service.duration}</Row>}
+              {item.service.area && <Row label="Service area">{item.service.area}</Row>}
+              {business.hours && (
+                <Row label="Hours">
+                  <span className="whitespace-pre-line">{business.hours}</span>
+                </Row>
+              )}
+              <Row label="Location">
+                {/* Opens the address in a map, in a new tab; nothing is sent to the map service until it is clicked. */}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.formatted_address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2"
+                >
+                  {business.formatted_address}
+                </a>
+              </Row>
+            </dl>
+          )}
           {/* pre-line: the owner's own line breaks stay. */}
           <p className="pb-5 text-[16px] leading-5 whitespace-pre-line text-[#111] wrap-break-word min-[1120px]:max-w-140 min-[1120px]:pt-8.75 min-[1120px]:pb-0">
             {item.description}
           </p>
           {/* relative: the contact box is placed against the button. It floats OVER the page (it doesn't push the description
               down, however many details the business gave); same white box, 1px #b8b8b8 line and sharp corners as the account menu. */}
-          <div ref={contactRef} className="relative w-fit">
+          <div ref={contactRef} className="relative w-full md:w-fit min-[1120px]:order-2">
             <button
               type="button"
               onClick={() => setContactOpen((open) => !open)}
               aria-expanded={contactOpen}
-              className="flex h-9 w-fit cursor-pointer items-center justify-center border border-black bg-white px-6 text-[14px] leading-[17px] font-semibold text-black"
+              className="flex h-11 w-full cursor-pointer items-center justify-center bg-black px-8 text-[16px] leading-[1.21] font-bold text-white md:w-fit md:min-w-48"
             >
               View contact
             </button>
@@ -280,7 +315,7 @@ function Contact({ business }: { business: PublicBusiness }) {
     <dl className="grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-2 text-[13px] leading-4.5 text-black">
       {business.phone && (
         <Row label="Phone">
-          <a href={`tel:${business.phone.replace(/[^d+]/g, "")}`} className={link}>
+          <a href={`tel:${business.phone.replace(/[^\d+]/g, "")}`} className={link}>
             {business.phone}
           </a>
         </Row>

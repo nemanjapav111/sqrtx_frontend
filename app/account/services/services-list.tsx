@@ -10,7 +10,7 @@ import PlaceholderPicture from "@/app/components/placeholder-picture";
 import { GENERIC_ERROR } from "@/lib/auth-messages";
 import { recall, remember } from "@/lib/memory-cache";
 import { getOnboardingState, pathForStep } from "@/lib/onboarding";
-import { formatPrice } from "@/lib/price";
+import { formatServicePrice } from "@/lib/price";
 import { getMyServicesPage, type MyService } from "@/lib/services";
 import { useRequireSession } from "@/lib/use-session";
 
@@ -272,7 +272,7 @@ function ServicesListInBrowser() {
                     <div className="flex min-w-0 flex-col gap-1">
                       <span className="text-[16px] leading-tight font-semibold wrap-break-word">{service.service_name}</span>
                       <span className="text-[14px] text-[#4b5563]">
-                        {service.category} · {formatPrice(service.price)}
+                        {service.category} · {formatServicePrice(service.price, service.price_type)}
                       </span>
                     </div>
                   </Link>

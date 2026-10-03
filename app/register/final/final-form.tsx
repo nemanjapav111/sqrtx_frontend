@@ -61,6 +61,7 @@ export default function FinalForm({ pending, onRetry }: { pending?: "loading" | 
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false); // the real "already working" guard: state would be stale for a second click in the same instant
+  const leaving = useRef(false); // the next page has been asked for: the button stays off until this page is gone (it came back to life for a moment before)
   const [error, setError] = useState<string | null>(null);
 
   const aboutInvalid = submitted && !about.trim();
@@ -88,11 +89,14 @@ export default function FinalForm({ pending, onRetry }: { pending?: "loading" | 
     try {
       const state = await finishOnboarding(about);
       router.push(await homePath(state)); // registration is finished: on to their own public page
+      leaving.current = true;
     } catch (err) {
       showError(err);
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      if (!leaving.current) {
+        inFlight.current = false;
+        setBusy(false);
+      }
     }
   }
 

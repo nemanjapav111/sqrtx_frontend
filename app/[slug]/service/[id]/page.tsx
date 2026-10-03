@@ -42,7 +42,14 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
   // Any other form of the address (the bare id, an old name, other capitals) goes to the current one.
   const current = serviceSegment(service.service_name, service.id);
   if (segment !== current) permanentRedirect(`/${slug.toLowerCase()}/service/${current}`);
-  const item = { name: service.service_name, price: service.price, description: service.description, images: service.images };
+  const item = {
+    name: service.service_name,
+    price: service.price,
+    priceType: service.price_type,
+    description: service.description,
+    images: service.images,
+    service: { duration: service.duration, area: service.service_area },
+  };
   return (
     <ItemDetail
       item={item}

@@ -2,8 +2,6 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import BackToProducts from "@/app/[slug]/back-to-products";
-import ArrowIcon from "@/app/register/arrow-icon";
 import { useHome } from "./home-context";
 
 // The search of the home page, in the two looks the designs have. The list follows what is typed (typing is enough: the button of the
@@ -81,19 +79,8 @@ export default function HomeSearch({ variant }: { variant: "line" | "desktop" })
         />
       </label>
     );
-    // The arrow's 44px box starts 6px from the screen's edge and overlaps the line by 1px, like the design. The line is the SAME element
-    // with or without the arrow (the arrow is only added in front of it), so typing, which takes the visitor from a product's page to the
-    // list, does not rebuild the box and the cursor stays in it.
-    return (
-      <div className="flex min-w-0 flex-1 items-center">
-        {onProductPage && (
-          <BackToProducts slug="" to={listPath} label={onServicePage ? "Back to services" : "Back to products"} className="-mr-px -ml-2.5 flex size-11 shrink-0 items-center justify-center">
-            <ArrowIcon className="h-5 w-5.5 rotate-180" strokeWidth={1.6} />
-          </BackToProducts>
-        )}
-        {line}
-      </div>
-    );
+    // (The way back to the list is on the product's or service's page itself, with words: item-detail.tsx.)
+    return <div className="flex min-w-0 flex-1 items-center">{line}</div>;
   }
 
   return (
