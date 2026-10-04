@@ -200,9 +200,10 @@ export const logoProblem = (file: File, shrinking = false): string | null => {
   return null;
 };
 
-// The logo is shown at most 110 x 68 (the phone navbar has little room), fitted inside without cropping or
-// enlarging. Sharp (retina) screens need twice the pixels, and a picture fitted into that box is limited by
-// its width or its height, whichever runs out first: so it must be 220 px wide OR 136 px tall.
+// The logo is shown at most 100 x 58 (see LOGO_ROW_* in lib/logo.ts; it was 110 x 68 before 2026-10-03), fitted inside without cropping or
+// enlarging. Sharp (retina) screens need twice the pixels, and a picture fitted into that box is limited by its width or its height,
+// whichever runs out first. The API still asks for 220 px wide OR 136 px tall (it stores the logo at 220 x 136, see API.md), which is more than
+// 2x of 100 x 58, so these two numbers are the API's and were not lowered.
 export const MIN_LOGO_WIDTH = 220;
 export const MIN_LOGO_HEIGHT = 136;
 // TODO: placeholder text, there is no design for it.

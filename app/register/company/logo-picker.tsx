@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { BusinessProfile } from "@/lib/business-profile";
-import { LOGO_FIT_CLASS, logoDisplaySize } from "@/lib/logo";
+import { LOGO_ROW_FIT_CLASS, LOGO_ROW_MAX_HEIGHT, LOGO_ROW_MAX_WIDTH, logoDisplaySize } from "@/lib/logo";
 
-// The logo is shown the way it will be on the site (navbar, cards), see lib/logo.ts: fitted inside 110 x 68, proportions
+// The logo is shown the way it will be on the site (the top bar, the company blocks), see lib/logo.ts: fitted inside 100 x 58, proportions
 // kept, nothing cropped, never enlarged (files that are too small are refused, see logoSizeProblem).
-// The box shrinks to the picture, so there is no white space around it. A wide logo is therefore short (4:1 = 110 x 27).
+// The box shrinks to the picture, so there is no white space around it. A wide logo is therefore short (4:1 = 100 x 25).
 
 // The company logo box from the design: click it to choose a photo. It shows the new photo, or the saved logo when
-// editing, or "+ Add photo". With a logo the box shrinks to fit it instead of keeping the design's 110 x 68.
+// editing, or "+ Add photo". With a logo the box shrinks to fit it instead of keeping the empty box's 100 x 58 (the size the logo is shown at on the site, at most).
 export default function LogoPicker({
   file,
   saved,
@@ -44,8 +44,8 @@ export default function LogoPicker({
         alt="Your company logo"
         width={saved.width ?? undefined}
         height={saved.height ?? undefined}
-        style={logoDisplaySize(saved.width, saved.height) ?? undefined}
-        className={LOGO_FIT_CLASS}
+        style={logoDisplaySize(saved.width, saved.height, LOGO_ROW_MAX_WIDTH, LOGO_ROW_MAX_HEIGHT) ?? undefined}
+        className={LOGO_ROW_FIT_CLASS}
       />
     </picture>
   );
@@ -66,7 +66,7 @@ export default function LogoPicker({
           alt="Chosen logo"
           onLoad={() => setLoadedUrl(previewUrl)}
           onError={() => setBroken(previewUrl)}
-          className={previewPending ? "hidden" : LOGO_FIT_CLASS}
+          className={previewPending ? "hidden" : LOGO_ROW_FIT_CLASS}
         />
       </>
     );
@@ -82,7 +82,7 @@ export default function LogoPicker({
       <span className="text-[14px] font-semibold">Company logo*</span>
       <label
         className={`max-w-full cursor-pointer overflow-hidden border text-[13px] font-medium focus-within:shadow-[0_0_0_1px_black] ${
-          showsLogo ? "block w-fit" : "flex h-17 w-27.5 items-center justify-center"
+          showsLogo ? "block w-fit" : "flex h-[58px] w-[100px] items-center justify-center"
         } ${invalid ? "border-red-600" : "border-black"}`}
       >
         <input

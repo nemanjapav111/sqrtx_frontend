@@ -1,8 +1,8 @@
 import Link from "next/link";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
-import { LOGO_FIT_CLASS, logoDisplaySize } from "@/lib/logo";
+import { LOGO_ROW_FIT_CLASS, LOGO_ROW_MAX_HEIGHT, LOGO_ROW_MAX_WIDTH, logoDisplaySize } from "@/lib/logo";
 
-// Whose it is, in the marketplace: the business's logo exactly as it is on its own page (business-header.tsx): fitted inside 110 x 68, never
+// Whose it is, in the marketplace: the business's logo exactly as it is on its own page (business-header.tsx): fitted inside 100 x 58, never
 // cropped or enlarged, no frame, at the left edge of the content, and 13px from it, centered against it,
 // the business's name (semibold 16) and under it its kind of business and its city on one line (13, grey). The whole block is ONE link to the
 // business's own page. Used on a product's or a service's own page and on the Companies page (`card`: it also has a chevron at its end, which is
@@ -33,7 +33,7 @@ export default function CompanyInfo({
   card?: boolean; // add the chevron at the end and let the block take the room it is given (up to 420px)
   className?: string;
 }) {
-  const size = logo ? logoDisplaySize(logo.width, logo.height) : null;
+  const size = logo ? logoDisplaySize(logo.width, logo.height, LOGO_ROW_MAX_WIDTH, LOGO_ROW_MAX_HEIGHT) : null;
   const place = [typeName, city].filter(Boolean).join(" · ");
   return (
     <Link
@@ -46,7 +46,7 @@ export default function CompanyInfo({
         {logo && !size && (
           <picture className="contents">
             <source srcSet={logo.avif} type="image/avif" />
-            <img src={logo.webp} alt="" className={LOGO_FIT_CLASS} />
+            <img src={logo.webp} alt="" className={LOGO_ROW_FIT_CLASS} />
           </picture>
         )}
       </span>

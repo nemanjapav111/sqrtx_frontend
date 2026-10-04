@@ -7,11 +7,12 @@ import PlaceholderPicture from "@/app/components/placeholder-picture";
 import { fetchFeedServicesPage, type FeedCategory, type FeedServiceItem, type FeedServicesPage } from "@/lib/feed";
 import { formatServicePrice } from "@/lib/price";
 import { marketServicePath } from "@/lib/product-url";
+import FitText from "@/app/components/fit-text";
 import CompanyInfo from "./company-info";
 import { useHome } from "./home-context";
 
 // The Services page's list (Figma "sqrtx Services Phone/Tablet/Desktop new"): the newest services of every business, one row each, like a
-// business's own Services page (service-list.tsx: the photo cropped to fill its box, the name, the price, the black "See More" button and the first
+// business's own Services page (service-list.tsx: the photo cropped to fill its box, the name, the price, the small black "See more" button and the first
 // 8 lines of the description) plus the business's company block (logo, name, kind of business, city: company-info.tsx) in every row, and above the
 // first row the filter ("ALL" = the business categories that have a service). Searching, the filter and the country (the bars' picker) ask the
 // API for the first page of what was chosen; the next pages come by "Show more" or by themselves when the end of the list is near (the API sends
@@ -19,7 +20,7 @@ import { useHome } from "./home-context";
 //  - phone (under 700px of content): one column, per row the company block, the photo (full width, 300px high), then the text, 50px between rows.
 //  - tablet (700px up): two columns 328 : 400, the photo (308 x 300) at the left, the company block and the text at the right, the rows touching.
 //  - desktop (1030px up): 420 : 600, the photo 400 x 300, the rows 20px apart.
-// These are container queries (the width of the content, not the window's), like the business pages' lists. "See More" and the photo lead to the
+// These are container queries (the width of the content, not the window's), like the business pages' lists. "See more" and the photo lead to the
 // service's own page in the marketplace (app/(sqrtx)/service/[id]).
 
 const ALL = "";
@@ -146,8 +147,8 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
 
                 {/* The photo is a second way to the same page as the button: left out of the keyboard's way and of the screen reader's. */}
                 <Link href={href} tabIndex={-1} aria-hidden className="block @min-[700px]:col-start-1 @min-[700px]:row-span-2 @min-[700px]:row-start-1 @min-[700px]:p-2.5">
-                  {/* The photo is shown whole (never cropped) in the same white box with a 1.5px light stroke as the products' cards (the list size fits inside 1000 x 750). */}
-                  <div className="flex h-75 w-full items-center justify-center bg-white p-6 ring-[1.5px] ring-black/15 ring-inset">
+                  {/* A cover photo: it fills its box (cropped at the edges), no frame (the owner wanted it back like this, 2026-10-03). */}
+                  <div className="h-75 w-full overflow-hidden bg-[#f3f4f6]">
                     {service.image && (
                       <PlaceholderPicture
                         avif={service.image.list.avif}
@@ -156,31 +157,29 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
                         // The first rows are on screen at once: load them at once. The rest wait until they come near.
                         loading={index < 2 ? "eager" : "lazy"}
                         className="size-full"
-                        imgClassName="size-full object-contain"
+                        imgClassName="size-full object-cover"
                         placeholder={service.image.placeholder}
-                        blockClassName="-inset-6"
+                        blockClassName="inset-0 bg-[#f3f4f6]"
                       />
                     )}
                   </div>
                 </Link>
 
-                <div className="flex min-w-0 flex-col gap-2.5 pt-2.5 @min-[700px]:col-start-2 @min-[700px]:row-start-2 @min-[700px]:px-2.5 @min-[700px]:pt-0 @min-[700px]:pb-2.5">
+                {/* From 700px this box is the rest of the photo's height under the company block; the description fills what is left in it (and is cut after the last line that fits). */}
+                <div className="flex min-h-0 min-w-0 flex-col gap-2.5 overflow-hidden pt-2.5 @min-[700px]:col-start-2 @min-[700px]:row-start-2 @min-[700px]:px-2.5 @min-[700px]:pt-0 @min-[700px]:pb-2.5">
                   <div className="flex flex-col gap-1.5">
-                    <h2 className="text-[24px] leading-[1.21] font-bold text-black wrap-break-word @min-[1030px]:text-[32px]">{service.service_name}</h2>
+                    <h2 className="text-[24px] leading-[1.21] font-bold text-black wrap-break-word @min-[700px]:line-clamp-2 @min-[1030px]:text-[32px]">{service.service_name}</h2>
                     <p className="text-[18px] leading-[1.21] font-semibold text-black @min-[1030px]:text-[20px] @min-[1030px]:font-bold">{formatServicePrice(service.price, service.price_type)}</p>
                   </div>
                   <Link
                     href={href}
                     aria-label={`See more: ${service.service_name}`}
-                    className="flex h-10.25 w-48 items-center justify-center bg-black text-[16px] leading-[1.21] font-bold text-white"
+                    className="flex h-9 w-fit shrink-0 items-center justify-center bg-black px-6 text-[14px] leading-[17px] font-semibold text-white"
                   >
-                    See More
+                    See more
                   </Link>
-                  {/* 8 lines, then "…" (the API cuts a very long text, see description_cut). Line breaks the owner typed are kept. */}
-                  <p className="line-clamp-8 text-[16px] leading-5 whitespace-pre-line text-[#111] wrap-break-word">
-                    {service.description}
-                    {service.description_cut ? "…" : ""}
-                  </p>
+                  {/* 8 lines on a phone; beside the photo as many as fit under it, then "…" (the API cuts a very long text, see description_cut). */}
+                  <FitText text={service.description + (service.description_cut ? "…" : "")} />
                 </div>
               </li>
             );

@@ -6,27 +6,29 @@ import PlaceholderPicture from "@/app/components/placeholder-picture";
 import { formatServicePrice } from "@/lib/price";
 import { servicePath } from "@/lib/product-url";
 import { fetchServicesPage, type PublicServiceRow, type PublicServicesPage } from "@/lib/public-services";
+import FitText from "@/app/components/fit-text";
 import CategoryFilter from "./category-filter";
 import { useSearch } from "./search-context";
 
 // The Services page content: the category filter ("ALL") and the services, one row each: a photo, the name, the price, a black
-// "See More" button (to the service's own page) and the first lines of the description. The search box is in the top bar
+// "See more" button (small, to the service's own page) and the first lines of the description. The search box is in the top bar
 // (business-header.tsx) and this list follows it, exactly like the Products page (product-list.tsx, whose paging and searching this
 // repeats: the API does the searching over ALL the services, the first 24 come with the page, the rest by "Show more" or
 // automatically when the end of the list comes near; GET /service/summary in the API notes).
 //
 // Sizes (Figma "Services Phone new" 2122:619, "Services Tablet new" 2027:396, "Services Desktop new" 1642:161; measured 2026-10-01
 // from the captured designs). A row, by the width of the content (container queries, not the window's, like the products' list):
-//  - phone: one column. The photo (full width, 300px tall, shown whole in the products' frame: white, 1.5px light stroke, 24px around the photo; owner's choice 2026-10-02, it used to be cropped to fill), 20px below it the name (Inter bold
-//    24/29), the price (Inter semibold 18/22, 6px under the name), 10px under that the black button (192 x 41, "See More" Inter
-//    bold 16), 10px under that the description (Inter 16/20, #111, 8 lines then "…"). 42px between a description's last line and the next photo.
+//  - phone: one column. The photo (full width, 300px tall, cropped to fill, no rounded corners), 20px below it the name (Inter bold
+//    24/29), the price (Inter semibold 18/22, 6px under the name), 10px under that the black button (small since 2026-10-03: 36px high, "See more" Inter semibold 14; the design had 192 x 41, bold 16, "See More")
+//    10px under that the description (Inter 16/20, #111, 8 lines then "…"). 42px between a description's last line and the next photo.
 //  - tablet, from 700px of content: two columns 328 : 400 (the content shrinks them a little when it is narrower than 728),
 //    each with 10px around it, so the text starts level with the photo and the rows are 20px apart.
 //  - desktop, from 1030px of content: two columns, 420 and 600 (photo 400 x 300, text 580), 10px apart, rows 40px apart; the name is
 //    32/39 bold and the price 20/24 bold.
 // The filter is the same one as on the Products page, at the left edge of the first row: 34px above the photo on a phone, and 20px
 // above the first row's own 10px on tablet and desktop (the photo is 78px below the filter's top in both).
-// The photo is the API's list size (fits inside 1000 x 750, made for this row: the photo shows whole inside the frame's 280 x 252 (phone) or 352 x 252 (desktop) and the card size (604) would be soft on a sharp screen; the detail size (1536 x 900) is twice the bytes).
+// The photo is the API's list size (fits inside 1000 x 750, made for this row: it shows the photo cropped to fill 328 x 300, and the card size (604) would be soft on a sharp screen; the detail size (1536 x 900) is twice the bytes).
+// From 700px the text column is as high as the photo and the description is cut after the last line that fits under the name, the price and the button (fit-text.tsx).
 // Around the rows: 16px at the sides on a phone and 10px on a tablet (the design has no wider margin), 20px above the filter on a tablet and
 // 30px on a desktop (the design's content starts 20px under the bar, and the desktop's row has 10px of its own).
 // Not in the design, so placeholders: the words when there is nothing to show or something went wrong, "Show more", and the filter's popup.
@@ -144,8 +146,8 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
               >
                 {/* The photo is a second way to the same page as the button: left out of the keyboard's way and of the screen reader's. */}
                 <Link href={href} tabIndex={-1} aria-hidden className="block @min-[700px]:p-2.5">
-                  {/* The photo is shown whole (never cropped) in the same white box with a 1.5px light stroke as the products' cards (the list size fits inside 1000 x 750). */}
-                  <div className="flex h-75 w-full items-center justify-center bg-white p-6 ring-[1.5px] ring-black/15 ring-inset">
+                  {/* A cover photo: it fills its box (cropped at the edges), no frame (the owner wanted it back like this, 2026-10-03). */}
+                  <div className="h-75 w-full overflow-hidden bg-[#f3f4f6]">
                     {service.image && (
                       <PlaceholderPicture
                         avif={service.image.list.avif}
@@ -154,17 +156,18 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
                         // The first rows are on screen at once: load them at once. The rest wait until they come near.
                         loading={index < 2 ? "eager" : "lazy"}
                         className="size-full"
-                        imgClassName="size-full object-contain"
+                        imgClassName="size-full object-cover"
                         placeholder={service.image.placeholder}
-                        blockClassName="-inset-6"
+                        blockClassName="inset-0 bg-[#f3f4f6]"
                       />
                     )}
                   </div>
                 </Link>
 
-                <div className="flex min-w-0 flex-col gap-2.5 @min-[700px]:p-2.5">
+                {/* From 700px the text column is exactly as high as the photo's box (300px and 10px around), and the description fills what is left in it. */}
+                <div className="flex min-w-0 flex-col gap-2.5 @min-[700px]:h-80 @min-[700px]:p-2.5">
                   <div className="flex flex-col gap-1.5">
-                    <h2 className="text-[24px] leading-[1.21] font-bold text-black wrap-break-word @min-[1030px]:text-[32px]">{service.service_name}</h2>
+                    <h2 className="text-[24px] leading-[1.21] font-bold text-black wrap-break-word @min-[700px]:line-clamp-2 @min-[1030px]:text-[32px]">{service.service_name}</h2>
                     <p className="text-[18px] leading-[1.21] font-semibold text-black @min-[1030px]:text-[20px] @min-[1030px]:font-bold">
                       {formatServicePrice(service.price, service.price_type)}
                     </p>
@@ -172,15 +175,12 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
                   <Link
                     href={href}
                     aria-label={`See more: ${service.service_name}`}
-                    className="flex h-10.25 w-48 items-center justify-center bg-black text-[16px] leading-[1.21] font-bold text-white"
+                    className="flex h-9 w-fit shrink-0 items-center justify-center bg-black px-6 text-[14px] leading-[17px] font-semibold text-white"
                   >
-                    See More
+                    See more
                   </Link>
-                  {/* 8 lines, then "…" (the API cuts a very long text, see description_cut). Line breaks the owner typed are kept. */}
-                  <p className="line-clamp-8 text-[16px] leading-5 whitespace-pre-line text-[#111] wrap-break-word">
-                    {service.description}
-                    {service.description_cut ? "…" : ""}
-                  </p>
+                  {/* 8 lines on a phone; beside the photo as many as fit under it, then "…" (the API cuts a very long text, see description_cut). */}
+                  <FitText text={service.description + (service.description_cut ? "…" : "")} />
                 </div>
               </li>
             );

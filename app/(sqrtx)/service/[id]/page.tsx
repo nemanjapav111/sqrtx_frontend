@@ -51,7 +51,7 @@ export default async function MarketServicePage({ params }: { params: Promise<{ 
       slug={slug}
       backTo="/services"
       backLabel="Back to services"
-      company={<CompanyCard business={business} slug={slug} categoryName={categoryName} label="Offered by" />}
+      company={<CompanyCard business={business} slug={slug} categoryName={categoryName} />}
     />
   );
 }
