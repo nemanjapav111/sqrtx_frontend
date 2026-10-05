@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CategoryFilter from "@/app/[slug]/category-filter";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
-import { fetchFeedPage, type FeedCategory, type FeedItem, type FeedPage } from "@/lib/feed";
+import { fetchFeedPage, reportSearchClick, type FeedCategory, type FeedItem, type FeedPage } from "@/lib/feed";
 import { formatPrice } from "@/lib/price";
 import { marketProductPath } from "@/lib/product-url";
 import { useHome } from "./home-context";
@@ -29,6 +29,7 @@ interface View {
   hasMore: boolean;
   page: number;
   categories: FeedCategory[]; // the business categories that have a product in this country
+  searchId?: string; // the id of the search these products answer (from its first page), sent back with a click
 }
 const keyOf = (q: string, category: string, country: string) => `${q}|${category}|${country}`;
 
@@ -68,7 +69,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
       setFailed(false);
       try {
         const page = await fetchFeedPage({ q: search, category, country }, controller.signal);
-        if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [] });
+        if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [], searchId: page.search_id });
       } catch {
         if (id === latest.current && !controller.signal.aborted) setFailed(true);
       } finally {
@@ -130,7 +131,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
           {view.items.map((product, index) => (
             <li key={product.id} className="min-h-108 w-full @min-[350px]:w-87.5">
               {/* The whole card (picture, name, price) leads to the product's own page in the marketplace (its business's logo and page are there). */}
-              <Link href={marketProductPath(product)} className="block">
+              <Link href={marketProductPath(product)} onClick={() => reportSearchClick(view.searchId, product.id, index)} className="block">
                 {/* The picture is shown whole (never cropped) inside a white box with square corners, a 1.5px light grey stroke, no shadow, no hover effect, no rounded corners (owner's choice, 2026-10-02). The stroke is a ring (an inset box-shadow), not a border. */}
                 <div className="flex h-87.5 items-center justify-center bg-white p-6 ring-[1.5px] ring-black/15 ring-inset">
                   {product.image && (

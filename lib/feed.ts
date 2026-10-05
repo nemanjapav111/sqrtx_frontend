@@ -39,6 +39,8 @@ export interface FeedPage {
   has_more: boolean; // there is no total (see the API notes)
   page: number;
   limit: number;
+  // On the first page of a SEARCH only (the API writes the search down): its id, to be sent back with a click (see reportSearchClick).
+  search_id?: string;
   // On the first page only: for the two pickers.
   categories?: FeedCategory[]; // the business categories that have a product (in the chosen country)
   countries?: string[]; // the countries that have a product, two capital letters
@@ -97,6 +99,25 @@ export async function fetchFeedPage(
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/feed/products?${feedQuery(options)}`, { signal });
   if (!response.ok) throw new Error(`The API answered ${response.status}`);
   return (await response.json()) as FeedPage;
+}
+
+/**
+ * The visitor opened a result of a search: tells the API which one (and at which place in the list, 0 = first), so the search can be judged on real
+ * clicks. `searchId` is the one that came with the first page of that search; without it (no search, or the smart search is off) nothing is sent.
+ * Fire and forget: it must never slow down or break the navigation (`keepalive` lets it finish while the next page loads).
+ */
+export function reportSearchClick(searchId: string | undefined, itemId: string, position: number) {
+  if (!searchId) return;
+  try {
+    void fetch(`${process.env.NEXT_PUBLIC_API_URL}/feed/search-clicks`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ search_id: searchId, item_id: itemId, position: Math.min(position, 500) }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    // nothing to do: the click is only a statistic
+  }
 }
 
 export const emptyFeedServicesPage: FeedServicesPage = { items: [], has_more: false, page: 1, limit: FEED_PAGE_SIZE, categories: [], countries: [] };

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CategoryFilter from "@/app/[slug]/category-filter";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
-import { fetchFeedServicesPage, type FeedCategory, type FeedServiceItem, type FeedServicesPage } from "@/lib/feed";
+import { fetchFeedServicesPage, reportSearchClick, type FeedCategory, type FeedServiceItem, type FeedServicesPage } from "@/lib/feed";
 import { formatServicePrice } from "@/lib/price";
 import { marketServicePath } from "@/lib/product-url";
 import FitText from "@/app/components/fit-text";
@@ -33,6 +33,7 @@ interface View {
   hasMore: boolean;
   page: number;
   categories: FeedCategory[]; // the business categories that have a service in this country
+  searchId?: string; // the id of the search these services answer (from its first page), sent back with a click
 }
 const keyOf = (q: string, category: string, country: string) => `${q}|${category}|${country}`;
 
@@ -72,7 +73,7 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
       setFailed(false);
       try {
         const page = await fetchFeedServicesPage({ q: search, category, country }, controller.signal);
-        if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [] });
+        if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [], searchId: page.search_id });
       } catch {
         if (id === latest.current && !controller.signal.aborted) setFailed(true);
       } finally {
@@ -146,7 +147,7 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
                 />
 
                 {/* The photo is a second way to the same page as the button: left out of the keyboard's way and of the screen reader's. */}
-                <Link href={href} tabIndex={-1} aria-hidden className="block @min-[700px]:col-start-1 @min-[700px]:row-span-2 @min-[700px]:row-start-1 @min-[700px]:p-2.5">
+                <Link href={href} onClick={() => reportSearchClick(view.searchId, service.id, index)} tabIndex={-1} aria-hidden className="block @min-[700px]:col-start-1 @min-[700px]:row-span-2 @min-[700px]:row-start-1 @min-[700px]:p-2.5">
                   {/* A cover photo: it fills its box (cropped at the edges), no frame (the owner wanted it back like this, 2026-10-03). */}
                   <div className="h-75 w-full overflow-hidden bg-[#f3f4f6]">
                     {service.image && (
@@ -173,6 +174,7 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
                   </div>
                   <Link
                     href={href}
+                    onClick={() => reportSearchClick(view.searchId, service.id, index)}
                     aria-label={`See more: ${service.service_name}`}
                     className="flex h-9 w-fit shrink-0 items-center justify-center bg-black px-6 text-[14px] leading-[17px] font-semibold text-white"
                   >
