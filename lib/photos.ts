@@ -3,7 +3,7 @@
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // what the API takes, checked AFTER the photo has been shrunk
 
-// Phone photos are often 20 MB or more, but nothing on the site is bigger than 1920 px, so every photo is shrunk in the
+// Phone photos are often 20 MB or more, but nothing on the site is bigger than 2400 px (the full size is the picture as uploaded), so every photo is shrunk in the
 // browser before it is uploaded: long side at most 2400 px (the server keeps a 2400 px master, see the API notes),
 // as a WebP at quality 0.9. That is about 1 MB, so the upload takes a second instead of many.
 export const UPLOAD_MAX_SIDE = 2400;

@@ -24,7 +24,6 @@ import { useHome } from "./home-context";
 // service's own page in the marketplace (app/(sqrtx)/service/[id]).
 
 const ALL = "";
-const SEARCH_DELAY_MS = 300;
 
 // What is on screen: the services of ONE search + category + country (`key`), as many pages of them as were asked for.
 interface View {
@@ -38,11 +37,10 @@ interface View {
 const keyOf = (q: string, category: string, country: string) => `${q}|${category}|${country}`;
 
 export default function HomeServices({ initial, initialCountry }: { initial: FeedServicesPage; initialCountry: string }) {
-  const { query, country } = useHome();
+  const { submitted: search, country } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
   const [chosen, setChosen] = useState({ country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
-  const [search, setSearch] = useState("");
   const [view, setView] = useState<View>({
     key: keyOf("", ALL, initialCountry),
     items: initial.items,
@@ -54,12 +52,6 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
   const latest = useRef(0); // only the newest request may change the screen
-
-  // What is searched is what was typed, a moment after the typing stopped.
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(query.trim()), SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [query]);
 
   const key = keyOf(search, category, country);
 
@@ -152,8 +144,9 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
                   <div className="h-75 w-full overflow-hidden bg-[#f3f4f6]">
                     {service.image && (
                       <PlaceholderPicture
-                        avif={service.image.list.avif}
-                        webp={service.image.list.webp}
+                        avif={service.image.detail.avif}
+                        avif3x={service.image.detail3x?.avif}
+                        webp={service.image.detail.webp}
                         alt=""
                         // The first rows are on screen at once: load them at once. The rest wait until they come near.
                         loading={index < 2 ? "eager" : "lazy"}

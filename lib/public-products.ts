@@ -11,7 +11,7 @@ export interface PublicProductCard {
   product_name: string;
   price: number | string | null; // a Postgres numeric: reads may come back as a string
   category: string;
-  image: { card: { avif: string; webp: string }; placeholder: string | null } | null;
+  image: { card: { avif: string; webp: string }; card3x?: { avif: string }; placeholder: string | null } | null;
 }
 
 export interface PublicProductsPage {

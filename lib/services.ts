@@ -96,14 +96,14 @@ export function createService(v: ServiceValues, onProgress?: (status: UploadStat
 
 // ---------- editing services that are already saved ----------
 
-// One saved image of the owner's own service (GET /service/mine): `urls.card` fits inside 604 x 604 (see API.md).
+// One saved image of the owner's own service (GET /service/mine): `urls.thumb` is the 270 x 270 square, `urls.detail` fits inside 1536 x 900 (see API.md).
 export interface MyServiceImage {
   id: string;
   sort_order: number;
   is_primary: boolean;
   // A tiny WebP data URI that becomes the blurred preview while the picture loads; null for an image saved before the API made them.
   placeholder?: string | null;
-  urls: { card: { avif: string; webp: string } };
+  urls: { thumb?: { avif: string; webp: string }; detail: { avif: string; webp: string } };
 }
 
 // The owner's own service with its images. Unlike the public list this includes services the public can't see (the
@@ -143,7 +143,7 @@ export function valuesFromService(p: MyService): ServiceValues {
   const price = p.price === null || p.price === "" ? "" : String(Number(p.price));
   const images = [...p.images].sort(byOrder).map((image, i) => ({
     id: image.id,
-    url: image.urls.card.webp,
+    url: (image.urls.thumb ?? image.urls.detail).webp,
     name: `Photo ${i + 1}`,
   }));
   return {

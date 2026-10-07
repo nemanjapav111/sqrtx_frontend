@@ -2,15 +2,18 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import BackToProducts from "@/app/[slug]/back-to-products";
+import ArrowIcon from "@/app/register/arrow-icon";
 import { useHome } from "./home-context";
 
-// The search of the home page, in the two looks the designs have. The list follows what is typed (typing is enough: the button of the
-// desktop box only puts the cursor back in it).
+// The search of the home page, in the two looks the designs have. The products, services and companies are searched when the visitor presses Enter
+// or the search button (the AI search cannot read half-typed words and costs a model run per search); emptying the box changes nothing until
+// Enter is pressed (an empty search shows everything).
 //  - "line" (phone and tablet, Figma "tablet_search_bar"): a line with a search icon, the design's "Find..." text is hidden there. The same
 //    look as the business pages' line (header-search.tsx, "bar").
 //  - "desktop" (Figma "search bar", in the black bar): a white box that says "Find..." with a grey (#d4d4d4) square button at its end, 38px high.
 // On a product's own page (Figma "sqrtx Product Details Phone/Tablet new") the phone/tablet line has a back arrow in front of it (44px, like
-// the business pages'), and typing in either box takes the visitor back to the list, which follows what was typed (the text lives in the
+// the business pages'), and typing in either box takes the visitor back to the list, which searches on Enter (the text lives in the
 // layout, so it is still there, and so is the cursor).
 function SearchIcon({ className, color, width }: { className: string; color: string; width: string }) {
   return (
@@ -34,7 +37,7 @@ export function HomeSearchLine() {
 }
 
 export default function HomeSearch({ variant }: { variant: "line" | "desktop" }) {
-  const { query, setQuery } = useHome();
+  const { query, setQuery, submit } = useHome();
   const router = useRouter();
   const pathname = usePathname();
   // A product's or a service's own page: the arrow in front of the line leads back to its list, and typing goes there (the products' list is
@@ -63,33 +66,51 @@ export default function HomeSearch({ variant }: { variant: "line" | "desktop" })
     }
   };
 
+  const search = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    submit(query);
+    input.current?.blur(); // closes the phone's keyboard so the results can be seen
+  };
+
   if (variant === "line") {
     const line = (
-      <label className="flex h-11 min-w-0 flex-1 items-center gap-1 border-b border-[#b8b8b8] px-1.75">
-        <SearchIcon className="size-5 shrink-0" color="#b8b8b8" width="2.5" />
-        <span className="sr-only">{searchLabel}</span>
-        <input
-          ref={input}
-          type="search"
-          value={query}
-          onChange={(e) => type(e.target.value)}
-          autoComplete="off"
-          enterKeyHint="search"
-          className="min-w-0 flex-1 bg-transparent px-1 text-[16px] outline-none [&::-webkit-search-cancel-button]:hidden"
-        />
-      </label>
+      <form role="search" onSubmit={search} className="flex h-11 min-w-0 flex-1 items-center gap-1 border-b border-[#b8b8b8] px-1.75">
+        <button type="submit" aria-label="Search" className="flex shrink-0 cursor-pointer items-center">
+          <SearchIcon className="size-5 shrink-0" color="#b8b8b8" width="2.5" />
+        </button>
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">{searchLabel}</span>
+          <input
+            ref={input}
+            type="search"
+            value={query}
+            onChange={(e) => type(e.target.value)}
+            autoComplete="off"
+            enterKeyHint="search"
+            className="w-full min-w-0 bg-transparent px-1 text-[16px] outline-none [&::-webkit-search-cancel-button]:hidden"
+          />
+        </label>
+      </form>
     );
-    // (The way back to the list is on the product's or service's page itself, with words: item-detail.tsx.)
-    return <div className="flex min-w-0 flex-1 items-center">{line}</div>;
+    // The arrow's 44px box starts 6px from the screen's edge and overlaps the line by 1px, like the design. The line is the SAME element
+    // with or without the arrow (the arrow is only added in front of it), so typing, which takes the visitor from a product's page to the
+    // list, does not rebuild the box and the cursor stays in it. (On desktop the arrow is in the page's top left corner: item-detail.tsx.)
+    return (
+      <div className="flex min-w-0 flex-1 items-center">
+        {onProductPage && (
+          <BackToProducts slug="" to={listPath} label={onServicePage ? "Back to services" : "Back to products"} className="-mr-px -ml-2.5 flex size-11 shrink-0 items-center justify-center">
+            <ArrowIcon className="h-5 w-5.5 rotate-180" strokeWidth={1.6} />
+          </BackToProducts>
+        )}
+        {line}
+      </div>
+    );
   }
 
   return (
     <form
       role="search"
-      onSubmit={(e) => {
-        e.preventDefault();
-        e.currentTarget.querySelector("input")?.focus();
-      }}
+      onSubmit={search}
       className="flex h-9.5 min-w-0 max-w-134.5 flex-1 items-center"
     >
       <input

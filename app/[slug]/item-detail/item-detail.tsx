@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import PlaceholderPicture, { markSeen } from "@/app/components/placeholder-picture";
+import PlaceholderPicture, { avifSourceSet, markSeen } from "@/app/components/placeholder-picture";
 import ArrowIcon from "@/app/register/arrow-icon";
 import { formatPrice, formatServicePrice } from "@/lib/price";
 import type { PublicBusiness, PublicProductImage } from "@/lib/public-site";
@@ -10,9 +10,9 @@ import PhotoViewer from "./photo-viewer";
 
 // A product's or a service's own page (the services' designs, Figma "Service Details Phone/Tablet/Desktop new" 2151:368, 2036:612,
 // 1673:194, are the products' ones with other words, so it is one component), in the three sizes of the designs (Figma 2108:344 phone
-// 360 x 840, 1988:1874 tablet 768 x 909, 1560:134 desktop 1440 x 1024). The top bar is the site's own (the layout draws it); the way back to the list is
-// an arrow with the words "Back to products" / "Back to services" (owner's request 2026-10-02: the design's bare arrow in the search line was easy to
-// miss), first on the page on phone and tablet and at its top left on desktop.
+// 360 x 840, 1988:1874 tablet 768 x 909, 1560:134 desktop 1440 x 1024). The top bar is the site's own (the layout draws it); // the way back to the list is
+// a bare arrow: in front of the search line on phone and tablet (the design's; header-search.tsx and home-search.tsx draw it), and on desktop at the
+// page's top left corner (this component; with no words, 2026-10-07: the owner wanted the words gone).
 //  - Phone: name (20px medium) and price (22px bold) at the left, the photo in a 360 x 450 box (shown whole, never cropped),
 //    the other photos as 80px squares (cropped to fill, three to a row), then the description and "View contact".
 //  - Tablet (768px up): the same in one centered column, the photo across the whole width, name and price centered, the
@@ -109,17 +109,16 @@ export default function ItemDetail({
           so on a wider window nothing is left behind at the window's edge. */}
       <div className="relative mx-auto w-full max-w-360">
       <main className="flex w-full flex-col gap-2.5 pt-1.5 pb-10 min-[1120px]:grid min-[1120px]:grid-cols-[minmax(0,740fr)_minmax(0,680fr)] min-[1120px]:grid-rows-[auto_1fr] min-[1120px]:items-start min-[1120px]:gap-x-0 min-[1120px]:gap-y-3.75 min-[1120px]:px-2.5 min-[1120px]:pt-0 min-[1120px]:pb-16">
-        {/* The way back: the site's thin arrow and the words ("Back to products" / "Back to services"), first on the page on phone and tablet
-            (it used to be an arrow in the search line, which is plain now) and, on desktop, in the page's top left corner (20px from the content's
-            edges, as the design had its arrow; absolute, so it is not a grid cell: the main box is not positioned, the box around it is). */}
+        {/* The way back, on DESKTOP only: the site's thin arrow, no words (the label is for screen readers), in the page's top left corner (20px from the
+            content's edges, as the design had its arrow; absolute, so it is not a grid cell: the main box is not positioned, the box around it is). On phone
+            and tablet the arrow is in front of the search line (header-search.tsx, home-search.tsx). */}
         <BackToProducts
           slug={slug}
           to={backTo}
           label={backLabel}
-          className="flex h-11 items-center gap-2 self-start px-4 text-[14px] leading-[17px] font-medium text-black md:px-6 min-[1120px]:absolute min-[1120px]:top-5 min-[1120px]:left-5 min-[1120px]:z-10 min-[1120px]:px-2.5"
+          className="hidden h-11 items-center self-start text-black min-[1120px]:absolute min-[1120px]:top-5 min-[1120px]:left-5 min-[1120px]:z-10 min-[1120px]:flex min-[1120px]:px-2.5"
         >
           <ArrowIcon className="h-4 w-4.5 shrink-0 rotate-180" strokeWidth={1.6} />
-          {backLabel}
         </BackToProducts>
 
         {/* Name and price. Desktop: the top of the right column. */}
@@ -156,8 +155,10 @@ export default function ItemDetail({
                   key={shown.id}
                   // The small version of this photo is already there (its square is on the page): shown sharp while the big
                   // one comes, instead of only the blurred preview.
-                  poster={shown.urls.card}
+                  // (A service has no card: its rows showed this very detail picture, which is cached, so there is no poster.)
+                  poster={shown.urls.card ? { ...shown.urls.card, avif3x: shown.urls.card3x?.avif } : null}
                   avif={shown.urls.detail.avif}
+                  avif3x={shown.urls.detail3x?.avif}
                   webp={shown.urls.detail.webp}
                   alt={item.name}
                   loading="eager"
@@ -189,8 +190,9 @@ export default function ItemDetail({
                     className={`block size-20 cursor-pointer bg-[#f9f9f9] md:size-22.5 ${i === selected ? "outline outline-1 outline-black" : ""}`}
                   >
                     <PlaceholderPicture
-                      avif={image.urls.card.avif}
-                      webp={image.urls.card.webp}
+                      // The small square (270 px); a photo saved before it existed has the card picture instead.
+                      avif={(image.urls.thumb ?? image.urls.card ?? image.urls.detail).avif}
+                      webp={(image.urls.thumb ?? image.urls.card ?? image.urls.detail).webp}
                       alt=""
                       loading="lazy"
                       placeholder={image.placeholder}
@@ -264,7 +266,7 @@ export default function ItemDetail({
           (image, i) =>
             toLoad.has(i) && (
               <picture key={image.id}>
-                <source srcSet={image.urls.detail.avif} type="image/avif" />
+                <source srcSet={avifSourceSet(image.urls.detail.avif, image.urls.detail3x?.avif)} type="image/avif" />
                 {/* Once it has loaded it counts as seen: choosing it then swaps it in at once instead of fading it in over its small version. */}
                 <img src={image.urls.detail.webp} alt="" onLoad={() => markSeen(image.urls.detail.webp)} />
               </picture>

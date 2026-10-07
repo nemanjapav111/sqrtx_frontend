@@ -38,14 +38,22 @@ export interface PublicBusiness {
 }
 
 // One image of a product; `urls.card` is the size for the product card (fits inside 604 x 604, shown at 302 x 302),
-// `urls.detail` the size for the product's own page (fits inside 1536 x 900), `urls.full` the one for the photo viewer (fits inside 1920 x 1920).
+// `urls.detail` the size for the product's own page (fits inside 1536 x 900), `urls.full` the one for the photo viewer (fits inside 2400 x 2400: the picture as it was uploaded).
 export interface PublicProductImage {
   id: string;
   is_primary: boolean;
   // A tiny WebP data URI that becomes the blurred preview; null for an image saved before the API made them.
   placeholder: string | null;
   sort_order: number;
-  urls: { card: { avif: string; webp: string }; detail: { avif: string; webp: string }; full: { avif: string; webp: string } };
+  // `card3x` and `detail3x`: the card and the detail picture at three times their box, AVIF only, for screens denser than 2x (missing on a photo saved before they existed).
+  urls: {
+    card?: { avif: string; webp: string }; // a product has it; a service has no card (its rows use detail)
+    thumb?: { avif: string; webp: string }; // the small square for the thumbnails (270 x 270)
+    card3x?: { avif: string };
+    detail: { avif: string; webp: string };
+    detail3x?: { avif: string };
+    full: { avif: string; webp: string };
+  };
 }
 
 // What GET /product?user_id=... returns for each product. `price` can arrive as a string (a Postgres numeric) or null.

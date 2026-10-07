@@ -34,7 +34,6 @@ import { useSearch } from "./search-context";
 // Not in the design, so placeholders: the words when there is nothing to show or something went wrong, "Show more", and the filter's popup.
 
 const ALL = "";
-const SEARCH_DELAY_MS = 300;
 
 // What is on screen: the services of ONE search + category (`key`), as many pages of them as were asked for.
 interface View {
@@ -46,20 +45,13 @@ interface View {
 const keyOf = (q: string, category: string) => `${q}|${category}`;
 
 export default function ServiceList({ initial, userId, slug }: { initial: PublicServicesPage; userId: string; slug: string }) {
-  const { query } = useSearch();
+  const { submitted: search } = useSearch(); // searched on Enter / the search button, not while typing (search-context.tsx)
   const [category, setCategory] = useState(ALL);
-  const [search, setSearch] = useState("");
   const [view, setView] = useState<View>({ key: keyOf("", ALL), items: initial.items, total: initial.total, page: 1 });
   const [busy, setBusy] = useState(false); // a search / category is being loaded
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
   const latest = useRef(0); // only the newest request may change the screen
-
-  // What is searched is what was typed, a moment after the typing stopped.
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(query.trim()), SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [query]);
 
   const key = keyOf(search, category);
 
@@ -150,8 +142,9 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
                   <div className="h-75 w-full overflow-hidden bg-[#f3f4f6]">
                     {service.image && (
                       <PlaceholderPicture
-                        avif={service.image.list.avif}
-                        webp={service.image.list.webp}
+                        avif={service.image.detail.avif}
+                        avif3x={service.image.detail3x?.avif}
+                        webp={service.image.detail.webp}
                         alt=""
                         // The first rows are on screen at once: load them at once. The rest wait until they come near.
                         loading={index < 2 ? "eager" : "lazy"}

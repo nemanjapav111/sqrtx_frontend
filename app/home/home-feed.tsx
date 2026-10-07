@@ -20,7 +20,6 @@ import { useHome } from "./home-context";
 // A card leads to the product's own page in the marketplace (app/(sqrtx)/product/[id]). Not in the design, so placeholders: the words for an empty list or an error, and "Show more".
 
 const ALL = "";
-const SEARCH_DELAY_MS = 300;
 
 // What is on screen: the products of ONE search + category + country (`key`), as many pages of them as were asked for.
 interface View {
@@ -34,11 +33,10 @@ interface View {
 const keyOf = (q: string, category: string, country: string) => `${q}|${category}|${country}`;
 
 export default function HomeFeed({ initial, initialCountry }: { initial: FeedPage; initialCountry: string }) {
-  const { query, country } = useHome();
+  const { submitted: search, country } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
   const [chosen, setChosen] = useState({ country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
-  const [search, setSearch] = useState("");
   const [view, setView] = useState<View>({
     key: keyOf("", ALL, initialCountry),
     items: initial.items,
@@ -50,12 +48,6 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
   const latest = useRef(0); // only the newest request may change the screen
-
-  // What is searched is what was typed, a moment after the typing stopped.
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(query.trim()), SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [query]);
 
   const key = keyOf(search, category, country);
 
@@ -137,6 +129,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
                   {product.image && (
                     <PlaceholderPicture
                       avif={product.image.card.avif}
+                      avif3x={product.image.card3x?.avif}
                       webp={product.image.card.webp}
                       alt={product.product_name}
                       // The first few are on screen at once: load them at once. The rest wait until they come near.

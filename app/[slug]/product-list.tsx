@@ -30,7 +30,6 @@ import { useSearch } from "./search-context";
 // Figma 2108:344).
 
 const ALL = "";
-const SEARCH_DELAY_MS = 300;
 
 // What is on screen: the products of ONE search + category (`key`), as many pages of them as were asked for.
 interface View {
@@ -42,20 +41,13 @@ interface View {
 const keyOf = (q: string, category: string) => `${q}|${category}`;
 
 export default function ProductList({ initial, userId, slug }: { initial: PublicProductsPage; userId: string; slug: string }) {
-  const { query } = useSearch();
+  const { submitted: search } = useSearch(); // searched on Enter / the search button, not while typing (search-context.tsx)
   const [category, setCategory] = useState(ALL);
-  const [search, setSearch] = useState("");
   const [view, setView] = useState<View>({ key: keyOf("", ALL), items: initial.items, total: initial.total, page: 1 });
   const [busy, setBusy] = useState(false); // a search / category is being loaded
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
   const latest = useRef(0); // only the newest request may change the screen
-
-  // What is searched is what was typed, a moment after the typing stopped.
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(query.trim()), SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [query]);
 
   const key = keyOf(search, category);
 
@@ -140,6 +132,7 @@ export default function ProductList({ initial, userId, slug }: { initial: Public
                   {product.image && (
                     <PlaceholderPicture
                       avif={product.image.card.avif}
+                      avif3x={product.image.card3x?.avif}
                       webp={product.image.card.webp}
                       alt={product.product_name}
                       // The first few are on screen at once: load them at once. The rest wait until they come near.

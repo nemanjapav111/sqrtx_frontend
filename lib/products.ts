@@ -79,7 +79,7 @@ export interface MyProductImage {
   is_primary: boolean;
   // A tiny WebP data URI that becomes the blurred preview while the picture loads; null for an image saved before the API made them.
   placeholder?: string | null;
-  urls: { card: { avif: string; webp: string } };
+  urls: { card: { avif: string; webp: string }; thumb?: { avif: string; webp: string } };
 }
 
 // The owner's own product with its images. Unlike the public list this includes products the public can't see (the

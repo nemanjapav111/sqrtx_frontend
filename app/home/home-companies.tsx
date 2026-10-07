@@ -9,12 +9,10 @@ import { useHome } from "./home-context";
 // The Companies page's list (Figma "sqrtx Companies Phone/Tablet/Desktop new"): the newest businesses, one block each: its company block (logo,
 // name, kind of business, city and a chevron, all one link to its own page: company-info.tsx; the design's separate "Visit" link is gone) and the first 5 lines of its About text under it.
 // Above the first one the filter ("ALL" = the business categories of the businesses in the chosen country). The same column on every size:
-// at most 700px wide and centered, the blocks 34px apart on a phone and 30px on a tablet and desktop. Searching (the company's name and its
-// About text), the filter and the country (the bars' picker) ask the API for the first page of what was chosen; the next pages come by "Show
+// at most 700px wide and centered, the blocks 34px apart on a phone and 30px on a tablet and desktop. Searching (the smart search reads the company's name, kind of business, city and About text), the filter and the country (the bars' picker) ask the API for the first page of what was chosen; the next pages come by "Show
 // more" or by themselves when the end of the list is near (the API sends no total, only whether there is a next page: see home-feed.tsx).
 
 const ALL = "";
-const SEARCH_DELAY_MS = 300;
 
 // What is on screen: the companies of ONE search + category + country (`key`), as many pages of them as were asked for.
 interface View {
@@ -27,11 +25,10 @@ interface View {
 const keyOf = (q: string, category: string, country: string) => `${q}|${category}|${country}`;
 
 export default function HomeCompanies({ initial, initialCountry }: { initial: FeedCompaniesPage; initialCountry: string }) {
-  const { query, country } = useHome();
+  const { submitted: search, country } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
   const [chosen, setChosen] = useState({ country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
-  const [search, setSearch] = useState("");
   const [view, setView] = useState<View>({
     key: keyOf("", ALL, initialCountry),
     items: initial.items,
@@ -43,12 +40,6 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
   const latest = useRef(0); // only the newest request may change the screen
-
-  // What is searched is what was typed, a moment after the typing stopped.
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(query.trim()), SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [query]);
 
   const key = keyOf(search, category, country);
 

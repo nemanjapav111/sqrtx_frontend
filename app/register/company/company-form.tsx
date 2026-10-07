@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BigLogo from "@/app/components/big-logo";
 import Field from "@/app/components/field";
 import PageHeading from "@/app/components/page-heading";
@@ -128,6 +128,15 @@ export default function CompanyForm({
   const picked = useRef<File | null>(null);
   const [shrinking, setShrinking] = useState(false);
   const logoIssue = logoProblemOf(values, shrinking);
+  // Save was pressed while the logo was still being shrunk (a second at most): it is saved the moment the shrunk file is ready, instead of the
+  // button being greyed out and back (a flash under the logo every time a big file was picked).
+  const formRef = useRef<HTMLFormElement>(null);
+  const saveWhenShrunk = useRef(false);
+  useEffect(() => {
+    if (shrinking || !saveWhenShrunk.current) return;
+    saveWhenShrunk.current = false;
+    formRef.current?.requestSubmit();
+  }, [shrinking]);
 
   // A new file: it is shown at once, its size is read (the minimum size is about the picture the owner chose), and a big one is shrunk
   // in the browser, the way product photos are (phone photos and big exports are 5 to 25 MB, a logo needs 220 x 136 px): the shrunk
@@ -185,6 +194,10 @@ export default function CompanyForm({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (inFlight.current) return;
+    if (shrinking) {
+      saveWhenShrunk.current = true; // see saveWhenShrunk
+      return;
+    }
     const form = e.currentTarget;
     setSubmitted(true);
     setError(null);
@@ -245,6 +258,7 @@ export default function CompanyForm({
       <div className="relative w-full">
         {/* noValidate: we draw our own red underline instead of the browser's pop-up messages. */}
         <form
+          ref={formRef}
           onSubmit={handleSubmit}
           noValidate
           inert={!!pending}
@@ -424,7 +438,7 @@ export default function CompanyForm({
 
           <button
             type="submit"
-            disabled={sending || shrinking}
+            disabled={sending}
             className="flex cursor-pointer items-center gap-1 bg-black px-17.25 py-2.75 font-bold text-white disabled:cursor-wait disabled:opacity-60"
           >
             {account ? (

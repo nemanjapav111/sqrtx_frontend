@@ -52,8 +52,16 @@ export const markSeen = (webp: string) => {
 const previewFrom = (placeholder: string | null | undefined) =>
   placeholder?.startsWith("data:image/webp;base64,") ? placeholder : null;
 
+/**
+ * The AVIF source of a picture: with an `avif3x` file it lists two candidates by density ("2x" and "3x"), so the browser takes the larger file only on a
+ * screen denser than 2x (iPhones, most recent Androids, foldables) and never downloads it on a desktop or a 2x phone. Without one, the plain file.
+ * The WebP in the <img> is the fallback for a browser that cannot read AVIF, and it is the same file for every density.
+ */
+export const avifSourceSet = (avif: string, avif3x?: string | null) => (avif3x ? `${avif} 2x, ${avif3x} 3x` : avif);
+
 export default function PlaceholderPicture({
   avif,
+  avif3x,
   webp,
   alt,
   placeholder,
@@ -67,6 +75,8 @@ export default function PlaceholderPicture({
   sweep = true,
 }: {
   avif: string;
+  // The same picture at three times its box (AVIF only): see avifSourceSet. Pictures saved before it existed have none.
+  avif3x?: string | null;
   webp: string;
   alt: string;
   // The API's tiny WebP data URI. Null/undefined or in another format: the loading block below is used instead.
@@ -75,7 +85,9 @@ export default function PlaceholderPicture({
   // size loads). Drawn sharp, over the blurred preview and under the real picture, and removed with them once the real one
   // has faded in. The blurred preview is only there until the poster has loaded (it shows through if the poster hasn't
   // arrived), and then it goes: left under a poster it would show as a blurred edge around a picture that is shown whole.
-  poster?: { avif: string; webp: string } | null;
+  // `avif3x`: the poster's own x3 file, so that a screen denser than 2x takes the SAME file the page it came from showed (the list's card3x, the page's detail3x),
+  // which is already in the browser's cache, and not the 2x one, which would be a new download.
+  poster?: { avif: string; avif3x?: string | null; webp: string } | null;
   className?: string;
   style?: React.CSSProperties;
   loading?: "eager" | "lazy";
@@ -129,7 +141,7 @@ export default function PlaceholderPicture({
   }, [decodedNow]);
   useEffect(() => {
     if (posterImg.current?.complete && posterImg.current.naturalWidth > 0) posterReady();
-  }, [poster]);
+  }, [poster?.webp]); // only a different poster FILE matters: the page makes a new object with the same files each time it draws
   useEffect(() => {
     if (!decoded || !fade || faded) return;
     const timer = setTimeout(() => setFaded(true), fadeMs + 50);
@@ -162,7 +174,7 @@ export default function PlaceholderPicture({
             )}
             {poster && (
               <picture className="absolute inset-0">
-                <source srcSet={poster.avif} type="image/avif" />
+                <source srcSet={avifSourceSet(poster.avif, poster.avif3x)} type="image/avif" />
                 <img ref={posterImg} src={poster.webp} alt="" onLoad={posterReady} className={imgClassName} />
               </picture>
             )}
@@ -177,7 +189,7 @@ export default function PlaceholderPicture({
         )
       )}
       <picture className="contents">
-        <source srcSet={avif} type="image/avif" />
+        <source srcSet={avifSourceSet(avif, avif3x)} type="image/avif" />
         <img
           ref={img}
           src={webp}

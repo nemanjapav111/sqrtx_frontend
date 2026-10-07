@@ -6,7 +6,7 @@ import type { PublicProductImage } from "@/lib/public-site";
 import ZoomStage from "./zoom-stage";
 
 // The photo viewer: the product page's big photo, opened over the whole window (click the photo) in the "full" size the API makes
-// (up to 1920px, which nothing else on the site used), as large as the window allows, shown whole on a dark ground. The page's own
+// (up to 2400px, the picture as it was uploaded, which nothing else on the site used), as large as the window allows, shown whole on a dark ground. The page's own
 // photo is shown at most 450px tall, so a visitor who wants to look at the detail had nothing to look at.
 // Not in the designs: a plain viewer, placeholder look. The photo can be zoomed and moved (zoom-stage.tsx). It closes with the x,
 // Escape, or a click on the dark ground around the photo; the arrows (and the left and right keys, when the photo is not zoomed) go
@@ -120,7 +120,7 @@ export default function PhotoViewer({
       {/* key: a new photo starts its own loading picture, and its own zoom (the whole photo). */}
       <ZoomStage key={image.id} onClose={onClose}>
         <PlaceholderPicture
-          poster={image.urls.detail}
+          poster={{ ...image.urls.detail, avif3x: image.urls.detail3x?.avif }}
           avif={image.urls.full.avif}
           webp={image.urls.full.webp}
           alt={name}

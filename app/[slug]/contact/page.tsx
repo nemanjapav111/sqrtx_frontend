@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBusiness, type PublicBusiness } from "@/lib/public-site";
+import { directionsUrl, staticMapUrl, viewOnMapUrl } from "@/lib/static-map";
 import ContactForm from "./contact-form";
-import MapEmbed from "./map-embed";
+import ContactMap from "./contact-map";
 
 // sqrtx.co/<address>/contact: the business's contact details, a map and a form to write to it (Figma "Contact Phone new" 2157:611,
 // "Contact Tablet new" 2036:761, "Contact Desktop new" 1681:347, measured 2026-10-01). The layout next to this file draws the top and
@@ -15,8 +16,10 @@ import MapEmbed from "./map-embed";
 // the Facebook and Instagram icons (the design also draws YouTube; a profile has no YouTube link). A line the business left empty is
 // not shown. Not in the design: the lines are links (phone, email, the address's map), and the heading says "Contact us" (the designs
 // have a typo, "Contac us").
-// The map is OpenStreetMap's own embedded map with a marker at the business's position (free, no key; the page it loads is openstreetmap.org's).
-// It is heavy (about 345 KB of script before any map picture), so it loads only when the visitor presses "Show map" (map-embed.tsx).
+// The map is a picture of the neighbourhood from Google's Static Maps in the site's greys with a black pin at the business's position (about 45 KB,
+// no script), with a black "Get directions" button under it (contact-map.tsx, lib/static-map.ts). When Google's picture is not available (no key, or
+// the service refuses the request) OpenStreetMap's embedded map behind a "Show map" button (map-embed.tsx, about 345 KB of script, so it loads only
+// when pressed) takes its place.
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -92,7 +95,8 @@ function countryName(code: string): string {
   }
 }
 
-// The business's position on OpenStreetMap's embedded map: a box of about 1.3 x 1.3 km around it, with a marker in the middle.
+// The map of the business's position: Google's picture, and OpenStreetMap's embedded map as its fallback (a box of about 1.3 x 1.3 km around the
+// position, with a marker in the middle).
 function Map({ business }: { business: PublicBusiness }) {
   const point = business.coordinates?.coordinates;
   if (!point) return null;
@@ -101,7 +105,16 @@ function Map({ business }: { business: PublicBusiness }) {
   const dLat = 0.006;
   const box = [lon - dLon, lat - dLat, lon + dLon, lat + dLat].map((n) => n.toFixed(5)).join("%2C");
   const src = `https://www.openstreetmap.org/export/embed.html?bbox=${box}&layer=mapnik&marker=${lat.toFixed(5)}%2C${lon.toFixed(5)}`;
-  return <MapEmbed src={src} title={`Map: ${business.formatted_address}`} />;
+  return (
+    <ContactMap
+      // NEXT_PUBLIC_ values must be written out in full like this so Next.js can put them into the browser bundle.
+      imageSrc={staticMapUrl(lat, lon, process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)}
+      osmSrc={src}
+      title={`Map: ${business.formatted_address}`}
+      viewHref={viewOnMapUrl(lat, lon)}
+      directionsHref={directionsUrl(lat, lon)}
+    />
+  );
 }
 
 // The two icons of the design, drawn as thin outlines at its sizes (its own vector shapes did not come with the capture).

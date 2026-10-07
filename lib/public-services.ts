@@ -16,7 +16,7 @@ export interface PublicServiceRow {
   category: string;
   description: string;
   description_cut: boolean;
-  image: { list: { avif: string; webp: string }; placeholder: string | null } | null;
+  image: { detail: { avif: string; webp: string }; detail3x?: { avif: string }; placeholder: string | null } | null;
 }
 
 export interface PublicServicesPage {

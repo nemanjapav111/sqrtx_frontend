@@ -26,7 +26,7 @@ export interface FeedItem {
   price: number | string | null; // a Postgres numeric: reads may come back as a string
   slug: string; // the business's address (sqrtx.co/<slug>)
   company_name: string;
-  image: { card: { avif: string; webp: string }; placeholder: string | null } | null;
+  image: { card: { avif: string; webp: string }; card3x?: { avif: string }; placeholder: string | null } | null;
 }
 
 export interface FeedCategory {
@@ -60,7 +60,7 @@ export interface FeedServiceItem {
   company_type: string | null;
   city: string;
   logo: FeedLogo | null;
-  image: { list: { avif: string; webp: string }; placeholder: string | null } | null;
+  image: { detail: { avif: string; webp: string }; detail3x?: { avif: string }; placeholder: string | null } | null;
 }
 export interface FeedServicesPage extends Omit<FeedPage, "items"> {
   items: FeedServiceItem[];

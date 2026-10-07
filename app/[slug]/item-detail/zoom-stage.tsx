@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 //  - A click on the dark ground around the photo (not zoomed) closes the viewer.
 // Zooming never goes past 2 pixels of screen per pixel of the picture (beyond that there is nothing more to see), nor below the whole
 // photo. Changes made with the buttons, the keys and the click glide (see GLIDE); wheel, pinch and drag follow the hand at once.
-// Everything is the photo's box moved with a CSS transform: the browser draws the 1920px picture at the zoomed size, so it stays sharp.
+// Everything is the photo's box moved with a CSS transform: the browser draws the full-size picture (up to 2400px) at the zoomed size, so it stays sharp.
 // Reduced motion: no gliding.
 
 const GLIDE = "transform 280ms cubic-bezier(0.22, 1, 0.36, 1)";

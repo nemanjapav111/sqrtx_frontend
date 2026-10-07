@@ -259,8 +259,8 @@ function ServicesListInBrowser() {
                         // lazy one is only started after the row has been laid out, a moment in which a picture that is already
                         // in the browser's cache would still show an empty box); the rest wait until they come near.
                         <PlaceholderPicture
-                          avif={image.urls.card.avif}
-                          webp={image.urls.card.webp}
+                          avif={(image.urls.thumb ?? image.urls.detail).avif}
+                          webp={(image.urls.thumb ?? image.urls.detail).webp}
                           alt=""
                           placeholder={image.placeholder}
                           loading={index < 8 ? "eager" : "lazy"}
