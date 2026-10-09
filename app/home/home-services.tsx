@@ -10,6 +10,7 @@ import { marketServicePath } from "@/lib/product-url";
 import FitText from "@/app/components/fit-text";
 import CompanyInfo from "./company-info";
 import { useHome } from "./home-context";
+import PhotoSearchNotice from "./photo-search";
 
 // The Services page's list (Figma "sqrtx Services Phone/Tablet/Desktop new"): the newest services of every business, one row each, like a
 // business's own Services page (service-list.tsx: the photo cropped to fill its box, the name, the price, the small black "See more" button and the first
@@ -22,6 +23,8 @@ import { useHome } from "./home-context";
 //  - desktop (1030px up): 420 : 600, the photo 400 x 300, the rows 20px apart.
 // These are container queries (the width of the content, not the window's), like the business pages' lists. "See more" and the photo lead to the
 // service's own page in the marketplace (app/(sqrtx)/service/[id]).
+// Changed 2026-10-07 (owner), the same as service-list.tsx: "See more" is a bold underlined text link (no arrow) after the description on a phone and
+// at the bottom of the text column from 700px, and a thin grey line separates two rows (the phone's 50px between rows are 25px on each side of it).
 
 const ALL = "";
 
@@ -34,15 +37,15 @@ interface View {
   categories: FeedCategory[]; // the business categories that have a service in this country
   searchId?: string; // the id of the search these services answer (from its first page), sent back with a click
 }
-const keyOf = (q: string, category: string, country: string) => `${q}|${category}|${country}`;
+const keyOf = (q: string, category: string, country: string, city: string, photo: string) => `${q}|${category}|${country}|${city}|${photo}`;
 
 export default function HomeServices({ initial, initialCountry }: { initial: FeedServicesPage; initialCountry: string }) {
-  const { submitted: search, country } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
+  const { submitted: search, country, city, photo, photoFetch } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
   const [chosen, setChosen] = useState({ country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
   const [view, setView] = useState<View>({
-    key: keyOf("", ALL, initialCountry),
+    key: keyOf("", ALL, initialCountry, "", ""),
     items: initial.items,
     hasMore: initial.has_more,
     page: 1,
@@ -53,7 +56,9 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
   const [failed, setFailed] = useState(false);
   const latest = useRef(0); // only the newest request may change the screen
 
-  const key = keyOf(search, category, country);
+  // A search by photo: the picture's own address stands for it in the key (the token behind it can be renewed without changing what is on screen).
+  const photoKey = photo?.state === "ready" ? photo.url : "";
+  const key = keyOf(search, category, country, city, photoKey);
 
   // A different search, category or country: its first page. The old rows stay (a little faded) until the new ones are here.
   useEffect(() => {
@@ -64,7 +69,9 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
       setBusy(true);
       setFailed(false);
       try {
-        const page = await fetchFeedServicesPage({ q: search, category, country }, controller.signal);
+        const page = photoKey
+          ? await photoFetch((token) => fetchFeedServicesPage({ category, country, city, photoToken: token }, controller.signal))
+          : await fetchFeedServicesPage({ q: search, category, country, city }, controller.signal);
         if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [], searchId: page.search_id });
       } catch {
         if (id === latest.current && !controller.signal.aborted) setFailed(true);
@@ -74,7 +81,7 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
     })();
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- view.key is compared, not watched: this runs for a new search/category/country
-  }, [key, search, category, country]);
+  }, [key, search, category, country, city, photoKey, photoFetch]);
 
   // The next page of what is on screen.
   const showMore = useCallback(async () => {
@@ -83,7 +90,9 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
     setMoreBusy(true);
     setFailed(false);
     try {
-      const page = await fetchFeedServicesPage({ q: search, category, country, page: view.page + 1 });
+      const page = photoKey
+        ? await photoFetch((token) => fetchFeedServicesPage({ category, country, city, photoToken: token, page: view.page + 1 }))
+        : await fetchFeedServicesPage({ q: search, category, country, city, page: view.page + 1 });
       if (id !== latest.current) return; // a newer search took over meanwhile
       setView((now) => {
         if (now.key !== view.key) return now;
@@ -96,7 +105,7 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
     } finally {
       if (id === latest.current) setMoreBusy(false);
     }
-  }, [moreBusy, busy, view, search, category, country]);
+  }, [moreBusy, busy, view, search, category, country, city, photoKey, photoFetch]);
 
   // Loads the next page by itself when the end of the list is about to come into view (400px before it).
   const end = useRef<HTMLDivElement>(null);
@@ -111,6 +120,8 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
   const filterOptions = useMemo(() => [{ value: ALL, text: "All" }, ...view.categories.map((c) => ({ value: c.id, text: c.name }))], [view.categories]);
   const filtering = search !== "" || category !== ALL;
 
+  if (photo && photo.state !== "ready") return <PhotoSearchNotice />; // the photo is being read, or could not be (photo-search.tsx)
+
   return (
     <main className="@container mx-auto flex w-full flex-col px-4 pb-2.5 md:px-2.5 md:max-[1119px]:pt-5 min-[1120px]:pt-7.5">
       {/* This block is as wide as a row (328, 728 or 1030px) and centered, so the filter lines up with the left edge of the rows. */}
@@ -118,16 +129,17 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
         <CategoryFilter value={category} options={filterOptions} onChange={(id) => setChosen({ country, id })} spacing="mb-8.5 @min-[700px]:mb-5" />
 
         {view.items.length === 0 && !busy && !failed && (
-          <p className="text-[14px] text-[#636363]">{filtering ? "No services match your search." : "No services yet."}</p>
+          <p className="text-[14px] text-[#636363]">{photoKey ? "No services look like your photo." : filtering ? "No services match your search." : "No services yet."}</p>
         )}
 
-        <ul aria-busy={busy} className={`flex flex-col transition-opacity duration-200 @min-[1030px]:gap-5 ${busy ? "opacity-50" : ""}`}>
+        <ul aria-busy={busy} className={`flex flex-col transition-opacity duration-200 ${busy ? "opacity-50" : ""}`}>
           {view.items.map((service, index) => {
             const href = marketServicePath(service);
             return (
               <li
                 key={service.id}
-                className="grid grid-cols-1 pb-12.5 @min-[700px]:grid-cols-[328fr_400fr] @min-[700px]:grid-rows-[auto_1fr] @min-[700px]:pb-0 @min-[1030px]:grid-cols-[420px_600px] @min-[1030px]:gap-x-2.5"
+                // A thin grey line between two rows, with the same space above and below it (25px on a phone, 10px beside the photo's own 10px on the others), as in service-list.tsx.
+                className="grid grid-cols-1 border-t border-[#e5e7eb] py-6.25 first:border-t-0 first:pt-0 last:pb-0 @min-[700px]:grid-cols-[328fr_400fr] @min-[700px]:grid-rows-[auto_1fr] @min-[700px]:py-2.5 @min-[700px]:first:pt-0 @min-[700px]:last:pb-0 @min-[1030px]:grid-cols-[420px_600px] @min-[1030px]:gap-x-2.5"
               >
                 <CompanyInfo
                   slug={service.slug}
@@ -165,16 +177,17 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
                     <h2 className="text-[24px] leading-[1.21] font-bold text-black wrap-break-word @min-[700px]:line-clamp-2 @min-[1030px]:text-[32px]">{service.service_name}</h2>
                     <p className="text-[18px] leading-[1.21] font-semibold text-black @min-[1030px]:text-[20px] @min-[1030px]:font-bold">{formatServicePrice(service.price, service.price_type)}</p>
                   </div>
+                  {/* 8 lines on a phone; beside the photo as many as fit between the price and the link, then "…" (the API cuts a very long text, see description_cut). */}
+                  <FitText text={service.description + (service.description_cut ? "…" : "")} />
+                  {/* After the text on every size; from 700px the text's box takes all the room that is left, so the link ends at the photo's bottom edge. */}
                   <Link
                     href={href}
                     onClick={() => reportSearchClick(view.searchId, service.id, index)}
                     aria-label={`See more: ${service.service_name}`}
-                    className="flex h-9 w-fit shrink-0 items-center justify-center bg-black px-6 text-[14px] leading-[17px] font-semibold text-white"
+                    className="mt-1.5 w-fit shrink-0 border-b-[1.5px] border-black pb-1 text-[16px] leading-[1.21] font-bold text-black @min-[700px]:mt-0"
                   >
                     See more
                   </Link>
-                  {/* 8 lines on a phone; beside the photo as many as fit under it, then "…" (the API cuts a very long text, see description_cut). */}
-                  <FitText text={service.description + (service.description_cut ? "…" : "")} />
                 </div>
               </li>
             );

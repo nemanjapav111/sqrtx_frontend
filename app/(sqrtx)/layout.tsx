@@ -17,8 +17,8 @@ export default async function SqrtxLayout({ children }: { children: React.ReactN
       <PathTracker />
       <div className="flex min-h-dvh flex-col bg-white leading-[normal] text-black">
         <HomeHeader countries={countries} />
-        {/* pb: on a phone, room for the fixed bottom bar (44px + its 1px top line, plus the phone's own bottom edge where it has one). */}
-        <div className="keep-width flex flex-1 flex-col pb-[calc(45px+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
+        {/* pb: on a phone, room for the fixed bottom bar (58px + its 1px top line, plus the phone's own bottom edge where it has one). */}
+        <div className="keep-width flex flex-1 flex-col pb-[calc(59px+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
         <HomeFooter countries={countries} />
       </div>
     </HomeProvider>

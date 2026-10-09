@@ -31,6 +31,9 @@ import { useSearch } from "./search-context";
 // From 700px the text column is as high as the photo and the description is cut after the last line that fits under the name, the price and the button (fit-text.tsx).
 // Around the rows: 16px at the sides on a phone and 10px on a tablet (the design has no wider margin), 20px above the filter on a tablet and
 // 30px on a desktop (the design's content starts 20px under the bar, and the desktop's row has 10px of its own).
+// Changed 2026-10-07 (owner's choice from a mock-up): "See more" is a bold 16px text link with a thin black underline instead of the small black
+// button (no arrow), after the description on a phone and at the bottom of the text column (the photo's bottom edge) from 700px, and a thin grey
+// line (#e5e7eb) separates two rows. Everything else is as designed.
 // Not in the design, so placeholders: the words when there is nothing to show or something went wrong, "Show more", and the filter's popup.
 
 const ALL = "";
@@ -127,14 +130,15 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
 
         <ul
           aria-busy={busy}
-          className={`flex flex-col gap-10.5 transition-opacity duration-200 @min-[700px]:gap-0 @min-[1030px]:gap-5 ${busy ? "opacity-50" : ""}`}
+          className={`flex flex-col transition-opacity duration-200 ${busy ? "opacity-50" : ""}`}
         >
           {view.items.map((service, index) => {
             const href = servicePath(slug, service);
             return (
               <li
                 key={service.id}
-                className="grid grid-cols-1 gap-5 @min-[700px]:grid-cols-[328fr_400fr] @min-[700px]:gap-0 @min-[1030px]:grid-cols-[420px_600px] @min-[1030px]:gap-x-2.5"
+                // A thin grey line between two rows, with the same space above and below it (21px on a phone, 20px beside the photo's own 10px on the others).
+                className="grid grid-cols-1 gap-5 border-t border-[#e5e7eb] py-5.25 first:border-t-0 first:pt-0 last:pb-0 @min-[700px]:grid-cols-[328fr_400fr] @min-[700px]:gap-0 @min-[700px]:py-2.5 @min-[700px]:first:pt-0 @min-[700px]:last:pb-0 @min-[1030px]:grid-cols-[420px_600px] @min-[1030px]:gap-x-2.5"
               >
                 {/* The photo is a second way to the same page as the button: left out of the keyboard's way and of the screen reader's. */}
                 <Link href={href} tabIndex={-1} aria-hidden className="block @min-[700px]:p-2.5">
@@ -165,15 +169,16 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
                       {formatServicePrice(service.price, service.price_type)}
                     </p>
                   </div>
+                  {/* 8 lines on a phone; beside the photo as many as fit between the price and the link, then "…" (the API cuts a very long text, see description_cut). */}
+                  <FitText text={service.description + (service.description_cut ? "…" : "")} />
+                  {/* After the text on every size; from 700px the text's box takes all the room that is left, so the link ends at the photo's bottom edge. */}
                   <Link
                     href={href}
                     aria-label={`See more: ${service.service_name}`}
-                    className="flex h-9 w-fit shrink-0 items-center justify-center bg-black px-6 text-[14px] leading-[17px] font-semibold text-white"
+                    className="mt-1.5 w-fit shrink-0 border-b-[1.5px] border-black pb-1 text-[16px] leading-[1.21] font-bold text-black @min-[700px]:mt-0"
                   >
                     See more
                   </Link>
-                  {/* 8 lines on a phone; beside the photo as many as fit under it, then "…" (the API cuts a very long text, see description_cut). */}
-                  <FitText text={service.description + (service.description_cut ? "…" : "")} />
                 </div>
               </li>
             );

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CELL, Icon, ICONS } from "@/app/[slug]/business-footer";
-import CountryPicker from "./country-picker";
+import { Icon, ICONS, TAB, TAB_OFF, TAB_ON } from "@/app/[slug]/business-footer";
+import LocationPicker from "./location-picker";
 
 // The pages of the site and the ways to them: Products (the home page), Services, Companies and About. (The same words are reserved: no
 // business can take them as its address.) `exists` is for a page that is not built yet: its link is not fetched ahead of time.
@@ -34,11 +34,14 @@ const COMPANIES_ICON = (
 );
 const PAGE_ICONS = { products: ICONS.products, services: ICONS.services, companies: COMPANIES_ICON, about: ICONS.about };
 
-/** The bottom bar of the PHONE design (Figma "sqrtx footer_links"): the four pages and the country picker, five equal cells in a 44px bar. */
+/**
+ * The bottom bar of the PHONE design (Figma "sqrtx footer_links"): the four pages and the location picker, five equal cells. New look 2026-10-08, the same as
+ * the business pages' bar (business-footer.tsx): 58px high, thin 22px icons, the current page black with a line on top of its cell, the others grey.
+ */
 export function HomeFooter({ countries }: { countries: readonly string[] }) {
   const current = useCurrent();
   return (
-    <nav aria-label="Pages" className="fixed inset-x-0 bottom-0 z-30 border-t border-[#b8b8b8] bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav aria-label="Pages" className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e5e7eb] bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="flex">
         {PAGES.map((page) => (
           <Link
@@ -46,13 +49,13 @@ export function HomeFooter({ countries }: { countries: readonly string[] }) {
             href={page.href}
             prefetch={page.exists}
             aria-current={page.key === current ? "page" : undefined}
-            className={`${CELL} ${page.key === current ? "bg-black text-white" : "text-black"}`}
+            className={`${TAB} ${page.key === current ? TAB_ON : TAB_OFF}`}
           >
             {PAGE_ICONS[page.key]}
             {page.label}
           </Link>
         ))}
-        <CountryPicker countries={countries} variant="bar" />
+        <LocationPicker countries={countries} variant="bar" />
       </div>
     </nav>
   );
@@ -60,21 +63,24 @@ export function HomeFooter({ countries }: { countries: readonly string[] }) {
 
 /**
  * The links of the top bar (the phone has them in the bottom bar): "tablet" (Figma "sqrtx links": 44px high, 23px apart, in their own row,
- * see home-header.tsx) and "desktop" (17px apart and 17px in from the left, exactly like a business's links, header-links.tsx; the design's "Frame 3" has them 28px apart). Both Inter bold 14px, white;
- * the current page is underlined (the design underlines it too).
+ * see home-header.tsx) and "desktop" (17px in from the left, exactly like a business's links, header-links.tsx). New look 2026-10-08 (owner's choice from
+ * a mock-up, the same as the business pages' links): Inter medium 15px, the current page white with a thin (1.5px) underline and the others grey (#a3a3a3,
+ * white under the pointer), 24px apart (28px from 1280px).
  */
 export function HomeLinks({ variant }: { variant: "tablet" | "desktop" }) {
   const desktop = variant === "desktop";
   const current = useCurrent();
   return (
-    <nav aria-label="Pages" className={desktop ? "flex items-center gap-4.25 py-1.25 pl-4.25" : "flex items-center gap-5.75"}>
+    <nav aria-label="Pages" className={desktop ? "flex items-center gap-6 py-1.25 pl-4.25 min-[1280px]:gap-7" : "flex items-center gap-5.75"}>
       {PAGES.map((page) => (
         <Link
           key={page.key}
           href={page.href}
           prefetch={page.exists}
           aria-current={page.key === current ? "page" : undefined}
-          className={`flex items-center text-[14px] leading-[17px] font-bold text-white ${desktop ? "" : "h-11"} ${page.key === current ? "underline decoration-2 underline-offset-4" : ""}`}
+          className={`flex items-center text-[15px] leading-[17px] font-medium ${desktop ? "" : "h-11"} ${
+            page.key === current ? "text-white underline decoration-[1.5px] underline-offset-6" : "text-[#a3a3a3] hover:text-white focus-visible:text-white"
+          }`}
         >
           {page.label}
         </Link>

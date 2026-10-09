@@ -8,6 +8,7 @@ import { fetchFeedPage, reportSearchClick, type FeedCategory, type FeedItem, typ
 import { formatPrice } from "@/lib/price";
 import { marketProductPath } from "@/lib/product-url";
 import { useHome } from "./home-context";
+import PhotoSearchNotice from "./photo-search";
 
 // The home page's list (Figma "sqrtx Phone new", 2167): the newest products of every business, the same cards as a business's own Products
 // page (product-list.tsx: a grey box with the picture shown whole, the name, the price, 350px wide, wrapping into one, two or three
@@ -30,15 +31,15 @@ interface View {
   categories: FeedCategory[]; // the business categories that have a product in this country
   searchId?: string; // the id of the search these products answer (from its first page), sent back with a click
 }
-const keyOf = (q: string, category: string, country: string) => `${q}|${category}|${country}`;
+const keyOf = (q: string, category: string, country: string, city: string, photo: string) => `${q}|${category}|${country}|${city}|${photo}`;
 
 export default function HomeFeed({ initial, initialCountry }: { initial: FeedPage; initialCountry: string }) {
-  const { submitted: search, country } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
+  const { submitted: search, country, city, photo, photoFetch } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
   const [chosen, setChosen] = useState({ country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
   const [view, setView] = useState<View>({
-    key: keyOf("", ALL, initialCountry),
+    key: keyOf("", ALL, initialCountry, "", ""),
     items: initial.items,
     hasMore: initial.has_more,
     page: 1,
@@ -49,7 +50,9 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
   const [failed, setFailed] = useState(false);
   const latest = useRef(0); // only the newest request may change the screen
 
-  const key = keyOf(search, category, country);
+  // A search by photo: the picture's own address stands for it in the key (the token behind it can be renewed without changing what is on screen).
+  const photoKey = photo?.state === "ready" ? photo.url : "";
+  const key = keyOf(search, category, country, city, photoKey);
 
   // A different search, category or country: its first page. The old products stay (a little faded) until the new ones are here.
   useEffect(() => {
@@ -60,7 +63,9 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
       setBusy(true);
       setFailed(false);
       try {
-        const page = await fetchFeedPage({ q: search, category, country }, controller.signal);
+        const page = photoKey
+          ? await photoFetch((token) => fetchFeedPage({ category, country, city, photoToken: token }, controller.signal))
+          : await fetchFeedPage({ q: search, category, country, city }, controller.signal);
         if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [], searchId: page.search_id });
       } catch {
         if (id === latest.current && !controller.signal.aborted) setFailed(true);
@@ -70,7 +75,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
     })();
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- view.key is compared, not watched: this runs for a new search/category/country
-  }, [key, search, category, country]);
+  }, [key, search, category, country, city, photoKey, photoFetch]);
 
   // The next page of what is on screen.
   const showMore = useCallback(async () => {
@@ -79,7 +84,9 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
     setMoreBusy(true);
     setFailed(false);
     try {
-      const page = await fetchFeedPage({ q: search, category, country, page: view.page + 1 });
+      const page = photoKey
+        ? await photoFetch((token) => fetchFeedPage({ category, country, city, photoToken: token, page: view.page + 1 }))
+        : await fetchFeedPage({ q: search, category, country, city, page: view.page + 1 });
       if (id !== latest.current) return; // a newer search took over meanwhile
       setView((now) => {
         if (now.key !== view.key) return now;
@@ -92,7 +99,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
     } finally {
       if (id === latest.current) setMoreBusy(false);
     }
-  }, [moreBusy, busy, view, search, category, country]);
+  }, [moreBusy, busy, view, search, category, country, city, photoKey, photoFetch]);
 
   // Loads the next page by itself when the end of the list is about to come into view (400px before it), so scrolling doesn't
   // stop at a button. The "Show more" button stays for keyboards and for when this can't run.
@@ -108,6 +115,8 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
   const filterOptions = useMemo(() => [{ value: ALL, text: "All" }, ...view.categories.map((c) => ({ value: c.id, text: c.name }))], [view.categories]);
   const filtering = search !== "" || category !== ALL;
 
+  if (photo && photo.state !== "ready") return <PhotoSearchNotice />; // the photo is being read, or could not be (photo-search.tsx)
+
   return (
     <main className="@container mx-auto flex w-full flex-col px-4 pb-2.5 md:px-7.5 md:pt-7.5">
       {/* This block is as wide as the columns that fit (350, 740 or 1130px) and centered, so the filter lines up with the
@@ -116,7 +125,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
         <CategoryFilter value={category} options={filterOptions} onChange={(id) => setChosen({ country, id })} />
 
         {view.items.length === 0 && !busy && !failed && (
-          <p className="text-[14px] text-[#636363]">{filtering ? "No products match your search." : "No products yet."}</p>
+          <p className="text-[14px] text-[#636363]">{photoKey ? "No products look like your photo." : filtering ? "No products match your search." : "No products yet."}</p>
         )}
 
         <ul aria-busy={busy} className={`flex flex-wrap justify-start gap-10 transition-opacity duration-200 ${busy ? "opacity-50" : ""}`}>
@@ -124,8 +133,8 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
             <li key={product.id} className="min-h-108 w-full @min-[350px]:w-87.5">
               {/* The whole card (picture, name, price) leads to the product's own page in the marketplace (its business's logo and page are there). */}
               <Link href={marketProductPath(product)} onClick={() => reportSearchClick(view.searchId, product.id, index)} className="block">
-                {/* The picture is shown whole (never cropped) inside a white box with square corners, a 1.5px light grey stroke, no shadow, no hover effect, no rounded corners (owner's choice, 2026-10-02). The stroke is a ring (an inset box-shadow), not a border. */}
-                <div className="flex h-87.5 items-center justify-center bg-white p-6 ring-[1.5px] ring-black/15 ring-inset">
+                {/* The picture is shown whole (never cropped) inside a grey box with square corners and a soft shadow: the owner's original design, back on 2026-10-08 (the white box with a thin grey stroke of 2026-10-02 is gone). No hover effect. */}
+                <div className="flex h-87.5 items-center justify-center bg-[#f9f9f9] p-6 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
                   {product.image && (
                     <PlaceholderPicture
                       avif={product.image.card.avif}

@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 // The description in a services row (business-service-list and marketplace Services page). On a phone the row is one column and the text
 // is cut after 8 lines. From 700px of content the text sits beside the photo and must end where the photo ends, so it gets all the height that
-// is left under the name, the price and the button and is cut, with "…", after the last whole line that fits: how many lines that is depends on
+// is left between the price and the "See more" link and is cut, with "…", after the last whole line that fits: how many lines that is depends on
 // how long the name is (one line or two) and on the company block above it on the marketplace page, so it is measured, not guessed.
 // Used inside a flex column that has a fixed height from 700px up (the text's box is `flex-1` there). Before the first measurement (the server's
 // HTML) 4 lines are shown, which fit in every layout, so nothing hangs out of the row for a moment.

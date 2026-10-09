@@ -64,7 +64,8 @@ export default function ContactForm({ userId }: { userId: string }) {
     }
   }
 
-  const label = "text-[14px] leading-[1.21] font-semibold @min-[1030px]:text-[14px]";
+  // The labels are the same small grey ones as the details above (sentence case), the typed text is 16px like their values.
+  const label = "text-[13px] leading-[1.2] font-medium text-[#8f8f8f]";
   const star = <span className="hidden @min-[1030px]:inline">*</span>;
 
   return (
@@ -105,7 +106,7 @@ export default function ContactForm({ userId }: { userId: string }) {
       </div>
 
       <div className="mt-11 flex flex-col gap-2.25 @min-[1030px]:gap-3.5">
-        <label htmlFor={ids.message} className={`${label} @min-[1030px]:text-[16px]`}>
+        <label htmlFor={ids.message} className={label}>
           Message{star}
         </label>
         <textarea
@@ -135,10 +136,13 @@ export default function ContactForm({ userId }: { userId: string }) {
         disabled={status === "sending"}
         className="mt-5 flex h-10.25 w-49.25 cursor-pointer items-center justify-center self-center bg-black text-[16px] leading-[1.21] font-bold text-white disabled:cursor-wait disabled:opacity-60 @min-[1030px]:mt-3.5 @min-[1030px]:self-start"
       >
-        {status === "sending" ? "Sending…" : "Send"}
+        {status === "sending" ? "Sending…" : "Send message"}
       </button>
 
-      {/* Under the button: what happened. aria-live so it is read out when it appears. */}
+      {/* Under the button: a line about the visitor's details (owner's wording, 2026-10-07), centered on a phone and a tablet like the button. */}
+      <p className="mt-3 text-center text-[13px] leading-[1.3] text-[#8f8f8f] @min-[1030px]:text-left">We only use your details to reply to you.</p>
+
+      {/* Under that: what happened. aria-live so it is read out when it appears. */}
       <div aria-live="polite" className="min-h-6 pt-3 text-center text-[14px] @min-[1030px]:text-left">
         {status === "sent" && <p className="text-[#111]">Your message was sent. The business will answer you by email.</p>}
         {error && (

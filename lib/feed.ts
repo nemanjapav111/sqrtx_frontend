@@ -1,6 +1,7 @@
 // The home page's list: the products of ALL the businesses, newest first, one page at a time (GET /feed/products, see API.md in the
 // backend). Used by the server (the first page, lib/public-site.ts) and by the browser (search, filters and "Show more"), so it holds
 // nothing that only works on one of them.
+import { shrinkForSearch } from "@/lib/photos";
 import type { ServicePriceType } from "@/lib/price";
 
 // How many products a page holds. 24 is a whole number of rows for one, two and three columns.
@@ -82,22 +83,69 @@ export interface FeedCompaniesPage extends Omit<FeedPage, "items"> {
 
 export const emptyFeedPage: FeedPage = { items: [], has_more: false, page: 1, limit: FEED_PAGE_SIZE, categories: [], countries: [] };
 
+// What a list asks for: the words searched, the business category, the country and, inside it, the city (all optional), and the page.
+export interface FeedOptions {
+  q?: string;
+  category?: string;
+  country?: string;
+  city?: string;
+  photoToken?: string; // a search BY PHOTO (see uploadSearchPhoto): the words are then ignored
+  page?: number;
+}
+
+/** The API answered with an error status; `status` says which (410: the photo search has expired, 503: it cannot answer, 429: too many photos). */
+export class ApiError extends Error {
+  constructor(public readonly status: number) {
+    super(`The API answered ${status}`);
+  }
+}
+
 /** The query string of the API call. */
-export function feedQuery({ q = "", category = "", country = "", page = 1 }: { q?: string; category?: string; country?: string; page?: number }) {
+export function feedQuery({ q = "", category = "", country = "", city = "", photoToken = "", page = 1 }: FeedOptions) {
   const params = new URLSearchParams({ page: String(page), limit: String(FEED_PAGE_SIZE) });
-  if (q) params.set("q", q);
+  if (photoToken) params.set("photo_token", photoToken);
+  else if (q) params.set("q", q);
   if (category) params.set("business_category", category);
   if (country) params.set("country", country);
+  if (country && city) params.set("city", city); // a city belongs to its country: without one it is not sent
   return params.toString();
+}
+
+// The location picker's list of cities (GET /feed/cities): the cities of one country that have something to show, with how many items each has
+// (products, services or businesses, by the page the visitor is on), the busiest first.
+export interface FeedCity {
+  name: string;
+  count: number;
+}
+export type FeedKind = "products" | "services" | "companies";
+
+/**
+ * The first step of a search by photo (POST /feed/photo in the API notes): the picture, shrunk to 512 px, goes up once and the answer is a token that the
+ * lists ask the pages of the answer with (`photoToken`), good for 15 minutes. Throws ApiError (400 not a picture, 429 too many, 503 not available).
+ */
+export async function uploadSearchPhoto(file: File, signal?: AbortSignal): Promise<string> {
+  const body = new FormData();
+  body.append("photo", await shrinkForSearch(file));
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/feed/photo`, { method: "POST", body, signal });
+  if (!response.ok) throw new ApiError(response.status);
+  return ((await response.json()) as { photo_token: string }).photo_token;
+}
+
+/** The cities of a country for the picker, asked for from the browser (public: no login). Throws if the API can't answer. */
+export async function fetchFeedCities(kind: FeedKind, country: string, signal?: AbortSignal): Promise<FeedCity[]> {
+  const params = new URLSearchParams({ kind, country });
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/feed/cities?${params.toString()}`, { signal });
+  if (!response.ok) throw new ApiError(response.status);
+  return ((await response.json()) as { cities: FeedCity[] }).cities;
 }
 
 /** One page of the feed, asked for from the browser (public: no login). Throws if the API can't answer. */
 export async function fetchFeedPage(
-  options: { q?: string; category?: string; country?: string; page?: number },
+  options: FeedOptions,
   signal?: AbortSignal,
 ): Promise<FeedPage> {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/feed/products?${feedQuery(options)}`, { signal });
-  if (!response.ok) throw new Error(`The API answered ${response.status}`);
+  if (!response.ok) throw new ApiError(response.status);
   return (await response.json()) as FeedPage;
 }
 
@@ -124,11 +172,11 @@ export const emptyFeedServicesPage: FeedServicesPage = { items: [], has_more: fa
 
 /** One page of the services feed, asked for from the browser (public: no login). Throws if the API can't answer. */
 export async function fetchFeedServicesPage(
-  options: { q?: string; category?: string; country?: string; page?: number },
+  options: FeedOptions,
   signal?: AbortSignal,
 ): Promise<FeedServicesPage> {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/feed/services?${feedQuery(options)}`, { signal });
-  if (!response.ok) throw new Error(`The API answered ${response.status}`);
+  if (!response.ok) throw new ApiError(response.status);
   return (await response.json()) as FeedServicesPage;
 }
 
@@ -136,11 +184,11 @@ export const emptyFeedCompaniesPage: FeedCompaniesPage = { items: [], has_more: 
 
 /** One page of the companies feed, asked for from the browser (public: no login). Throws if the API can't answer. */
 export async function fetchFeedCompaniesPage(
-  options: { q?: string; category?: string; country?: string; page?: number },
+  options: FeedOptions,
   signal?: AbortSignal,
 ): Promise<FeedCompaniesPage> {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/feed/companies?${feedQuery(options)}`, { signal });
-  if (!response.ok) throw new Error(`The API answered ${response.status}`);
+  if (!response.ok) throw new ApiError(response.status);
   return (await response.json()) as FeedCompaniesPage;
 }
 

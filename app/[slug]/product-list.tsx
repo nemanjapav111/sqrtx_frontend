@@ -127,8 +127,8 @@ export default function ProductList({ initial, userId, slug }: { initial: Public
             <li key={product.id} className="min-h-108 w-full @min-[350px]:w-87.5">
               {/* The whole card (picture, name, price) leads to the product's own page (product/[id]). */}
               <Link href={productPath(slug, product)} className="block">
-                {/* The picture is shown whole (never cropped) inside a white box with square corners, a 1.5px light grey stroke, no shadow, no hover effect, no rounded corners (owner's choice, 2026-10-02). The stroke is a ring (an inset box-shadow), not a border. */}
-                <div className="flex h-87.5 items-center justify-center bg-white p-6 ring-[1.5px] ring-black/15 ring-inset">
+                {/* The picture is shown whole (never cropped) inside a grey box with square corners and a soft shadow: the owner's original design, back on 2026-10-08 (the white box with a thin grey stroke of 2026-10-02 is gone). No hover effect. */}
+                <div className="flex h-87.5 items-center justify-center bg-[#f9f9f9] p-6 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
                   {product.image && (
                     <PlaceholderPicture
                       avif={product.image.card.avif}

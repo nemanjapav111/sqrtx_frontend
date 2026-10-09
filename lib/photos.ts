@@ -122,3 +122,37 @@ export async function drawThumbnail(file: File, canvas: HTMLCanvasElement) {
     bitmap.close();
   }
 }
+
+// The picture a visitor searches BY (the camera button of the marketplace's search box, app/home/photo-search.tsx): the model looks at it at about 256 x 256
+// pixels, so the long side is shrunk to 512 px and it goes up as a JPEG (on white: a see-through PNG would otherwise get a black background), about 30 to 80 KB
+// instead of a phone photo's 5 MB. A browser that cannot read the file (HEIC in most browsers) sends it as it is: the server reads those. Never throws.
+export const SEARCH_PHOTO_SIDE = 512;
+export async function shrinkForSearch(file: File): Promise<File> {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file); // applies the rotation stored in the photo
+  } catch {
+    return file;
+  }
+  try {
+    const scale = Math.min(1, SEARCH_PHOTO_SIDE / Math.max(bitmap.width, bitmap.height)); // never enlarged
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return file;
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, width, height);
+    context.imageSmoothingQuality = "high";
+    context.drawImage(bitmap, 0, 0, width, height);
+    const blob = await toBlob(canvas, "image/jpeg", 0.85);
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], `${file.name.replace(/\.[^./\\]+$/, "")}.jpg`, { type: "image/jpeg" });
+  } catch {
+    return file;
+  } finally {
+    bitmap.close();
+  }
+}

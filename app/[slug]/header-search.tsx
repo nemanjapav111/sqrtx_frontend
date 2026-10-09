@@ -9,7 +9,9 @@ import { useSearch } from "./search-context";
 // The search box of the top bar, in the two looks the designs have.
 //  - "bar" (phone and tablet, Figma 2063:8902 and 1960:663): a line with a search icon and nothing else. The design's
 //    "Find..." text is hidden there, so it is only the icon.
-//  - "desktop" (Figma 1424:468): a bordered box that says "Find..." with a square icon button at its end.
+//  - "desktop" (Figma 1424:468 had a bordered box with a square icon button at its end; since 2026-10-08, the owner's choice from a mock-up): a line
+//    like the phone's, 280px at most, with the search icon at its start (it is the submit button, Enter does the same) and "Find..." after it; the line
+//    turns black while the box has the focus.
 // On a product's or a service's own page (Figma 2108:344) the phone/tablet line has a back arrow to the list in front of it (on desktop the
 // arrow is in the page's top left corner instead, see item-detail.tsx), and typing in either box takes the visitor back to the list (the text
 // lives in the layout, so it is still there).
@@ -22,6 +24,23 @@ function SearchIcon({ className, color, width }: { className: string; color: str
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" />
     </svg>
+  );
+}
+
+/**
+ * The search line under the top bar on phone and tablet (20px above and below it on the phone; on the tablet only below, centered and at most 390px
+ * wide). NOT drawn on the Contact and About pages (owner's request 2026-10-07): there is no list there to search, and the line only took room
+ * from the page. The line's own space goes with it (the box around it is not drawn either), so the page starts right under the bar.
+ */
+export function HeaderSearchLine({ servicesPath }: { servicesPath: string }) {
+  const pathname = usePathname();
+  if (/^\/[^/]+\/(contact|about)\/?$/i.test(pathname)) return null;
+  return (
+    <div className="keep-width py-5 md:pt-0 min-[1120px]:hidden">
+      <div className="mx-auto max-w-97.5 px-4 md:px-5">
+        <HeaderSearch variant="bar" servicesPath={servicesPath} />
+      </div>
+    </div>
   );
 }
 
@@ -91,8 +110,12 @@ export default function HeaderSearch({ variant, servicesPath }: { variant: "bar"
     <form
       role="search"
       onSubmit={search}
-      className="flex h-9 w-full min-w-56.75 max-w-106 flex-1 items-center"
+      className="flex h-9 w-full min-w-40 max-w-70 flex-1 items-center gap-2.5 border-b border-[#b8b8b8] pl-1 focus-within:border-black"
     >
+      {/* The icon is the submit button too (Enter does the same). */}
+      <button type="submit" aria-label="Search" className="flex shrink-0 cursor-pointer items-center">
+        <SearchIcon className="size-4" color="#8f8f8f" width="2.2" />
+      </button>
       <input
         ref={input}
         type="search"
@@ -101,15 +124,8 @@ export default function HeaderSearch({ variant, servicesPath }: { variant: "bar"
         value={query}
         onChange={(e) => type(e.target.value)}
         autoComplete="off"
-        className="h-full min-w-0 flex-1 border border-[#b8b8b8] bg-white px-1.75 text-[15px] outline-none placeholder:text-[#8f8f8f] [&::-webkit-search-cancel-button]:hidden"
+        className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-[#8f8f8f] [&::-webkit-search-cancel-button]:hidden"
       />
-      <button
-        type="submit"
-        aria-label="Search"
-        className="-ml-px flex h-full w-11.25 shrink-0 cursor-pointer items-center justify-center border border-[#b8b8b8] bg-[#f9f9f9]"
-      >
-        <SearchIcon className="size-4" color="#000" width="2.5" />
-      </button>
     </form>
   );
 }

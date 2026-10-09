@@ -5,6 +5,7 @@ import CategoryFilter from "@/app/[slug]/category-filter";
 import { fetchFeedCompaniesPage, type FeedCategory, type FeedCompaniesPage, type FeedCompanyItem } from "@/lib/feed";
 import CompanyInfo from "./company-info";
 import { useHome } from "./home-context";
+import PhotoSearchNotice from "./photo-search";
 
 // The Companies page's list (Figma "sqrtx Companies Phone/Tablet/Desktop new"): the newest businesses, one block each: its company block (logo,
 // name, kind of business, city and a chevron, all one link to its own page: company-info.tsx; the design's separate "Visit" link is gone) and the first 5 lines of its About text under it.
@@ -22,15 +23,15 @@ interface View {
   page: number;
   categories: FeedCategory[]; // the business categories of the businesses in this country
 }
-const keyOf = (q: string, category: string, country: string) => `${q}|${category}|${country}`;
+const keyOf = (q: string, category: string, country: string, city: string) => `${q}|${category}|${country}|${city}`;
 
 export default function HomeCompanies({ initial, initialCountry }: { initial: FeedCompaniesPage; initialCountry: string }) {
-  const { submitted: search, country } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
+  const { submitted: search, country, city, photo } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
   const [chosen, setChosen] = useState({ country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
   const [view, setView] = useState<View>({
-    key: keyOf("", ALL, initialCountry),
+    key: keyOf("", ALL, initialCountry, ""),
     items: initial.items,
     hasMore: initial.has_more,
     page: 1,
@@ -41,7 +42,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
   const [failed, setFailed] = useState(false);
   const latest = useRef(0); // only the newest request may change the screen
 
-  const key = keyOf(search, category, country);
+  const key = keyOf(search, category, country, city);
 
   // A different search, category or country: its first page. The old companies stay (a little faded) until the new ones are here.
   useEffect(() => {
@@ -52,7 +53,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
       setBusy(true);
       setFailed(false);
       try {
-        const page = await fetchFeedCompaniesPage({ q: search, category, country }, controller.signal);
+        const page = await fetchFeedCompaniesPage({ q: search, category, country, city }, controller.signal);
         if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [] });
       } catch {
         if (id === latest.current && !controller.signal.aborted) setFailed(true);
@@ -62,7 +63,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
     })();
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- view.key is compared, not watched: this runs for a new search/category/country
-  }, [key, search, category, country]);
+  }, [key, search, category, country, city]);
 
   // The next page of what is on screen.
   const showMore = useCallback(async () => {
@@ -71,7 +72,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
     setMoreBusy(true);
     setFailed(false);
     try {
-      const page = await fetchFeedCompaniesPage({ q: search, category, country, page: view.page + 1 });
+      const page = await fetchFeedCompaniesPage({ q: search, category, country, city, page: view.page + 1 });
       if (id !== latest.current) return; // a newer search took over meanwhile
       setView((now) => {
         if (now.key !== view.key) return now;
@@ -84,7 +85,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
     } finally {
       if (id === latest.current) setMoreBusy(false);
     }
-  }, [moreBusy, busy, view, search, category, country]);
+  }, [moreBusy, busy, view, search, category, country, city]);
 
   // Loads the next page by itself when the end of the list is about to come into view (400px before it).
   const end = useRef<HTMLDivElement>(null);
@@ -98,6 +99,8 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
 
   const filterOptions = useMemo(() => [{ value: ALL, text: "All" }, ...view.categories.map((c) => ({ value: c.id, text: c.name }))], [view.categories]);
   const filtering = search !== "" || category !== ALL;
+
+  if (photo) return <PhotoSearchNotice companies />; // a business has no photo to compare with: the notice says so (photo-search.tsx)
 
   return (
     <main className="mx-auto flex w-full flex-col px-4 md:pt-7.5">
