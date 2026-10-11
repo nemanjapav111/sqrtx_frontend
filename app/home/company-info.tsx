@@ -5,9 +5,9 @@ import { LOGO_ROW_FIT_CLASS, LOGO_ROW_MAX_HEIGHT, LOGO_ROW_MAX_WIDTH, logoDispla
 // Whose it is, in the marketplace: the business's logo exactly as it is on its own page (business-header.tsx): fitted inside 100 x 58, never
 // cropped or enlarged, no frame, at the left edge of the content, and 13px from it, centered against it,
 // the business's name (semibold 16) and under it its kind of business and its city on one line (13, grey). The whole block is ONE link to the
-// business's own page. Used on a product's or a service's own page and on the Companies page (`card`: it also has a chevron at its end, which is
-// what says "tap to open it"; this replaced the design's separate "Visit >" text link under the block, which looked like a stray word) and in
-// every row of the Services page (no chevron). The parts the page has no value for are left out (a logo is required at registration, so there is always one).
+// business's own page. Used on the Companies page (`card`: it also has a chevron at its end, which is
+// what says "tap to open it"; this replaced the design's separate "Visit >" text link under the block, which looked like a stray word). (Since 2026-10-11 a product's or service's page and the Services list
+// use the slim line of components/company-line.tsx instead.) The parts the page has no value for are left out (a logo is required at registration, so there is always one).
 export interface CompanyLogo {
   avif: string;
   webp: string;

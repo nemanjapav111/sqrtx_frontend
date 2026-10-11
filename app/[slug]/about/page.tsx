@@ -24,7 +24,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
   return (
     <main className="mx-auto flex w-full flex-col px-4 pt-12.5 pb-17.5 md:px-10 md:pb-25">
-      <div className="mx-auto w-full max-w-175">
+      <div className="mx-auto w-full max-w-87.5 md:max-w-175">
         <h1 className="sr-only">About {business.company_name}</h1>
         {about ? (
           <p className="text-[16px] leading-5 whitespace-pre-line text-black wrap-break-word">{about}</p>

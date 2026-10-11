@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { FieldShell } from "@/app/components/field";
+import { POPUP_BELOW_LINE, POPUP_HEADING, POPUP_NOTE, POPUP_PANEL, POPUP_ROW_ON, TICK } from "@/app/components/popup";
 
 // A category to pick from. A plain string is its own name and value. An object keeps them apart: `value` is what is
 // picked (the business categories use an id that never changes), `text` is what is shown, and `keywords` are never
@@ -181,20 +182,18 @@ export default function CategorySelect({
       className={className}
       dropdown={
         open && (
-          // No design for this list yet.
-          <ul id={listId} role="listbox" className="absolute top-full z-10 mt-1 max-h-64 w-full overflow-y-auto overscroll-contain border border-black bg-white">
+          // The look of every popup of the site (popup.tsx).
+          <ul id={listId} role="listbox" className={`absolute ${POPUP_BELOW_LINE} z-10 max-h-64 w-full overflow-y-auto overscroll-contain ${POPUP_PANEL}`}>
             {!rows.some((row) => !row.fallback) && (
-              <li aria-hidden className="px-3 py-2 text-[14px] text-[#9ca3af]">
+              <li aria-hidden className={POPUP_NOTE}>
                 {allowCreate ? "Type to create a category" : "No matching category"}
               </li>
             )}
             {rows.map((row, i) => (
               <Fragment key={`${row.create ? "create:" : ""}${row.fallback ? "fallback:" : ""}${row.value}`}>
                 {row.group && row.group !== rows[i - 1]?.group && (
-                  // No design for the headings yet.
-                  // A solid mid grey, clearly darker than the row highlight (which is a very light grey), so a heading
-                  // is never mistaken for a highlighted row.
-                  <li role="presentation" className="bg-[#d1d5db] px-3 py-1.5 text-[12px] font-semibold tracking-wide text-[#1f2937] uppercase">
+                  // Small grey text with no background, so a heading is never mistaken for a highlighted row.
+                  <li role="presentation" className={`pt-2 pb-1 ${POPUP_HEADING}`}>
                     {row.group}
                   </li>
                 )}
@@ -207,23 +206,23 @@ export default function CategorySelect({
                     e.preventDefault();
                     choose(row.value);
                   }}
-                  // A category lights up (the same grey the field hints use, at low opacity so the black text
-                  // stays readable) under the mouse or the arrow keys. The "Create ..." row has it all the time,
-                  // so it stands apart from the categories, and goes a step darker when it is picked.
+                  // A category lights up (light grey, like the other popups' rows) under the mouse or the arrow keys. The "Create ..."
+                  // row has it all the time, so it stands apart from the categories, and goes a step darker when it is picked.
                   // The "can't find yours" row is solid (not see-through) because list rows scroll underneath it.
-                  className={`cursor-pointer px-3 py-2 text-[14px] ${
+                  className={`flex min-h-11 cursor-pointer items-center justify-between gap-3 px-4.5 py-1 text-[16px] md:min-h-10 md:text-[15px] ${
                     row.fallback
-                      ? `sticky bottom-0 border-t border-black ${i === active ? "bg-[#ededee]" : "bg-white hover:bg-[#ededee]"}`
+                      ? `sticky bottom-0 border-t border-[#e5e7eb] ${i === active ? POPUP_ROW_ON : "bg-white hover:bg-[#f3f4f6]"}`
                       : row.create
                       ? i === active
-                        ? "bg-[#4b5563]/20"
-                        : "bg-[#4b5563]/10 hover:bg-[#4b5563]/20"
+                        ? "bg-[#e5e7eb]"
+                        : "bg-[#f3f4f6] hover:bg-[#e5e7eb]"
                       : i === active
-                        ? "bg-[#4b5563]/10"
-                        : "hover:bg-[#4b5563]/10"
+                        ? POPUP_ROW_ON
+                        : "hover:bg-[#f3f4f6]"
                   } ${row.value === value ? "font-semibold" : ""}`}
                 >
-                  {row.text}
+                  <span className="min-w-0 truncate">{row.text}</span>
+                  {row.value === value && !row.fallback && !row.create && TICK}
                 </li>
               </Fragment>
             ))}

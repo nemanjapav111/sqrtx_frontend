@@ -5,24 +5,24 @@ import { useHome } from "./home-context";
 
 // Search by photo, the visitor's side (the camera button and the small "Photo" chip of the search box, owner's design 2026-10-08). The button opens
 // the phone's camera or gallery (or a computer's file picker), the picture picked becomes a chip with its preview and an x in the box, it is uploaded at
-// once (home-context.tsx) and the lists show the products or services whose photo is nearest (the API's search by photo). Words typed with a photo are not
-// used by the API, so the box has no place to type while a photo is picked: the camera button picks another one, the x removes it.
+// once (home-context.tsx) and the lists show the products or services whose photo is nearest (the API's search by photo). The box stays next to the chip: words typed
+// with a photo (Enter, as always) put those items in order (the API's photo + words search); the camera button picks another photo, the x removes it. The Companies
+// have no photo to compare with: words search them and the photo is not used; a photo without words gets the notice below.
 const MAX_BYTES = 15 * 1024 * 1024; // a phone's photo; the browser will shrink it before it is sent, once there is somewhere to send it
 
 /**
- * What a list says INSTEAD of its items while the photo cannot be searched by: it is being read (uploading), it could not be (failed), or the page is the
- * Companies' (a business has no photo to compare with). Not shown once the photo is ready on a products or services page: the list shows the answer.
+ * What a list says INSTEAD of its items when the photo cannot be searched by: it could not be read (failed), or the page is the Companies' and no words come with the
+ * photo (a business has no photo to compare with). While the photo is being read (uploading) the lists show grey placeholders (list-skeleton.tsx), not a message; once it is ready the list
+ * shows the answer.
  */
 export default function PhotoSearchNotice({ companies = false }: { companies?: boolean }) {
   const { photo, clearPhoto } = useHome();
   const words = companies
-    ? "Companies can't be searched by photo. Remove the photo to see the companies, or look in Products and Services."
-    : photo?.state === "failed"
-      ? photo.problem
-      : "Looking at your photo…";
+    ? "Companies can't be searched by photo. Type words to search them, remove the photo to see all of them, or look in Products and Services."
+    : (photo?.problem ?? "");
   return (
     <main className="mx-auto flex w-full max-w-97.5 flex-col items-start gap-4 px-4 pt-10 md:px-5">
-      <p role={photo?.state === "failed" ? "alert" : "status"} className="text-[16px] leading-6 text-[#1f2937]">
+      <p role={companies ? "status" : "alert"} className="text-[16px] leading-6 text-[#1f2937]">
         {words}
       </p>
       {(companies || photo?.state === "failed") && (

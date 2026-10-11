@@ -89,7 +89,7 @@ export interface FeedOptions {
   category?: string;
   country?: string;
   city?: string;
-  photoToken?: string; // a search BY PHOTO (see uploadSearchPhoto): the words are then ignored
+  photoToken?: string; // a search BY PHOTO (see uploadSearchPhoto); with `q` the words put the items that look like the photo in order (photo + words)
   page?: number;
 }
 
@@ -104,7 +104,7 @@ export class ApiError extends Error {
 export function feedQuery({ q = "", category = "", country = "", city = "", photoToken = "", page = 1 }: FeedOptions) {
   const params = new URLSearchParams({ page: String(page), limit: String(FEED_PAGE_SIZE) });
   if (photoToken) params.set("photo_token", photoToken);
-  else if (q) params.set("q", q);
+  if (q) params.set("q", q);
   if (category) params.set("business_category", category);
   if (country) params.set("country", country);
   if (country && city) params.set("city", city); // a city belongs to its country: without one it is not sent

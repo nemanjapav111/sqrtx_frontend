@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import PlaceholderPicture, { avifSourceSet, markSeen } from "@/app/components/placeholder-picture";
+import { POPUP_ABOVE, POPUP_BELOW, POPUP_CARD, POPUP_GAP } from "@/app/components/popup";
+import { usePopupDismiss } from "@/app/components/use-popup-dismiss";
 import ArrowIcon from "@/app/register/arrow-icon";
 import { formatPrice, formatServicePrice } from "@/lib/price";
 import type { PublicBusiness, PublicProductImage } from "@/lib/public-site";
@@ -10,24 +12,19 @@ import PhotoViewer from "./photo-viewer";
 
 // A product's or a service's own page (the services' designs, Figma "Service Details Phone/Tablet/Desktop new" 2151:368, 2036:612,
 // 1673:194, are the products' ones with other words, so it is one component), in the three sizes of the designs (Figma 2108:344 phone
-// 360 x 840, 1988:1874 tablet 768 x 909, 1560:134 desktop 1440 x 1024). The top bar is the site's own (the layout draws it); // the way back to the list is
+// 360 x 840, 1988:1874 tablet 768 x 909, 1560:134 desktop 1440 x 1024). The top bar is the site's own (the layout draws it); the way back to the list is
 // a bare arrow: in front of the search line on phone and tablet (the design's; header-search.tsx and home-search.tsx draw it), and on desktop at the
 // page's top left corner (this component; with no words, 2026-10-07: the owner wanted the words gone).
-//  - Phone: name (20px medium) and price (22px bold) at the left, the photo in a 360 x 450 box (shown whole, never cropped),
-//    the other photos as 80px squares (cropped to fill, three to a row), then the description and "View contact".
-//  - Tablet (768px up): the same in one centered column, the photo across the whole width, name and price centered, the
-//    small photos 90px in a row, the text under them (text 640px wide, the frame 680).
-//  - Desktop (1120px up; the design is 1440 wide, 1120 is where the two columns still fit): the photos at the left with
-//    "<" ">" arrows on the big photo, and at the right the name (32px bold), the price (20px bold), "View contact" and the
-//    description (all 560px wide).
+//  - Phone and tablet (under 1120px): one column, in this order: the photos (a swiped strip of photos 450px high, shown whole, never cropped, and the small photos under it),
+//    the name and the price (24px, left-aligned, no gap between them), the business's slim line (marketplace only), "View contact", a service's facts and the description.
+//    The column is the window's width less 16px at each side on a phone, and 680px, centered, on a tablet (768px up), where the photo, the small photos and the text share its left edge.
+//  - Desktop (1120px up; the design is 1440 wide, 1120 is where the two columns still fit): the photos at the left with "<" ">" arrows on the big photo, and at the right the
+//    same order: the name (32px bold), the price (20px bold), the slim line, "View contact", the facts and the description (all 560px wide).
 // The "View contact" button is the page's main button (black, white 16px bold text, 44px high, the same black as the lists' "See More"; full width on a
 // phone), on products and services alike (owner's choice 2026-10-02: it used to be a small outlined one, and what it does is unchanged).
 // A service also shows its facts (item.service): how long it takes and where the business works (the owner's two optional lines), and the
-// business's hours and address, which were only in the contact box; under the photos on phone and tablet, between the button and the text on desktop.
+// business's hours and address, which were only in the contact box, between the button and the text.
 // Where I chose (not in the designs):
-//  - "View contact" comes AFTER the description on phone and tablet (the design's tablet has it before) and right under the
-//    price on desktop (as designed): a reader finishes the text and then acts, except on desktop where the column is short
-//    and the button stays in view.
 //  - What "View contact" does: it opens the business's contact details in a box that floats under the button (there is no Contact page yet): phone,
 //    email, address (a map link), hours and social pages, no name (it is in the top bar already).
 //  - A click on the big photo opens it in the photo viewer (photo-viewer.tsx): the "full" size, as large as the window allows.
@@ -35,7 +32,7 @@ import PhotoViewer from "./photo-viewer";
 //    show when there is more than one photo; a product with one photo has no small ones.
 // Between the designs' widths it keeps its shape instead of stretching: the content never grows past 1440px and is centered,
 // from 1120px the two columns keep the design's 740:680 proportions and the right column's name and left space shrink
-// with the window, and on a tablet the photos stop at 900px.
+// with the window, and on a tablet the column stops at 680px.
 // CSS gotcha (also in header-links.tsx): `md:` (768px up) and `min-[1120px]:` both match on a desktop and the md rule wins, so
 // what only tablet needs is written `md:max-[1120px]:` (768 up to, not including, 1120).
 // What the page shows of a product or a service, and where the back arrow leads (the list the visitor came from).
@@ -48,23 +45,23 @@ export interface DetailItem {
   service?: { duration: string | null; area: string | null }; // present on a service's page: its facts
 }
 
-// `company`: only on a product's page in the sqrtx marketplace (Figma "sqrtx Product Details Phone/Tablet/Desktop new"), where the page has no
-// business top bar to say whose product it is: the business's logo, name, kind and place with a "Visit" button. On desktop it is the first thing
-// of the right column (above the name); on phone and tablet it comes last, under "View contact".
+// `companyLine`: only on a product's or service's page in the sqrtx marketplace, where the page has no business top bar to say whose it is: the business's slim line (components/company-line.tsx:
+// logo, name, city, chevron; a tap opens the business's page). On EVERY size it is right under the name and the price, and "View contact" right under it (2026-10-11, the owner: desktop follows
+// phone and tablet; before, desktop had the bigger company card above the name).
 export default function ItemDetail({
   item,
   business,
   slug,
   backTo,
   backLabel,
-  company,
+  companyLine,
 }: {
   item: DetailItem;
   business: PublicBusiness;
   slug: string;
   backTo: string;
   backLabel: string;
-  company?: React.ReactNode;
+  companyLine?: React.ReactNode; // the business's slim line, under the name and the price (components/company-line.tsx)
 }) {
   const images = [...item.images].sort((a, b) => a.sort_order - b.sort_order);
   const [selected, setSelected] = useState(0);
@@ -73,22 +70,23 @@ export default function ItemDetail({
   const photo = useRef<HTMLButtonElement>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const contactRef = useRef<HTMLDivElement>(null);
-  // The contact box floats over the page, so it closes like the account menu does: a click outside it, or Escape.
-  useEffect(() => {
+  const contactBox = useRef<HTMLDivElement>(null);
+  // Where the contact box opens: under the button when it fits there, else above it when it fits there, else on the side with more room. Worked out when it opens, before it is
+  // painted (a layout effect), from the box's own height and the room between the button and what is fixed to the screen: the bottom bar on a phone (the pages' bar), and the top bar.
+  const [contactUp, setContactUp] = useState(false);
+  useLayoutEffect(() => {
     if (!contactOpen) return;
-    const onPointer = (e: MouseEvent) => {
-      if (contactRef.current && !contactRef.current.contains(e.target as Node)) setContactOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setContactOpen(false);
-    };
-    document.addEventListener("mousedown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
+    const button = contactRef.current?.getBoundingClientRect();
+    const box = contactBox.current?.offsetHeight;
+    if (!button || !box) return;
+    const bottomBar = [...document.querySelectorAll("nav")].map((nav) => nav.getBoundingClientRect()).find((r) => r.height > 0 && r.top > window.innerHeight / 2 && r.bottom >= window.innerHeight - 1);
+    const header = document.querySelector("header[data-site-header]")?.getBoundingClientRect().bottom ?? 0;
+    const below = (bottomBar?.top ?? window.innerHeight) - button.bottom - POPUP_GAP;
+    const above = button.top - header - POPUP_GAP;
+    setContactUp(below < box && (above >= box || above > below));
   }, [contactOpen]);
+  // The contact box floats over the page, so it closes like the account menu does: a click outside it (that click does nothing else), or Escape.
+  usePopupDismiss(contactOpen, contactRef, () => setContactOpen(false));
   const shown = images[selected] ?? images[0];
   // The photos whose big version is loaded before it is asked for, so choosing one shows it at once instead of after a
   // download: the two next to the shown one (also going round, as the arrows do), and any small photo the visitor's
@@ -103,12 +101,74 @@ export default function ItemDetail({
     photo.current?.focus(); // back to the photo that was clicked
   }, []);
 
+  // PHONE AND TABLET (under 1120px): the big photo is a strip of all the photos that is swiped sideways (CSS scroll snap: one photo at a time), and the row of small photos goes with it. Swiping
+  // changes `selected` (the photo that is more than half in view). Choosing a small photo (or anything else that changes `selected`) does NOT slide the strip (2026-10-10, the owner:
+  // "don't make sliding animation, make ease in ease out"): the photo fades out (140ms, ease-in), the strip jumps to the chosen one while it is not seen, and it fades in (200ms,
+  // ease-out). People who ask for less motion get a jump at once. While this runs, the strip's own scrolling does not change `selected` (scrollingTo); a finger on the strip ends it
+  // at once (onPointerDown: the jump is done first, so the visitor is looking at the chosen photo), and a timer ends it if the page stops running animations (a hidden tab).
+  // The selected small photo is kept in the middle of its row. On desktop (1120px up) the strip is not shown (clientWidth 0) and the single photo with its arrows is.
+  const strip = useRef<HTMLDivElement>(null);
+  const thumbList = useRef<HTMLUListElement>(null);
+  const scrollingTo = useRef<number | null>(null);
+  const fade = useRef<{ animations: Animation[]; timer: number; jumpTo: number | null } | null>(null);
+  const stopFade = useCallback(() => {
+    const running = fade.current;
+    fade.current = null;
+    scrollingTo.current = null;
+    if (!running) return;
+    window.clearTimeout(running.timer);
+    if (running.jumpTo !== null && strip.current) strip.current.scrollLeft = running.jumpTo; // not jumped yet: do it now
+    running.animations.forEach((animation) => animation.cancel());
+  }, []);
+  useEffect(() => stopFade, [stopFade]);
+  useEffect(() => {
+    const el = strip.current;
+    if (el && el.clientWidth > 0 && Math.round(el.scrollLeft / el.clientWidth) !== selected) {
+      stopFade();
+      const to = selected * el.clientWidth;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        el.scrollLeft = to;
+      } else {
+        scrollingTo.current = selected;
+        const state = { animations: [] as Animation[], timer: 0, jumpTo: to as number | null };
+        fade.current = state;
+        const fadeOut = el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: "ease-in", fill: "forwards" });
+        state.animations = [fadeOut];
+        fadeOut.onfinish = () => {
+          el.scrollLeft = to;
+          state.jumpTo = null;
+          // The fade-in is made BEFORE the fade-out is removed, so the photo is never drawn at full strength in between.
+          const fadeIn = el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: "ease-out" });
+          state.animations = [fadeIn, fadeOut];
+          fadeOut.cancel();
+          fadeIn.onfinish = () => {
+            if (fade.current === state) stopFade();
+          };
+        };
+        state.timer = window.setTimeout(() => {
+          if (fade.current === state) stopFade();
+        }, 900);
+      }
+    }
+    const list = thumbList.current;
+    const thumb = list?.children[selected] as HTMLElement | undefined;
+    if (list && thumb && list.scrollWidth > list.clientWidth) {
+      list.scrollTo({ left: thumb.offsetLeft - (list.clientWidth - thumb.offsetWidth) / 2, behavior: "smooth" });
+    }
+  }, [selected, stopFade]);
+  const onStripScroll = () => {
+    const el = strip.current;
+    if (!el || el.clientWidth === 0 || scrollingTo.current !== null) return;
+    const index = Math.round(el.scrollLeft / el.clientWidth);
+    if (index !== selected && images[index]) setSelected(index);
+  };
+
   return (
     <div className="flex w-full flex-1 flex-col">
       {/* The content is at most 1440px wide (the design's) and centered; everything of the page is placed against THIS box,
           so on a wider window nothing is left behind at the window's edge. */}
       <div className="relative mx-auto w-full max-w-360">
-      <main className="flex w-full flex-col gap-2.5 pt-1.5 pb-10 min-[1120px]:grid min-[1120px]:grid-cols-[minmax(0,740fr)_minmax(0,680fr)] min-[1120px]:grid-rows-[auto_1fr] min-[1120px]:items-start min-[1120px]:gap-x-0 min-[1120px]:gap-y-3.75 min-[1120px]:px-2.5 min-[1120px]:pt-0 min-[1120px]:pb-16">
+      <main className={`flex w-full flex-col gap-2.5 pt-1.5 pb-10 min-[1120px]:grid min-[1120px]:grid-cols-[minmax(0,740fr)_minmax(0,680fr)] ${companyLine ? "min-[1120px]:grid-rows-[auto_auto_1fr]" : "min-[1120px]:grid-rows-[auto_1fr]"} min-[1120px]:items-start min-[1120px]:gap-x-0 min-[1120px]:gap-y-3.75 min-[1120px]:px-2.5 min-[1120px]:pt-0 min-[1120px]:pb-16`}>
         {/* The way back, on DESKTOP only: the site's thin arrow, no words (the label is for screen readers), in the page's top left corner (20px from the
             content's edges, as the design had its arrow; absolute, so it is not a grid cell: the main box is not positioned, the box around it is). On phone
             and tablet the arrow is in front of the search line (header-search.tsx, home-search.tsx). */}
@@ -121,26 +181,56 @@ export default function ItemDetail({
           <ArrowIcon className="h-4 w-4.5 shrink-0 rotate-180" strokeWidth={1.6} />
         </BackToProducts>
 
-        {/* Name and price. Desktop: the top of the right column. */}
-        <div className="flex flex-col gap-2.5 px-4 md:max-[1120px]:items-center md:max-[1120px]:px-10 md:max-[1120px]:text-center min-[1120px]:col-start-2 min-[1120px]:row-start-1 min-[1120px]:gap-3.75 min-[1120px]:pt-25 min-[1120px]:pr-10 min-[1120px]:pl-[clamp(40px,5.56vw,80px)] min-[1120px]:text-left">
-          {company && <div className="hidden min-[1120px]:block">{company}</div>}
-          <h1 className="text-[20px] leading-6.05 font-medium text-black wrap-break-word min-[1120px]:text-[clamp(26px,calc(1.75vw+6.8px),32px)] min-[1120px]:leading-[1.21] min-[1120px]:font-bold">
+        {/* Name and price. Phone and tablet: under the photos (order-2), both 24px with no gap between them. Desktop: the top of the right column, with its own sizes and a gap. */}
+        <div className="flex flex-col px-4 max-[1120px]:order-2 md:max-[1120px]:mx-auto md:max-[1120px]:w-full md:max-[1120px]:max-w-170 md:max-[1120px]:px-0 md:max-[1120px]:pt-2 min-[1120px]:col-start-2 min-[1120px]:row-start-1 min-[1120px]:gap-3.75 min-[1120px]:pt-25 min-[1120px]:pr-10 min-[1120px]:pl-[clamp(40px,5.56vw,80px)] min-[1120px]:text-left">
+          <h1 className="text-[24px] leading-[1.2] font-semibold text-black wrap-break-word min-[1120px]:text-[clamp(26px,calc(1.75vw+6.8px),32px)] min-[1120px]:leading-[1.21] min-[1120px]:font-bold">
             {item.name}
           </h1>
-          <p className="text-[22px] leading-6.65 font-bold text-black min-[1120px]:text-[20px] min-[1120px]:leading-6.05">
+          <p className="text-[24px] leading-[1.2] font-bold text-black min-[1120px]:text-[20px] min-[1120px]:leading-[1.21]">
             {item.service ? formatServicePrice(item.price, item.priceType) : formatPrice(item.price)}
           </p>
         </div>
 
         {/* The photos. Desktop: the whole left column (a 40px gap at its left, 96px above: the back arrow sits above it with room to spare). */}
-        <div className="flex w-full flex-col gap-2.5 md:max-[1120px]:mx-auto md:max-[1120px]:max-w-225 min-[1120px]:col-start-1 min-[1120px]:row-span-2 min-[1120px]:row-start-1 min-[1120px]:gap-5 min-[1120px]:pt-24 min-[1120px]:pl-10">
+        <div className={`flex w-full flex-col gap-2.5 max-[1120px]:order-1 md:max-[1120px]:mx-auto md:max-[1120px]:max-w-170 min-[1120px]:col-start-1 ${companyLine ? "min-[1120px]:row-span-3" : "min-[1120px]:row-span-2"} min-[1120px]:row-start-1 min-[1120px]:gap-5 min-[1120px]:pt-24 min-[1120px]:pl-10`}>
+          {/* The photo is 450px high on every size (a height that follows the screen made the page look as if it did not scroll). */}
           <div className="flex h-112.5 w-full items-center min-[1120px]:gap-6.25">
             {images.length > 1 && (
               <PhotoArrow direction="previous" onClick={() => step(-1)} />
             )}
-            {/* The photo is shown whole. key: a new photo starts its own loading picture instead of showing the old one. */}
+            {/* PHONE AND TABLET (under 1120px): the strip of photos, swiped sideways. Only the shown photo and its two neighbours have their picture (a product can have 30 photos); the others are empty
+                slides of the same width, so the strip's length and the scrolling are right. */}
+            <div
+              ref={strip}
+              onScroll={onStripScroll}
+              onPointerDown={stopFade}
+              className="flex h-full min-w-0 flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] min-[1120px]:hidden"
+            >
+              {images.map((image, i) => (
+                <div key={image.id} className="h-full w-full shrink-0 snap-center">
+                  {Math.abs(i - selected) <= 1 && (
+                    <button type="button" onClick={() => setViewing(true)} aria-label="Enlarge photo" className="block size-full">
+                      <PlaceholderPicture
+                        poster={image.urls.card ? { ...image.urls.card, avif3x: image.urls.card3x?.avif } : null}
+                        avif={image.urls.detail.avif}
+                        avif3x={image.urls.detail3x?.avif}
+                        webp={image.urls.detail.webp}
+                        alt={i === selected ? item.name : ""}
+                        loading={i === selected ? "eager" : "lazy"}
+                        placeholder={image.placeholder}
+                        className="size-full"
+                        imgClassName="size-full object-contain"
+                        blockClassName="inset-0 bg-[#f9f9f9]"
+                        sweep={false}
+                      />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* The photo is shown whole. key: a new photo starts its own loading picture instead of showing the old one. Desktop (1120px and up): one photo with its arrows. */}
             {shown && (
-              <div className="h-full min-w-0 flex-1">
+              <div className="h-full min-w-0 flex-1 max-[1120px]:hidden">
                 {/* A button, so the photo can be opened with the keyboard too. The full size starts loading as soon as the pointer is on it. */}
                 <button
                   ref={photo}
@@ -151,23 +241,23 @@ export default function ItemDetail({
                   aria-label="Enlarge photo"
                   className="block size-full cursor-zoom-in"
                 >
-                <PlaceholderPicture
-                  key={shown.id}
-                  // The small version of this photo is already there (its square is on the page): shown sharp while the big
-                  // one comes, instead of only the blurred preview.
-                  // (A service has no card: its rows showed this very detail picture, which is cached, so there is no poster.)
-                  poster={shown.urls.card ? { ...shown.urls.card, avif3x: shown.urls.card3x?.avif } : null}
-                  avif={shown.urls.detail.avif}
-                  avif3x={shown.urls.detail3x?.avif}
-                  webp={shown.urls.detail.webp}
-                  alt={item.name}
-                  loading="eager"
-                  placeholder={shown.placeholder}
-                  className="size-full"
-                  imgClassName="size-full object-contain"
-                  blockClassName="inset-0 bg-[#f9f9f9]"
-                  sweep={false}
-                />
+                  <PlaceholderPicture
+                    key={shown.id}
+                    // The small version of this photo is already there (its square is on the page): shown sharp while the big
+                    // one comes, instead of only the blurred preview.
+                    // (A service has no card: its rows showed this very detail picture, which is cached, so there is no poster.)
+                    poster={shown.urls.card ? { ...shown.urls.card, avif3x: shown.urls.card3x?.avif } : null}
+                    avif={shown.urls.detail.avif}
+                    avif3x={shown.urls.detail3x?.avif}
+                    webp={shown.urls.detail.webp}
+                    alt={item.name}
+                    loading="eager"
+                    placeholder={shown.placeholder}
+                    className="size-full"
+                    imgClassName="size-full object-contain"
+                    blockClassName="inset-0 bg-[#f9f9f9]"
+                    sweep={false}
+                  />
                 </button>
               </div>
             )}
@@ -175,9 +265,11 @@ export default function ItemDetail({
           </div>
 
           {images.length > 1 && (
-            <ul className="flex flex-wrap justify-start gap-2.5 self-center px-4 md:px-0 min-[1120px]:max-w-148">
+            // PHONE: one row that is swiped sideways (not wrapped into rows that would push the name down, a product can have 30 photos); the 1px of padding keeps the chosen photo's outline from being cut.
+            // DESKTOP: starts at the photo's left edge (44px arrow + 25px gap = 69px) and wraps at the column's right edge.
+            <ul ref={thumbList} className="relative flex flex-wrap gap-2.5 self-start px-4 max-md:w-full max-md:flex-nowrap max-md:overflow-x-auto max-md:py-px max-md:[scrollbar-width:none] md:px-0 min-[1120px]:ml-17.25 min-[1120px]:self-stretch">
               {images.map((image, i) => (
-                <li key={image.id}>
+                <li key={image.id} className="max-md:shrink-0">
                   <button
                     type="button"
                     onClick={() => setSelected(i)}
@@ -187,7 +279,7 @@ export default function ItemDetail({
                     onFocus={() => setWarm((now) => (now.includes(i) ? now : [...now, i]))}
                     aria-label={`Show photo ${i + 1} of ${images.length}`}
                     aria-current={i === selected}
-                    className={`block size-20 cursor-pointer bg-[#f9f9f9] md:size-22.5 ${i === selected ? "outline outline-1 outline-black" : ""}`}
+                    className={`block size-14 cursor-pointer bg-[#f9f9f9] md:size-22.5 ${i === selected ? "outline outline-1 outline-black" : ""}`}
                   >
                     <PlaceholderPicture
                       // The small square (270 px); a photo saved before it existed has the card picture instead.
@@ -199,7 +291,7 @@ export default function ItemDetail({
                       className="size-full"
                       imgClassName="size-full object-cover"
                       blockClassName="inset-0 bg-[#f3f4f6]"
-                    sweep={false}
+                      sweep={false}
                     />
                   </button>
                 </li>
@@ -208,12 +300,13 @@ export default function ItemDetail({
           )}
         </div>
 
-        {/* The description and "View contact". Desktop: below the price in the right column, with the button FIRST (the
-            reversed column puts the button and the contact details above the text). A service's facts come first on phone and tablet
-            (before the text, which can be long) and on desktop between the button and the text: the order classes do that in the reversed column. */}
-        <div className="flex w-full flex-col gap-3.75 px-4 pt-2.5 md:max-[1120px]:mx-auto md:max-[1120px]:max-w-170 md:max-[1120px]:px-5 min-[1120px]:col-start-2 min-[1120px]:row-start-2 min-[1120px]:flex-col-reverse min-[1120px]:justify-end min-[1120px]:pt-0 min-[1120px]:pr-10 min-[1120px]:pl-[clamp(40px,5.56vw,80px)]">
+        {/* The business's slim line (components/company-line.tsx), under the name and the price, on every size; a tap opens the business's page. Phone: 16px at the sides; tablet: in the 680px column of the text; desktop: in the right column, at the name's left edge. */}
+        {companyLine && <div className="px-4 max-[1120px]:order-3 md:max-[1120px]:mx-auto md:max-[1120px]:w-full md:max-[1120px]:max-w-170 md:max-[1120px]:px-0 min-[1120px]:col-start-2 min-[1120px]:row-start-2 min-[1120px]:pr-10 min-[1120px]:pl-[clamp(40px,5.56vw,80px)]">{companyLine}</div>}
+
+        {/* "View contact" and the description, on every size: the button FIRST (right under the business's line), then a service's facts, then the text (which can be long): the `order` classes. Desktop: in the right column under the business's line. */}
+        <div className={`flex w-full flex-col gap-3.75 px-4 pt-2.5 max-[1120px]:order-4 md:max-[1120px]:mx-auto md:max-[1120px]:max-w-170 md:max-[1120px]:px-0 min-[1120px]:col-start-2 ${companyLine ? "min-[1120px]:row-start-3" : "min-[1120px]:row-start-2"} min-[1120px]:pt-0 min-[1120px]:pr-10 min-[1120px]:pl-[clamp(40px,5.56vw,80px)]`}>
           {item.service && (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2.5 border-y border-[#e5e7eb] py-3.5 text-[14px] leading-5 text-black min-[1120px]:order-1 min-[1120px]:max-w-140">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2.5 border-y border-[#e5e7eb] py-3.5 text-[14px] leading-5 text-black order-2 min-[1120px]:max-w-140">
               {item.service.duration && <Row label="Duration">{item.service.duration}</Row>}
               {item.service.area && <Row label="Service area">{item.service.area}</Row>}
               {business.hours && (
@@ -235,28 +328,30 @@ export default function ItemDetail({
             </dl>
           )}
           {/* pre-line: the owner's own line breaks stay. */}
-          <p className="pb-5 text-[16px] leading-5 whitespace-pre-line text-[#111] wrap-break-word min-[1120px]:max-w-140 min-[1120px]:pt-8.75 min-[1120px]:pb-0">
+          <p className="pb-5 text-[16px] leading-5 whitespace-pre-line text-[#111] wrap-break-word order-3 min-[1120px]:max-w-140 min-[1120px]:pt-8.75 min-[1120px]:pb-0">
             {item.description}
           </p>
           {/* relative: the contact box is placed against the button. It floats OVER the page (it doesn't push the description
-              down, however many details the business gave); same white box, 1px #b8b8b8 line and sharp corners as the account menu. */}
-          <div ref={contactRef} className="relative w-full md:w-fit min-[1120px]:order-2">
+              down, however many details the business gave); the card of every popup of the site (components/popup.tsx). */}
+          {/* "View contact" comes FIRST here, right under the business's line (then a service's facts, then the text). */}
+          <div ref={contactRef} className="relative order-1 w-full md:w-fit">
             <button
               type="button"
-              onClick={() => setContactOpen((open) => !open)}
+              onClick={() => {
+                setContactUp(false); // it is first drawn below the button, then moved above it before it is painted if it has no room there
+                setContactOpen((open) => !open);
+              }}
               aria-expanded={contactOpen}
               className="flex h-11 w-full cursor-pointer items-center justify-center bg-black px-8 text-[16px] leading-[1.21] font-bold text-white md:w-fit md:min-w-48"
             >
               View contact
             </button>
             {contactOpen && (
-              <div className="absolute top-full left-0 z-20 mt-1 w-[min(17rem,calc(100vw-2rem))] border border-[#b8b8b8] bg-white p-3.5">
+              <div ref={contactBox} className={`absolute ${contactUp ? POPUP_ABOVE : POPUP_BELOW} left-0 z-20 w-[min(24rem,calc(100vw-2rem))] p-3.5 ${POPUP_CARD}`}>
                 <Contact business={business} />
               </div>
             )}
           </div>
-          {/* Phone and tablet: the business comes last (50px under the button on a phone, 20px on a tablet, on top of the 15px between rows). */}
-          {company && <div className="pt-12.5 pb-10 md:max-[1120px]:pt-5 min-[1120px]:hidden">{company}</div>}
         </div>
       </main>
       {/* Loads the big versions of the photos listed above, out of sight (an image that isn't shown still loads, and through

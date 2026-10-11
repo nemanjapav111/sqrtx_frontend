@@ -12,7 +12,7 @@ import ContactMap from "./contact-map";
 //  - The details are ROWS between thin lines: a small grey label ("Location", "Address", "Phone", "Email", "Hours", "Follow") over the value in
 //    larger black type. A thin black line opens the list. Address, phone and email are links (the address opens Google Maps, the phone dials, the email
 //    writes), with a small square icon at the row's end that says so. A row the business left empty is not shown.
-//  - Phone: 50px under the bar, the rows, 30px under them the map (328 x 250) and its black "Get directions" button, then "Send a message" (24px
+//  - Phone: 50px under the bar, the rows, 30px under them the map (350 x 250 on a 414px phone, 343 on a 375px one: the box is as wide as the product list) and its black "Get directions" button, then "Send a message" (24px
 //    medium, centered, 50px above and below) and the form (contact-form.tsx).
 //  - Tablet (from 500px of content, the width of its map and form): the same in a centered column, the rows 494px wide and the map and the form 500px.
 //  - Desktop (from 1030px of content): the rows (468px) and the map (500px) side by side, 56px apart, in a 1024px row; the map has a FIXED size, the one
@@ -56,7 +56,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="@container mx-auto flex w-full flex-col px-4 pt-12.5 pb-17.5 md:px-10 md:pb-25">
-      <div className="mx-auto flex w-full max-w-82 flex-col @min-[500px]:max-w-125 @min-[1030px]:max-w-256">
+      <div className="mx-auto flex w-full max-w-87.5 flex-col @min-[500px]:max-w-125 @min-[1030px]:max-w-256">
         <section className="flex flex-col gap-7.5 @min-[1030px]:flex-row @min-[1030px]:items-start @min-[1030px]:gap-14">
           <div className="flex flex-col @min-[500px]:w-123.5 @min-[500px]:self-center @min-[1030px]:w-117 @min-[1030px]:shrink-0 @min-[1030px]:self-start">
             {location && <Row label="Location">{location}</Row>}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LOGO_ROW_FIT_CLASS, LOGO_ROW_MAX_HEIGHT, LOGO_ROW_MAX_WIDTH, logoDisplaySize } from "@/lib/logo";
+import { LOGO_ROW_FIT_CLASS, LOGO_ROW_MAX_HEIGHT, LOGO_ROW_MAX_WIDTH, logoDisplaySize, logoFillSize } from "@/lib/logo";
 import PlaceholderPicture from "@/app/components/placeholder-picture";
 import type { PublicBusiness } from "@/lib/public-site";
 import BackToSqrtx from "./back-to-sqrtx";
@@ -29,6 +29,12 @@ import VisitorIcon from "./visitor-icon";
 export default function BusinessHeader({ business, slug, categoryName }: { business: PublicBusiness; slug: string; categoryName: string | null }) {
   const { logo, provides } = business;
   const logoSize = logo ? logoDisplaySize(logo.width, logo.height, LOGO_ROW_MAX_WIDTH, LOGO_ROW_MAX_HEIGHT) : null;
+  // Phone and tablet (2026-10-10, the owner, to try): every logo is 68px high, the whole bar (up to 130px wide: a logo wider than about 1.9 : 1 is 130px wide and lower), and touches the window's left edge; desktop keeps the 100 x 58 with air.
+  const logoFull = logo ? logoFillSize(logo.width, logo.height) : null;
+  const logoVars =
+    logoSize && logoFull
+      ? ({ "--lw": `${logoFull.width}px`, "--lh": `${logoFull.height}px`, "--dw": `${logoSize.width}px`, "--dh": `${logoSize.height}px` } as React.CSSProperties)
+      : undefined;
   return (
     <header data-site-header className="sticky top-0 z-30 bg-white">
       {/* The line under the bar goes across the window. What is in the bar goes across it too on a phone and a tablet (the logo and the name at
@@ -44,10 +50,17 @@ export default function BusinessHeader({ business, slug, categoryName }: { busin
       <div className="mx-auto flex w-full items-center min-[1120px]:max-w-297.5 min-[1120px]:px-7.5 min-[1120px]:max-[1319px]:pl-24">
         <div className="flex min-w-0 flex-1 items-center gap-3.25 min-[1120px]:w-75.75 min-[1120px]:flex-none">
           {/* 5px of air above and below the logo (it is at most 58px high in the 68px bar) and, on phone and tablet, 5px from the window's edge (the same air as above and below it); on desktop the box around the bar already lines it up with the first column. */}
-          <div className="flex h-17 shrink-0 items-center justify-start pl-1.25 min-[1120px]:pl-0">
+          <div className="flex h-17 shrink-0 items-center justify-start">
             {/* A grey block shows until the logo has loaded, which needs its size (from the API). */}
             {logo && logoSize && (
-              <PlaceholderPicture avif={logo.avif} webp={logo.webp} alt="" placeholder={logo.placeholder} className="shrink-0" style={logoSize} />
+              <PlaceholderPicture
+                avif={logo.avif}
+                webp={logo.webp}
+                alt=""
+                placeholder={logo.placeholder}
+                className="h-(--lh) w-(--lw) shrink-0 min-[1120px]:h-(--dh) min-[1120px]:w-(--dw)"
+                style={logoVars}
+              />
             )}
             {logo && !logoSize && (
               <picture className="contents">

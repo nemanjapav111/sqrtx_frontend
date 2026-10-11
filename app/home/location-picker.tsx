@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ALL_COUNTRIES, countryName, fetchFeedCities, type FeedCity, type FeedKind } from "@/lib/feed";
+import { usePopupDismiss } from "@/app/components/use-popup-dismiss";
+import { POPUP_GAP, POPUP_HEADING, POPUP_PANEL, POPUP_ROW, TICK } from "@/app/components/popup";
 import { useHome } from "./home-context";
 
 // The location picker (it was the country picker; the owner's design 2026-10-08): a pin with the place chosen, and a list that opens on it. The products,
@@ -13,8 +15,8 @@ import { useHome } from "./home-context";
 //    countries" there is no city list: a city belongs to its country. Choosing a country keeps the list open, so the city can be chosen next; choosing a
 //    city (or "All of ...") closes it.
 // Where it is: in the phone's bottom bar (variant "bar": a pin over the place, the list opens UPWARDS), at the end of the tablet's black row of links
-// (variant "tablet": the place beside the pin, Inter 600 14px) and in the desktop's black bar (variant "desktop": a pin, the place in Inter bold 14px and a
-// small chevron); both open downwards. The place on the button is the city, or the country's code, or "ALL". The list is a white card with a soft shadow.
+// (variant "tablet": the place beside the pin, Inter 600 14px) and in the desktop's black bar (variant "desktop": a pin, the place in Inter bold 13px and a
+// small chevron); both open downwards. Both have a FIXED width (116px and 124px) so that choosing a city, which makes the label longer, does not move the links and the search beside the button (the long label is cut). The place on the button is the city, or the country's code, or "All". The list is a white card with a soft shadow.
 // The cities of a country are asked for when the list opens and kept for the visit (by page and country). The city is not remembered between visits (see
 // home-context.tsx). The chevrons are drawn: the character is not in the Inter files the site loads.
 const COUNTRY_SEARCH_FROM = 8;
@@ -23,11 +25,6 @@ const CITY_SEARCH_FROM = 6;
 const CHEVRON = (
   <svg aria-hidden viewBox="0 0 24 24" className="size-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     <path d="m6 9 6 6 6-6" />
-  </svg>
-);
-const TICK = (
-  <svg aria-hidden viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m5 12.5 4.5 4.5L19 7.5" />
   </svg>
 );
 
@@ -39,7 +36,8 @@ function useKind(): FeedKind {
   return "products";
 }
 
-const ROW = "flex h-11 w-full shrink-0 cursor-pointer items-center justify-between gap-3 px-4.5 text-left text-[16px] hover:bg-[#f3f4f6] md:h-10 md:text-[15px]";
+// The look of the list (card, rows, tick) is the site's popup look, shared with the other popups (components/popup.tsx).
+const ROW = POPUP_ROW;
 
 export default function LocationPicker({ countries, variant, className = "" }: { countries: readonly string[]; variant: "bar" | "tablet" | "desktop"; className?: string }) {
   const { country, setCountry, city, setCity } = useHome();
@@ -54,22 +52,8 @@ export default function LocationPicker({ countries, variant, className = "" }: {
   const searchRef = useRef<HTMLInputElement>(null);
   const known = useRef(new Map<string, FeedCity[]>()); // the cities already asked for: "<page>|<country>"
 
-  // Closes on a click outside, or on Escape.
-  useEffect(() => {
-    if (!open) return;
-    function onPointer(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  // Closes on a click outside it (that click does nothing else), or on Escape: components/use-popup-dismiss.ts.
+  usePopupDismiss(open, rootRef, () => setOpen(false));
 
   // The cities of the chosen country, when the list is open (the page's own counts: products, services or companies).
   useEffect(() => {
@@ -105,7 +89,7 @@ export default function LocationPicker({ countries, variant, className = "" }: {
 
   const bar = variant === "bar";
   const desktop = variant === "desktop";
-  const label = city || country || "ALL";
+  const label = city || country || (bar ? "Location" : "All"); // the phone's bottom bar has room for a word that says what the pin is
   const place = city || (country ? countryName(country) : "all countries");
 
   const words = countrySearch.trim().toLowerCase();
@@ -146,20 +130,30 @@ export default function LocationPicker({ countries, variant, className = "" }: {
           setCitySearch("");
           setOpen((v) => !v);
         }}
-        className={`flex cursor-pointer items-center justify-center ${
+        className={`flex cursor-pointer items-center ${
           bar
-            ? "h-14.5 w-full flex-col gap-1 px-1 text-[12px] leading-[17px] font-medium text-[#6b7280] [&_svg]:size-5.5 [&_svg]:[stroke-width:1.6]"
+            ? "h-14.5 w-full flex-col justify-center gap-1 px-1 text-[12px] leading-[17px] font-medium tracking-[0.02em] text-[#6b7280] [&_svg]:size-5.5 [&_svg]:[stroke-width:1.6]"
             : desktop
-              ? "h-11 gap-1.5 text-[14px] leading-[1.21] font-bold text-white"
-              : "h-11 gap-1.75 text-[14px] leading-[17px] font-semibold text-white"
+              ? "h-10 w-29 justify-start gap-1.5 text-[13px] leading-[1.21] font-bold text-white"
+              : "h-11 w-31 justify-start gap-1.75 text-[14px] leading-[17px] font-semibold text-white"
         }`}
       >
-        <svg aria-hidden viewBox="0 0 24 24" className={`shrink-0 ${desktop ? "size-4" : bar ? "size-4" : "size-3.5"}`} fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
-          <circle cx="12" cy="10" r="3" />
-        </svg>
-        <span className="inline-flex max-w-full min-w-0 items-center gap-0.5">
-          <span className={`truncate text-center ${bar ? "max-w-18" : "max-w-28 min-w-7.5"}`}>{label}</span>
+        {bar ? (
+          // The phone's bottom bar: a target, drawn like the bar's other icons (square ends; 2026-10-10, the owner). The top and side bars keep the pin.
+          <svg aria-hidden viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="square" strokeLinejoin="miter">
+            <circle cx="12" cy="12" r="7" />
+            <circle cx="12" cy="12" r="2" />
+            <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" />
+          </svg>
+        ) : (
+          <svg aria-hidden viewBox="0 0 24 24" className={`shrink-0 ${desktop ? "size-4" : "size-3.5"}`} fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+        )}
+        {/* On desktop and tablet the button has a FIXED width (the label is cut with "..." when it is long), so what is beside it never moves when a city is chosen. */}
+        <span className={bar ? "inline-flex max-w-full min-w-0 items-center gap-0.5" : "flex min-w-0 flex-1 items-center justify-between gap-1"}>
+          <span className={`truncate ${bar ? "max-w-18 text-center" : "text-left"}`}>{label}</span>
           {!bar && CHEVRON}
         </span>
       </button>
@@ -168,9 +162,11 @@ export default function LocationPicker({ countries, variant, className = "" }: {
         <div
           role="dialog"
           aria-label="Location"
-          className={`absolute right-0 z-40 flex max-h-[min(30rem,70dvh)] w-75 max-w-[calc(100vw-1rem)] flex-col border border-[#e5e7eb] bg-white py-2 text-black shadow-[0_8px_28px_rgba(0,0,0,0.28)] ${
-            bar ? "bottom-full mb-px" : "top-full mt-1"
+          className={`absolute right-0 z-40 flex max-h-[min(30rem,70dvh)] w-75 max-w-[calc(100vw-1rem)] flex-col ${POPUP_PANEL} ${
+            bar ? "bottom-full mb-px" : ""
           }`}
+          // Desktop and tablet: POPUP_GAP under the bottom of the pin and the label (half of their height, 8px on desktop and 8.5px on tablet, under the middle of the button).
+          style={bar ? undefined : { top: `calc(50% + ${desktop ? 8 : 8.5}px + ${POPUP_GAP}px)` }}
         >
           {view === "countries" ? (
             <>
@@ -203,7 +199,7 @@ export default function LocationPicker({ countries, variant, className = "" }: {
             </>
           ) : (
             <>
-              <p className="shrink-0 px-4.5 text-[13px] leading-[1.2] font-medium text-[#8f8f8f]">Country</p>
+              <p className={`shrink-0 ${POPUP_HEADING}`}>Country</p>
               <button
                 type="button"
                 onClick={() => setView("countries")}

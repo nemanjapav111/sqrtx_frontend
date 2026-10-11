@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { InlineScript } from "@/app/components/inline-script";
+import { POPUP_GAP, POPUP_PANEL, POPUP_ROW } from "@/app/components/popup";
+import { usePopupDismiss } from "@/app/components/use-popup-dismiss";
 import { SAVED_LOGIN_KEY, hasSavedLogin } from "@/lib/saved-login";
 
 // The account icon at the right of the top bar (Figma "visitor_icon" opens "visitor_account_dropdown", node 495:51):
@@ -17,13 +19,10 @@ import { SAVED_LOGIN_KEY, hasSavedLogin } from "@/lib/saved-login";
 // in a layout effect for client-side navigations. Only a browser that holds a saved login loads the library, to confirm it
 // (it may have expired) and to log out; the dot follows what it says. The menu opens with the saved login as its answer: Account
 // and Settings are plain links, and "Log out" loads the library when it is pressed.
-// The menu is the same plain box as the category filter's (category-filter.tsx): white, 1px #b8b8b8 border, sharp corners, no
-// shadow, no pointer, the rows told apart by the same thin lines. (The design has a small triangle pointing up at the icon; it
-// was taken out on request, 2026-09-30, so that the two popups look alike.)
-//
-// Rows and their text are smaller from 1120px up (desktop, the same breakpoint business-header.tsx switches on): a mouse
-// doesn't need the 44px touch target a phone/tablet does, and the design has no dropdown of its own to match there anyway.
-// Plain Tailwind breakpoint classes, not a JS media-query check.
+// The menu has the look of every popup of the site (components/popup.tsx: the location picker's card with its soft shadow, rows without lines
+// between them, light grey under the pointer), since 2026-10-09 (owner: "set other popups have the same style as location picker"); before that it
+// was a plain box with a 1px #b8b8b8 border and thin lines between the rows, like the category filter's. No pointer (the design's small triangle
+// was taken out on request, 2026-09-30). The rows are 44px high on a phone and 40px from 768px up, like the picker's.
 const MENU_WIDTH = "w-50.75"; // 203px, the design's width
 
 // "View my page" (first row of the signed-in menu): where the signed-in owner's own public page is, asked once and kept while the page is open.
@@ -58,40 +57,19 @@ function forgetMyPage() {
   } catch {}
 }
 
-// How far below the ROOT (the 40px button box) the menu starts. The icon itself is only 25px, centred in that 40px box, so its
-// own bottom edge sits 7.5px above the box's bottom edge; the menu starts 4px under THAT edge (the gap the category popup has
-// under its row). Anchoring to the box (as `top-full` does) put the popup noticeably further from the icon.
+// How far below the ROOT (the 40px button box) the menu starts: POPUP_GAP (16px, the same under every popup's trigger, see popup.tsx) under the bottom of the icon. The icon itself is only
+// 25px, centred in that 40px box, so its bottom edge sits 7.5px above the box's bottom edge (anchoring to the box, as `top-full` does, would put the menu further from the icon).
 const ICON_BOTTOM = (40 - 25) / 2 + 25; // 32.5
-const MENU_TOP = ICON_BOTTOM + 4; // 36.5
-// On the home page's black bar (`light`) the menu is further from the icon, 16.3px under it (48.8 from the top of the 40px box): the same
-// distance the country picker's list has from its pin and code there (it starts 4px under a 44px button whose content ends 12.3px above
-// the button's bottom edge). The owner found the 4px too tight on that bar (2026-10-02); the business pages keep the 4px.
-const MENU_TOP_LIGHT = ICON_BOTTOM + 16.3; // 48.8
+const MENU_TOP = ICON_BOTTOM + POPUP_GAP; // 48.5
 
-function MenuRow({
-  href,
-  children,
-  onClick,
-  first,
-  disabled,
-}: {
-  href?: string;
-  children: React.ReactNode;
-  onClick?: () => void;
-  first?: boolean;
-  disabled?: boolean;
-}) {
-  // Same hover grey as the register page's dropdowns and the category popup (the field-hint grey at low opacity). Desktop text
-  // matches the size of the nav links and "← sqrtx" beside it (header-links.tsx, business-header.tsx: both text-[14px]).
-  const cls = `flex h-11 items-center px-4.25 text-[16px] hover:bg-[#4b5563]/10 min-[1120px]:h-9 min-[1120px]:text-[14px] ${
-    first ? "" : "border-t border-[#b8b8b8]"
-  }`;
+function MenuRow({ href, children, onClick, disabled }: { href?: string; children: React.ReactNode; onClick?: () => void; disabled?: boolean }) {
+  // The row of every popup (components/popup.tsx).
   return href ? (
-    <Link href={href} className={cls} onClick={onClick}>
+    <Link href={href} className={POPUP_ROW} onClick={onClick}>
       {children}
     </Link>
   ) : (
-    <button type="button" onClick={onClick} disabled={disabled} className={`w-full cursor-pointer text-left disabled:cursor-wait disabled:opacity-60 ${cls}`}>
+    <button type="button" onClick={onClick} disabled={disabled} className={`disabled:cursor-wait disabled:opacity-60 ${POPUP_ROW}`}>
       {children}
     </button>
   );
@@ -142,22 +120,8 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
     };
   }, []);
 
-  // Closes on a click outside the icon/menu, or on Escape.
-  useEffect(() => {
-    if (!open) return;
-    function onPointer(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  // Closes on a click outside it (that click does nothing else), or on Escape: components/use-popup-dismiss.ts.
+  usePopupDismiss(open, rootRef, () => setOpen(false));
 
   // The row stays (saying so) while the library loads and the login is dropped.
   async function logOut() {
@@ -227,15 +191,15 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
       />
 
       {open && (
-        <div role="menu" style={{ top: light ? MENU_TOP_LIGHT : MENU_TOP }} className={`absolute right-0 z-40 flex flex-col border border-[#b8b8b8] bg-white ${MENU_WIDTH}`}>
+        <div role="menu" style={{ top: MENU_TOP }} className={`absolute right-0 z-40 flex flex-col ${POPUP_PANEL} ${MENU_WIDTH}`}>
           {signedIn ? (
             <>
               {myPage && (
-                <MenuRow href={myPage} onClick={onNavigate} first>
+                <MenuRow href={myPage} onClick={onNavigate}>
                   View my page
                 </MenuRow>
               )}
-              <MenuRow href="/account" onClick={onNavigate} first={!myPage}>
+              <MenuRow href="/account" onClick={onNavigate}>
                 Account
               </MenuRow>
               <MenuRow href="/account/settings" onClick={onNavigate}>
@@ -247,7 +211,7 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
             </>
           ) : (
             <>
-              <MenuRow href="/login" onClick={onNavigate} first>
+              <MenuRow href="/login" onClick={onNavigate}>
                 Log In
               </MenuRow>
               <MenuRow href="/register" onClick={onNavigate}>

@@ -119,9 +119,9 @@ export default function ServiceList({ initial, userId, slug }: { initial: Public
   const hasMore = view.items.length < view.total;
 
   return (
-    <main className="@container mx-auto flex w-full flex-col px-4 pb-2.5 md:px-2.5 md:max-[1119px]:pt-5 min-[1120px]:pt-7.5">
-      {/* This block is as wide as a row (328, 728 or 1030px) and centered, so the filter lines up with the left edge of the rows. */}
-      <div className="mx-auto w-full max-w-82 @min-[700px]:max-w-182 @min-[1030px]:max-w-257.5">
+    <main className="@container mx-auto flex w-full flex-col px-4 pb-2.5 md:px-7.5 md:pt-7.5">
+      {/* This block is as wide as a row (350 on a phone, like the product list: 16px at the sides on a 375px phone; then 740 or 1030px: 30px at the sides and 30px above on a tablet, the product list's, 2026-10-11) and centered, so the filter lines up with the left edge of the rows. */}
+      <div className="mx-auto w-full max-w-87.5 @min-[700px]:max-w-185 @min-[1030px]:max-w-257.5">
         <CategoryFilter value={category} options={filterOptions} onChange={setCategory} spacing="mb-8.5 @min-[700px]:mb-5" />
 
         {view.total === 0 && !busy && !failed && (

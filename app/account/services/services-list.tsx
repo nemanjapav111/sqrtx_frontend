@@ -93,8 +93,11 @@ export default function ServicesList() {
               tabIndex={-1}
               className="h-11 w-full border border-black px-2 text-[16px] outline-none placeholder:text-[#8f8f8f]"
             />
-            <div aria-hidden className="flex h-20.5 items-center justify-between gap-3">
-              <div className="mb-8.5 flex h-12 items-center pl-7">
+            <div aria-hidden className="flex h-12 items-center justify-between gap-3">
+              <div className="flex items-center gap-2 pr-2">
+                <svg viewBox="0 0 24 24" className="size-5 shrink-0" fill="none" stroke="#1e1e1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
                 <div className="breathe h-3 w-24 rounded-sm bg-[#e5e7eb]" />
               </div>
               <div className="breathe h-3.5 w-20 shrink-0 rounded-sm bg-[#e5e7eb]" />
@@ -226,7 +229,7 @@ function ServicesListInBrowser() {
             className="h-11 w-full border border-black px-2 text-[16px] outline-none placeholder:text-[#8f8f8f] focus:shadow-[0_0_0_1px_black]"
           />
           <div className="flex items-center justify-between gap-3">
-            <CategoryFilter value={category} options={options} onChange={setCategory} />
+            <CategoryFilter value={category} options={options} onChange={setCategory} spacing="" />
             {counting ? (
               <div aria-hidden className="breathe h-3.5 w-20 shrink-0 rounded-sm bg-[#e5e7eb]" />
             ) : (
@@ -265,7 +268,7 @@ function ServicesListInBrowser() {
                           placeholder={image.placeholder}
                           loading={index < 8 ? "eager" : "lazy"}
                           className="size-full"
-                          imgClassName="size-full object-contain"
+                          imgClassName="size-full object-cover"
                         />
                       )}
                     </div>

@@ -18,6 +18,17 @@ export const LOGO_ROW_FIT_CLASS = "block h-auto max-h-[58px] w-auto max-w-[100px
 export const LOGO_FIT_CLASS = "block h-auto max-h-17 w-auto max-w-27.5";
 
 /**
+ * For the phone's and the tablet's top bar, where every logo fills the bar's whole height (2026-10-10, the owner): the size that makes the logo exactly 68px high, unless that
+ * would be wider than `maxWidth` (130, kept as the owner asked; then it is as wide as that and so lower than 68px, only for a logo wider than about 1.9 : 1). The API keeps a logo at 220 x 136 at least
+ * on one side, twice the box, so a logo is never enlarged here by more than `maxEnlarge`. Returns null when the size is unknown.
+ */
+export function logoFillSize(width: number | null, height: number | null, maxWidth = 130, maxHeight = LOGO_MAX_HEIGHT, maxEnlarge = 1.2): { width: number; height: number } | null {
+  if (!width || !height) return null;
+  const scale = Math.min(maxEnlarge, maxWidth / width, maxHeight / height);
+  return { width: width * scale, height: height * scale };
+}
+
+/**
  * The size to show a logo at, worked out from the pixel size the API sends (logo.width, logo.height).
  * Set it on the <img> so the space is reserved before the picture loads and nothing on the page jumps.
  * Returns null when the size is unknown (a logo saved before the API kept sizes): the picture then sizes itself.

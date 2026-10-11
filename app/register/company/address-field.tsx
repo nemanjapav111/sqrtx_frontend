@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { FieldShell } from "@/app/components/field";
+import { POPUP_BELOW_LINE, POPUP_PANEL } from "@/app/components/popup";
 import {
   AddressTooVagueError,
   getPlaceDetails,
@@ -186,8 +187,8 @@ export default function AddressField({
       dropdown={
         // Anchored right under the input line itself, so it doesn't drift when a message reserves space below it.
         listOpen && (
-          // No design for this list yet.
-          <ul id={listId} role="listbox" className="absolute top-full z-10 mt-1 w-full border border-black bg-white">
+          // The look of every popup of the site (components/popup.tsx).
+          <ul id={listId} role="listbox" className={`absolute ${POPUP_BELOW_LINE} z-10 w-full ${POPUP_PANEL}`}>
             {suggestions.map((s, i) => (
               <li
                 key={s.prediction.placeId}
@@ -199,16 +200,14 @@ export default function AddressField({
                   e.preventDefault();
                   choose(s);
                 }}
-                // 44px tall on phones so a thumb can hit it, tighter with a mouse
-                // The same grey the field hints use, at low opacity so the black text stays readable (see the
-                // category dropdown's rows, which light up the same way).
-                className={`flex min-h-11 cursor-pointer items-center px-3 text-[14px] hover:bg-[#4b5563]/10 md:min-h-0 md:py-2 ${i === active ? "bg-[#4b5563]/10" : ""}`}
+                // 44px tall on phones so a thumb can hit it, 40px with a mouse; light grey under the pointer and the arrow keys, like the rows of every popup.
+                className={`flex min-h-11 cursor-pointer items-center px-4.5 py-2 text-[16px] hover:bg-[#f3f4f6] md:min-h-10 md:text-[15px] ${i === active ? "bg-[#f3f4f6]" : ""}`}
               >
                 {s.text}
               </li>
             ))}
             {/* Google's rules ask for this credit next to address suggestions. */}
-            <li aria-hidden className="px-3 py-1 text-[11px] text-[#4b5563]">
+            <li aria-hidden className="px-4.5 pt-1 text-[11px] text-[#8f8f8f]">
               Powered by Google
             </li>
           </ul>

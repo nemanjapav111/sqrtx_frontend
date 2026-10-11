@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import ItemDetail from "@/app/[slug]/item-detail/item-detail";
 import { idFromSegment, productSegment, slugOfCompanyUrl } from "@/lib/product-url";
-import { SITE_ORIGIN, getBusinessByUserId, getCategoryName, getProductAnywhere } from "@/lib/public-site";
-import CompanyCard from "./company-card";
+import { SITE_ORIGIN, getBusinessByUserId, getProductAnywhere } from "@/lib/public-site";
+import { CompanyLine } from "@/app/components/company-line";
 
 // A product's own page in the sqrtx marketplace: sqrtx.co/product/<name>-<id> (Figma "sqrtx Product Details Phone/Tablet/Desktop new"), where
 // a product of the home page leads. The same page as the one under its business's own address (<address>/product/<name>-<id>,
@@ -39,7 +39,6 @@ export default async function MarketProductPage({ params }: { params: Promise<{ 
   const current = productSegment(product.product_name, product.id);
   if (segment !== current) permanentRedirect(`/product/${current}`);
 
-  const categoryName = await getCategoryName(business.business_category);
   const item = { name: product.product_name, price: product.price, description: product.description, images: product.images };
   return (
     <ItemDetail
@@ -48,7 +47,7 @@ export default async function MarketProductPage({ params }: { params: Promise<{ 
       slug={slug}
       backTo="/"
       backLabel="Back to products"
-      company={<CompanyCard business={business} slug={slug} categoryName={categoryName} />}
+      companyLine={<CompanyLine slug={slug} name={business.company_name} city={business.city} logo={business.logo} />}
     />
   );
 }

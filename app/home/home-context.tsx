@@ -39,6 +39,11 @@ interface Home {
   clearPhoto: () => void;
   /** Runs a request that needs the photo's token; when the API says the token has expired (410) it uploads the photo again and runs it once more. */
   photoFetch: <T>(run: (token: string) => Promise<T>) => Promise<T>;
+  /** What each list (products, services, companies) had on screen when it was left, so coming back (the Back arrow of a product's page) shows it again instead of asking the API again. */
+  memory: Map<string, unknown>;
+  /** A list is loading a new search / filter / country: the search box shows a small spinner in place of its magnifier. Set by the lists. */
+  searching: boolean;
+  setSearching: (value: boolean) => void;
 }
 const HomeContext = createContext<Home | null>(null);
 
@@ -63,6 +68,11 @@ export function HomeProvider({ initialCountry, children }: { initialCountry: str
     setCity("");
     document.cookie = `${COUNTRY_COOKIE}=${value || "all"}; path=/; max-age=31536000; samesite=lax`;
   }, []);
+
+  // The lists are rebuilt each time the visitor leaves them (to a product's page) and returns; this provider is not, so what they showed is kept here
+  // for the visit (lost on a reload, like the search text). A list starts from it when its `key` (search + category + country...) still matches.
+  const [memory] = useState(() => new Map<string, unknown>());
+  const [searching, setSearching] = useState(false);
 
   const [photo, setPhoto] = useState<HomePhoto | null>(null);
   // The photo as the latest render has it, for photoFetch below. A LAYOUT effect: it must be set before the lists' own effects run (those ask for the page with
@@ -129,7 +139,7 @@ export function HomeProvider({ initialCountry, children }: { initialCountry: str
   );
 
   return (
-    <HomeContext.Provider value={{ query, setQuery, submitted, submit, country, setCountry, city, setCity, photo, choosePhoto, clearPhoto, photoFetch }}>
+    <HomeContext.Provider value={{ query, setQuery, submitted, submit, country, setCountry, city, setCity, photo, choosePhoto, clearPhoto, photoFetch, memory, searching, setSearching }}>
       {children}
     </HomeContext.Provider>
   );

@@ -22,27 +22,43 @@ interface View {
   hasMore: boolean;
   page: number;
   categories: FeedCategory[]; // the business categories of the businesses in this country
+  fresh?: boolean; // a new result set just arrived: its blocks fade in one after the other (see home-feed.tsx)
 }
 const keyOf = (q: string, category: string, country: string, city: string) => `${q}|${category}|${country}|${city}`;
 
 export default function HomeCompanies({ initial, initialCountry }: { initial: FeedCompaniesPage; initialCountry: string }) {
-  const { submitted: search, country, city, photo } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
+  const { submitted: search, country, city, photo, memory } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
+  // Coming back to this list (from another tab of the marketplace) it starts from what it showed when it was left (see home-feed.tsx).
+  const [saved] = useState(() => memory.get("companies") as { chosen: { country: string; id: string }; view: View } | undefined);
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
-  const [chosen, setChosen] = useState({ country: initialCountry, id: ALL });
+  const [chosen, setChosen] = useState(saved?.chosen ?? { country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
-  const [view, setView] = useState<View>({
-    key: keyOf("", ALL, initialCountry, ""),
-    items: initial.items,
-    hasMore: initial.has_more,
-    page: 1,
-    categories: initial.categories ?? [],
-  });
+  const [view, setView] = useState<View>(
+    saved?.view ?? {
+      key: keyOf("", ALL, initialCountry, ""),
+      items: initial.items,
+      hasMore: initial.has_more,
+      page: 1,
+      categories: initial.categories ?? [],
+    },
+  );
+  useEffect(() => {
+    memory.set("companies", { chosen, view: { ...view, fresh: false } });
+  }, [memory, chosen, view]);
   const [busy, setBusy] = useState(false); // a search / filter / country is being loaded
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
   const latest = useRef(0); // only the newest request may change the screen
 
   const key = keyOf(search, category, country, city);
+  // Loading from the very render in which the key changed, not one render later (see home-feed.tsx).
+  const loading = !failed && (busy || key !== view.key);
+  // The search box shows a spinner in place of its magnifier meanwhile (home-search.tsx).
+  const { setSearching } = useHome();
+  useEffect(() => {
+    setSearching(loading);
+    return () => setSearching(false);
+  }, [loading, setSearching]);
 
   // A different search, category or country: its first page. The old companies stay (a little faded) until the new ones are here.
   useEffect(() => {
@@ -54,7 +70,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
       setFailed(false);
       try {
         const page = await fetchFeedCompaniesPage({ q: search, category, country, city }, controller.signal);
-        if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [] });
+        if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [], fresh: true });
       } catch {
         if (id === latest.current && !controller.signal.aborted) setFailed(true);
       } finally {
@@ -67,7 +83,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
 
   // The next page of what is on screen.
   const showMore = useCallback(async () => {
-    if (moreBusy || busy || !view.hasMore) return;
+    if (moreBusy || busy || key !== view.key || !view.hasMore) return;
     const id = ++latest.current;
     setMoreBusy(true);
     setFailed(false);
@@ -78,14 +94,14 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
         if (now.key !== view.key) return now;
         // A business added while the visitor scrolled shifts the pages by one: the same business is not shown twice.
         const have = new Set(now.items.map((c) => c.slug));
-        return { ...now, items: [...now.items, ...page.items.filter((c) => !have.has(c.slug))], hasMore: page.has_more, page: view.page + 1 };
+        return { ...now, items: [...now.items, ...page.items.filter((c) => !have.has(c.slug))], hasMore: page.has_more, page: view.page + 1, fresh: false };
       });
     } catch {
       if (id === latest.current) setFailed(true);
     } finally {
       if (id === latest.current) setMoreBusy(false);
     }
-  }, [moreBusy, busy, view, search, category, country, city]);
+  }, [moreBusy, busy, key, view, search, category, country, city]);
 
   // Loads the next page by itself when the end of the list is about to come into view (400px before it).
   const end = useRef<HTMLDivElement>(null);
@@ -100,20 +116,33 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
   const filterOptions = useMemo(() => [{ value: ALL, text: "All" }, ...view.categories.map((c) => ({ value: c.id, text: c.name }))], [view.categories]);
   const filtering = search !== "" || category !== ALL;
 
-  if (photo) return <PhotoSearchNotice companies />; // a business has no photo to compare with: the notice says so (photo-search.tsx)
+  // A business has no photo to compare with: with a photo and no words the notice says so (photo-search.tsx); with words they search the businesses and the photo is not used.
+  if (photo && !search) return <PhotoSearchNotice companies />;
 
   return (
-    <main className="mx-auto flex w-full flex-col px-4 md:pt-7.5">
-      <div className="mx-auto w-full max-w-175">
+    <main className="mx-auto flex w-full flex-col px-4 md:px-7.5 md:pt-7.5">
+      {/* 350px at most on a phone, like the product and service lists (16px at the sides on a 375px phone, the same on a wider one), 740px from 768px, with 30px at the sides like the product list (2026-10-11). */}
+      <div className="mx-auto w-full max-w-87.5 md:max-w-185">
         <CategoryFilter value={category} options={filterOptions} onChange={(id) => setChosen({ country, id })} spacing="mb-8.5 md:mb-7.5" />
 
-        {view.items.length === 0 && !busy && !failed && (
+        {view.items.length === 0 && !loading && !failed && (
           <p className="text-[14px] text-[#636363]">{filtering ? "No companies match your search." : "No companies yet."}</p>
         )}
 
-        <ul aria-busy={busy} className={`flex flex-col gap-8.5 transition-opacity duration-200 md:gap-7.5 ${busy ? "opacity-50" : ""}`}>
-          {view.items.map((company) => (
-            <li key={company.slug} className="flex flex-col gap-3">
+        {loading && (
+          <span role="status" className="sr-only">
+            Searching…
+          </span>
+        )}
+
+        {/* While a new search / filter / country is loading the companies on screen are dimmed lightly; the new ones fade in one after the other (`fresh`), see home-feed.tsx. */}
+        <ul aria-busy={loading} className={`flex flex-col gap-8.5 transition-opacity duration-150 md:gap-7.5 ${loading ? "opacity-60" : ""}`}>
+          {view.items.map((company, index) => (
+            <li
+              key={company.slug}
+              className={`flex flex-col gap-3 ${view.fresh ? "result-in" : ""}`}
+              style={view.fresh ? ({ "--i": Math.min(index, 8) } as React.CSSProperties) : undefined}
+            >
               <CompanyInfo card slug={company.slug} name={company.company_name} typeName={company.company_type} city={company.city} logo={company.logo} />
               {/* 5 lines, then "…" (the API sends the first 500 characters). Line breaks the owner typed are kept. */}
               {company.about && <p className="line-clamp-5 text-[16px] leading-5 whitespace-pre-line text-[#111] wrap-break-word">{company.about}</p>}
@@ -123,7 +152,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
 
         {/* The end of the list: what the observer above watches. The phone's design has 50px under the last company, a tablet's and a desktop's 40px. */}
         <div ref={end} className="flex flex-col items-center gap-2 pt-8.5 pb-12.5 md:pt-7.5 md:pb-10">
-          {view.hasMore && (
+          {view.hasMore && !loading && (
             <button
               type="button"
               onClick={() => void showMore()}

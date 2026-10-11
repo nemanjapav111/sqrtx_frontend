@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import ItemDetail from "@/app/[slug]/item-detail/item-detail";
 import { idFromSegment, serviceSegment, slugOfCompanyUrl } from "@/lib/product-url";
-import { SITE_ORIGIN, getBusinessByUserId, getCategoryName, getServiceAnywhere } from "@/lib/public-site";
-import CompanyCard from "../../product/[id]/company-card";
+import { SITE_ORIGIN, getBusinessByUserId, getServiceAnywhere } from "@/lib/public-site";
+import { CompanyLine } from "@/app/components/company-line";
 
 // A service's own page in the sqrtx marketplace: sqrtx.co/service/<name>-<id>, where a row of the Services page leads ("See More"). The
 // services' version of the marketplace's product page (../../product/[id]/page.tsx: the same page and rules, the same layout, see
@@ -35,7 +35,6 @@ export default async function MarketServicePage({ params }: { params: Promise<{ 
   const current = serviceSegment(service.service_name, service.id);
   if (segment !== current) permanentRedirect(`/service/${current}`);
 
-  const categoryName = await getCategoryName(business.business_category);
   const item = {
     name: service.service_name,
     price: service.price,
@@ -51,7 +50,7 @@ export default async function MarketServicePage({ params }: { params: Promise<{ 
       slug={slug}
       backTo="/services"
       backLabel="Back to services"
-      company={<CompanyCard business={business} slug={slug} categoryName={categoryName} />}
+      companyLine={<CompanyLine slug={slug} name={business.company_name} city={business.city} logo={business.logo} />}
     />
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import PlaceholderPicture, { markSeen } from "@/app/components/placeholder-picture";
 import type { PublicProductImage } from "@/lib/public-site";
 import ZoomStage from "./zoom-stage";
@@ -9,8 +9,8 @@ import ZoomStage from "./zoom-stage";
 // (up to 2400px, the picture as it was uploaded, which nothing else on the site used), as large as the window allows, shown whole on a dark ground. The page's own
 // photo is shown at most 450px tall, so a visitor who wants to look at the detail had nothing to look at.
 // Not in the designs: a plain viewer, placeholder look. The photo can be zoomed and moved (zoom-stage.tsx). It closes with the x,
-// Escape, or a click on the dark ground around the photo; the arrows (and the left and right keys, when the photo is not zoomed) go
-// round the product's photos; "n / total" says which one is shown. While it is open the page behind does not scroll, the focus stays
+// Escape, or a click on the dark ground around the photo; the arrows (and the left and right keys, when the photo is not zoomed, and a flick sideways with a finger on a touch screen:
+// phone, tablet, a touch desktop) go round the product's photos, and the new photo slides in from the side it came from; "n / total" says which one is shown. While it is open the page behind does not scroll, the focus stays
 // inside it, and closing it returns the focus to the photo that was clicked.
 // The detail size (already on the page, already decoded) is the poster under the full one, so opening is instant and the photo only
 // gets sharper when the full one has loaded. The neighbours' full sizes are loaded out of sight, so an arrow shows the next one at
@@ -31,6 +31,15 @@ export default function PhotoViewer({
   const image = images[index];
   const dialog = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  // Every change of photo goes through here (arrow, key, flick) so the new photo knows which way it came: 1 from the right (the next), -1 from the left.
+  const [came, setCame] = useState(0);
+  const go = useCallback(
+    (by: number) => {
+      setCame(by);
+      onStep(by);
+    },
+    [onStep],
+  );
 
   // The page behind stays still while the viewer is open. Its scrollbar goes with the scrolling, and the page behind does not move
   // when it goes (see keep-width in globals.css).
@@ -46,8 +55,8 @@ export default function PhotoViewer({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") return onClose();
-      if (e.key === "ArrowLeft") return onStep(-1);
-      if (e.key === "ArrowRight") return onStep(1);
+      if (e.key === "ArrowLeft") return go(-1);
+      if (e.key === "ArrowRight") return go(1);
       // Tab goes round the viewer's own buttons, never out to the page behind it.
       if (e.key === "Tab" && dialog.current) {
         const buttons = [...dialog.current.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
@@ -65,7 +74,7 @@ export default function PhotoViewer({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose, onStep]);
+  }, [onClose, go]);
 
   const neighbours = images.length > 1 ? [images[(index + 1) % images.length], images[(index - 1 + images.length) % images.length]] : [];
   const control = "flex size-11 cursor-pointer items-center justify-center bg-black/50 text-white hover:bg-black/70";
@@ -101,7 +110,7 @@ export default function PhotoViewer({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onStep(direction === "next" ? 1 : -1);
+                go(direction === "next" ? 1 : -1);
               }}
               aria-label={direction === "next" ? "Next photo" : "Previous photo"}
               className={`${control} absolute top-1/2 z-10 -translate-y-1/2 ${direction === "next" ? "right-3 md:right-5" : "left-3 md:left-5"}`}
@@ -117,9 +126,11 @@ export default function PhotoViewer({
         </>
       )}
 
-      {/* key: a new photo starts its own loading picture, and its own zoom (the whole photo). */}
-      <ZoomStage key={image.id} onClose={onClose}>
+      {/* The stage stays (and with it the zoom buttons: they must not be made again at each photo, that flashed them and lost taps); photoId says which photo it shows, and a new one starts whole.
+          key on the picture: a new photo starts its own loading picture. */}
+      <ZoomStage photoId={image.id} onClose={onClose} onSwipe={images.length > 1 ? go : undefined} enter={came}>
         <PlaceholderPicture
+          key={image.id}
           poster={{ ...image.urls.detail, avif3x: image.urls.detail3x?.avif }}
           avif={image.urls.full.avif}
           webp={image.urls.full.webp}
