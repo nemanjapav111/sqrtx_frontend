@@ -30,7 +30,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // Premium polish (2026-10-10, the owner): 520ms with a soft landing (ease-out: it leaves quickly and settles slowly, FADE_EASING) instead of ease-in-out, a preview blurred enough to read as a wash
 // of the picture's colours instead of a soft low-resolution photo (PREVIEW_BLUR_PX), and no fade at all for a picture that arrives within QUICK_MS (a cached file, or one that was
 // ready before the page came alive): fading 400ms for a picture that was there at once looked like a flicker, not a polish.
-const FADE_MS = 520;
+const FADE_MS = 720;
 const FADE_EASING = "cubic-bezier(0.22, 0.61, 0.36, 1)";
 const QUICK_MS = 120;
 // With a poster (the same photo, sharp, in a smaller size) there is no blur to "develop": the big picture only adds detail, so it fades
@@ -40,9 +40,13 @@ const POSTER_FADE_MS = 200;
 // this blurry (CSS px) and sharpens while it fades, so the picture seems to resolve out of the preview instead of being laid over it.
 // Only the opacity and the blur change, both run on the GPU. Not with a poster (that is the same photo, sharp: nothing to focus) and
 // not for reduced motion (which gets no transition at all).
-const FOCUS_BLUR_PX = 12;
+// Premium finish (2026-10-11, the owner: "do it yourself, make it premium"): the real picture no longer starts blurred and sharpens while it fades in (0 = off). Two things changing at once (blur and opacity)
+// over a blurred preview that is itself fixed read as a shimmer; now the preview stays exactly as it is and the sharp picture simply dissolves over it, slowly and with a soft landing.
+const FOCUS_BLUR_PX = 0;
 // The preview's own blur for a big box (a card, a cover photo, a detail picture). A small box (a logo) passes less: the preview is the same 96px for every size.
-const PREVIEW_BLUR_PX = 8;
+const PREVIEW_BLUR_PX = 4;
+// The card poster fades in over the blurred preview (it used to replace it in one frame, a cut that read as a flicker); the preview goes once the poster is fully opaque.
+const POSTER_IN_MS = 260;
 
 // The pictures that have finished loading in this browser tab. Going to another page of the site and coming back draws
 // every picture again from the start; without this each one would replay its blurred preview and its fade, although the file
@@ -56,8 +60,18 @@ export const markSeen = (webp: string) => {
 };
 
 // Only a WebP data URI is ever put in an <img src>: whatever the API sends, nothing else can end up there.
-const previewFrom = (placeholder: string | null | undefined) =>
-  placeholder?.startsWith("data:image/webp;base64,") ? placeholder : null;
+// The API's placeholder is "data:image/webp;w=241;h=302;base64,..." (w and h: the PICTURE's exact size, see API.md "Blur-up placeholder"), or, for a picture saved before that, plain
+// "data:image/webp;base64,...".
+const PREVIEW_URI = /^data:image\/webp(?:;w=(\d+);h=(\d+))?;base64,/;
+const previewFrom = (placeholder: string | null | undefined) => (placeholder && PREVIEW_URI.test(placeholder) ? placeholder : null);
+
+/** The picture's own width and height as the API declares them in the data URI (null for an old placeholder that has none). */
+function declaredSize(dataUri: string): { w: number; h: number } | null {
+  const match = PREVIEW_URI.exec(dataUri);
+  const w = Number(match?.[1]);
+  const h = Number(match?.[2]);
+  return w > 0 && h > 0 ? { w, h } : null;
+}
 
 /**
  * The width and height of the preview, read from the first bytes of the WebP file itself (its three formats: lossy, lossless, extended), so the blurred preview can be
@@ -66,7 +80,7 @@ const previewFrom = (placeholder: string | null | undefined) =>
  */
 function webpSize(dataUri: string): { w: number; h: number } | null {
   try {
-    const bytes = atob(dataUri.slice("data:image/webp;base64,".length, "data:image/webp;base64,".length + 48));
+    const bytes = atob(dataUri.slice(dataUri.indexOf("base64,") + 7, dataUri.indexOf("base64,") + 7 + 48));
     const b = (i: number) => bytes.charCodeAt(i);
     if (bytes.slice(0, 4) !== "RIFF" || bytes.slice(8, 12) !== "WEBP") return null;
     const kind = bytes.slice(12, 16);
@@ -138,11 +152,21 @@ export default function PlaceholderPicture({
   sweep?: boolean;
 }) {
   const preview = previewFrom(placeholder);
-  const previewSize = preview ? webpSize(preview) : null;
+  // The picture's exact size comes from the API inside the placeholder (declaredSize); an old placeholder has none, and the preview's own width : height is only known to the pixel (the file is at most 96px, so it is rounded: up to 1.2px off on a 300px picture). The picture's true size is read from the
+  // browser as soon as it knows it (the poster's or the picture's own width and height, which it has once the file's header has arrived, before it is drawn), and the preview then takes
+  // exactly the picture's shape: the blurred placeholder is the same size as the photo that replaces it.
+  const [exact, setExact] = useState<{ w: number; h: number } | null>(null);
+  const previewSize = (exact ?? (preview ? (declaredSize(preview) ?? webpSize(preview)) : null)) as { w: number; h: number } | null;
   const under = !!preview || !!poster; // something is drawn under the real picture until it has been decoded
   const img = useRef<HTMLImageElement>(null);
   const posterImg = useRef<HTMLImageElement>(null);
   const [posterLoaded, setPosterLoaded] = useState(false);
+  const [posterIn, setPosterIn] = useState(false); // the poster has finished fading in over the preview: the preview can go
+  useEffect(() => {
+    if (!posterLoaded) return;
+    const timer = window.setTimeout(() => setPosterIn(true), POSTER_IN_MS + 40);
+    return () => window.clearTimeout(timer);
+  }, [posterLoaded]);
   // The poster counts as ready only once the browser has DECODED it, not merely downloaded it: the blurred preview goes the moment it is
   // ready, and a picture that is downloaded but not yet decoded is not painted, so between the two there was a frame with nothing (an
   // empty box, a flash of a few milliseconds that showed on opening a product). decode() resolves when it can be painted at once; if it
@@ -183,44 +207,77 @@ export default function PlaceholderPicture({
     if (img.current?.complete && img.current.naturalWidth > 0) decodedNow();
   }, [decodedNow]);
   useEffect(() => {
+    if (!preview || exact) return;
+    let timer = 0;
+    let tries = 0;
+    const look = () => {
+      const el = [posterImg.current, img.current].find((x) => x && x.naturalWidth > 0 && x.naturalHeight > 0);
+      if (el) return setExact({ w: el.naturalWidth, h: el.naturalHeight });
+      if (++tries < 200) timer = window.setTimeout(look, 50); // 10 seconds at most
+    };
+    look();
+    return () => window.clearTimeout(timer);
+  }, [preview, exact]);
+  useEffect(() => {
     if (posterImg.current?.complete && posterImg.current.naturalWidth > 0) posterReady();
   }, [poster?.webp]); // only a different poster FILE matters: the page makes a new object with the same files each time it draws
+  // What is behind the picture may only go once the picture itself is fully opaque, which is READ from the page (not assumed from a timer): the fade starts when the browser
+  // gets round to it (a busy page, a phone, the dev server, a picture that is still being decoded), sometimes a second or more after `decoded`, and a timer of fadeMs + 50 then
+  // took the preview away while the picture was still invisible: an empty box for a second or more (found 2026-10-11 on the product page: the card picture gone at 800ms, the
+  // big one only starting to appear at 1200 to 2200ms). The first look is when the fade should be over; after that it looks again every 60ms until the picture is opaque.
   useEffect(() => {
     if (!decoded || !fade || faded) return;
-    const timer = setTimeout(() => setFaded(true), fadeMs + 50);
-    return () => clearTimeout(timer);
+    let timer = 0;
+    const look = () => {
+      const el = img.current;
+      if (!el || Number(getComputedStyle(el).opacity) >= 0.99) setFaded(true);
+      else timer = window.setTimeout(look, 60);
+    };
+    timer = window.setTimeout(look, fadeMs + 50);
+    return () => window.clearTimeout(timer);
   }, [decoded, fade, faded, fadeMs]);
   // What is behind the picture goes: at once when it is decoded, or when its fade is over.
   const behindGone = decoded && (!fade || faded);
   // The real picture is coming into focus (see FOCUS_BLUR_PX): from the moment it is rendered until its fade is over.
-  const focusing = !!preview && !poster && fade && !faded;
+  const focusing = FOCUS_BLUR_PX > 0 && !!preview && !poster && fade && !faded;
 
   return (
     <div className={`relative ${className ?? ""}`} style={style}>
       {under ? (
         !behindGone && (
           <div aria-hidden className="absolute inset-0 overflow-hidden">
-            {preview && !(poster && posterLoaded) && (
+            {preview && !(poster && posterIn) && (
               // The preview is drawn in exactly the shape of the picture (its own width : height, read from the file: `webpSize`), fitted into the box the way the real picture will be
-              // (whole, or covering it with object-cover), and blurred INSIDE that shape: the picture is enlarged a little behind a clip, so the blur has nothing transparent to
+              // (whole, or covering it with object-cover), and blurred INSIDE that shape (at its TRUE size: no zoom, and in the picture's exact shape once the browser knows it, see `exact`): a copy enlarged a little sits behind it, so the blur has nothing transparent to
               // fade into at the edges. Before, the blurred image spread past the picture's edge into the empty space around it, like a soft shadow, and its own edges went pale.
-              // The blur grows with the box (2.4% of its width, from 1px up to `blurPx`: a 350px card gets the full 8px, a 100px logo about 2px, a thumbnail 1px), so one value suits every
+              // The blur grows with the box (1.4% of its width, from 1px up to `blurPx`, 4px by default: a 300px card gets 4px, a 100px logo 1.4px, a thumbnail 1px), so one value suits every
               // size; the wrapper is the "container" those widths are measured in (its size is the box's, it takes no room of its own).
               <div className="absolute inset-0 flex items-center justify-center overflow-hidden" style={{ containerType: "size" }}>
                 <div
-                  className="overflow-hidden"
+                  className="relative overflow-hidden"
                   style={
                     previewSize && !imgClassName.includes("object-cover")
                       ? { width: `min(100cqw, calc(100cqh * ${previewSize.w / previewSize.h}))`, height: `min(100cqh, calc(100cqw * ${previewSize.h / previewSize.w}))` }
                       : { width: "100%", height: "100%" }
                   }
                 >
+                  {/* No zoom (2026-10-11, the owner: "remove zoom in animation on all blurry placeholders"): the preview used to be enlarged 12% (the copy behind it is now 4%, so what shows at the edge matches the picture) to keep its blurred edges from going pale, so when the sharp picture
+                      faded in over it the picture visibly shrank by 12%. Now the preview is the true size, and a copy enlarged behind it only fills the few pixels at the edges where the blur fades out. */}
+                  {previewSize && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={preview}
+                      alt=""
+                      className={`absolute inset-0 size-full ${imgClassName.includes("object-cover") ? "object-cover" : ""}`}
+                      style={{ filter: `blur(clamp(1px, 1.4cqw, ${blurPx}px))`, transform: "scale(1.02)" }}
+                    />
+                  )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={preview}
                     alt=""
-                    className={previewSize ? `size-full ${imgClassName.includes("object-cover") ? "object-cover" : ""}` : imgClassName}
-                    style={{ filter: `blur(clamp(1px, 2.4cqw, ${blurPx}px))`, transform: "scale(1.12)", ...(previewSize ? null : { clipPath: "inset(0)", transform: undefined }) }}
+                    className={`${previewSize ? `size-full ${imgClassName.includes("object-cover") ? "object-cover" : ""}` : imgClassName} ${previewSize ? "relative" : ""}`}
+                    style={{ filter: `blur(clamp(1px, 1.4cqw, ${blurPx}px))`, ...(previewSize ? null : { clipPath: "inset(0)" }) }}
                   />
                 </div>
               </div>
@@ -228,7 +285,15 @@ export default function PlaceholderPicture({
             {poster && (
               <picture className="absolute inset-0">
                 <source srcSet={avifSourceSet(poster.avif, poster.avif3x)} type="image/avif" />
-                <img ref={posterImg} src={poster.webp} alt="" onLoad={posterReady} className={imgClassName} />
+                <img
+                  ref={posterImg}
+                  src={poster.webp}
+                  alt=""
+                  onLoad={posterReady}
+                  // With a preview under it the poster fades in over it (opacity 0 until it is decoded); without one it is simply drawn.
+                  className={`${imgClassName} ${preview ? `transition-opacity ease-out motion-reduce:transition-none ${posterLoaded ? "opacity-100" : "opacity-0"}` : ""}`}
+                  style={preview ? { transitionDuration: `${POSTER_IN_MS}ms` } : undefined}
+                />
               </picture>
             )}
           </div>

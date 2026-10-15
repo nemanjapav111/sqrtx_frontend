@@ -15,6 +15,17 @@ export const PRIVACY_VERSION = "1";
 export const LEGAL = {
   operator: "[Your full legal name]", // the person (later the company) behind sqrtx: the "we" of both documents
   address: "[Postal address]", // shown publicly. For a person this is a home address unless a business address or PO box is used
-  email: "[Contact email for legal and privacy questions]", // a dedicated address, not a personal one
+  email: "support@sqrtx.co", // one monitored address for everything (legal, privacy, refunds, support); the sqrtx.co mailbox must exist (receive + send-as) before launch
   updated: "[Date this version was published]",
+  // Takes the payments and is the seller of record (Paddle's "Merchant of Record"): it is the one that charges the card, collects the
+  // taxes and handles refunds. Named in Terms section 6, the Refund Policy and the Privacy Policy; keep them true if it changes.
+  paymentProvider: "Paddle",
 };
+
+// The pages every legal document links to, in the order they are listed.
+export const LEGAL_LINKS = [
+  { href: "/pricing", label: "Pricing" },
+  { href: "/terms", label: "Terms and Conditions" },
+  { href: "/privacy", label: "Privacy Policy" },
+  { href: "/legal/refunds", label: "Refund Policy" },
+] as const;

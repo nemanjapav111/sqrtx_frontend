@@ -155,7 +155,7 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
         )}
 
         {/* While a new search / filter / country is loading the services on screen are dimmed lightly; the new ones fade in one after the other (`fresh`), see home-feed.tsx. */}
-        <ul aria-busy={loading} className={`flex flex-col transition-opacity duration-150 ${loading ? "opacity-60" : ""}`}>
+        <ul aria-busy={loading} className={`flex flex-col transition-opacity duration-150 ${loading ? "pointer-events-none opacity-60" : ""}`}>
           {view.items.map((service, index) => {
             const href = marketServicePath(service);
             return (

@@ -155,7 +155,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
 
         {/* While a new search / filter / country is loading the products on screen are dimmed lightly (from that very render, see `loading`; the search box shows a spinner),
             and the new ones fade in one after the other when they arrive (`fresh`). */}
-        <ul aria-busy={loading} className={`flex flex-wrap justify-start gap-10 transition-opacity duration-150 ${loading ? "opacity-60" : ""}`}>
+        <ul aria-busy={loading} className={`flex flex-wrap justify-start gap-10 transition-opacity duration-150 ${loading ? "pointer-events-none opacity-60" : ""}`}>
           {view.items.map((product, index) => (
             <li
               key={product.id}

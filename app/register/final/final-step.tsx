@@ -31,7 +31,11 @@ export default function FinalStep() {
         const before = state.steps[state.steps.indexOf("final") - 1];
         if (!cancelled && before) setBackHref(pathForStep(before));
         // Coming back to this page once registration is already done sends them to the normal site instead.
-        if (state.step !== "final") return router.replace(await homePath(state));
+        if (state.step !== "final") {
+          const to = await homePath(state);
+          if (!cancelled) router.replace(to); // not if they have left this page meanwhile
+          return;
+        }
         if (!cancelled) setLoad({ status: "ready" });
       } catch {
         if (!cancelled) setLoad({ status: "error" });

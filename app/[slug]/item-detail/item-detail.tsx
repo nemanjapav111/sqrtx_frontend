@@ -101,7 +101,7 @@ export default function ItemDetail({
     photo.current?.focus(); // back to the photo that was clicked
   }, []);
 
-  // PHONE AND TABLET (under 1120px): the big photo is a strip of all the photos that is swiped sideways (CSS scroll snap: one photo at a time), and the row of small photos goes with it. Swiping
+  // PHONE AND TABLET (under 1120px): the big photo is a strip of all the photos that is swiped sideways (CSS scroll snap, `snap-always`: one photo at a time, a quick flick cannot skip over one), and the row of small photos goes with it. Swiping
   // changes `selected` (the photo that is more than half in view). Choosing a small photo (or anything else that changes `selected`) does NOT slide the strip (2026-10-10, the owner:
   // "don't make sliding animation, make ease in ease out"): the photo fades out (140ms, ease-in), the strip jumps to the chosen one while it is not seen, and it fades in (200ms,
   // ease-out). People who ask for less motion get a jump at once. While this runs, the strip's own scrolling does not change `selected` (scrollingTo); a finger on the strip ends it
@@ -110,6 +110,8 @@ export default function ItemDetail({
   const strip = useRef<HTMLDivElement>(null);
   const thumbList = useRef<HTMLUListElement>(null);
   const scrollingTo = useRef<number | null>(null);
+  // The photo the strip's own scrolling made the selected one (a swipe), so the effect below can tell it from a choice made elsewhere (a small photo, an arrow, the viewer).
+  const selectedByScroll = useRef<number | null>(null);
   const fade = useRef<{ animations: Animation[]; timer: number; jumpTo: number | null } | null>(null);
   const stopFade = useCallback(() => {
     const running = fade.current;
@@ -123,7 +125,11 @@ export default function ItemDetail({
   useEffect(() => stopFade, [stopFade]);
   useEffect(() => {
     const el = strip.current;
-    if (el && el.clientWidth > 0 && Math.round(el.scrollLeft / el.clientWidth) !== selected) {
+    // A swipe already put the strip where it is: nothing to move. (Before this was only guessed from where the strip happened to be when this ran, a frame or more after the swipe changed
+    // `selected`: in a quick flick the strip was already past the next photo, so it was thought to be out of step and was fade-jumped back to the old selection: a photo "jumping".)
+    const bySwipe = selectedByScroll.current === selected;
+    selectedByScroll.current = null;
+    if (el && !bySwipe && el.clientWidth > 0 && Math.round(el.scrollLeft / el.clientWidth) !== selected) {
       stopFade();
       const to = selected * el.clientWidth;
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -160,7 +166,10 @@ export default function ItemDetail({
     const el = strip.current;
     if (!el || el.clientWidth === 0 || scrollingTo.current !== null) return;
     const index = Math.round(el.scrollLeft / el.clientWidth);
-    if (index !== selected && images[index]) setSelected(index);
+    if (index !== selected && images[index]) {
+      selectedByScroll.current = index;
+      setSelected(index);
+    }
   };
 
   return (
@@ -207,7 +216,7 @@ export default function ItemDetail({
               className="flex h-full min-w-0 flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] min-[1120px]:hidden"
             >
               {images.map((image, i) => (
-                <div key={image.id} className="h-full w-full shrink-0 snap-center">
+                <div key={image.id} className="h-full w-full shrink-0 snap-center snap-always">
                   {Math.abs(i - selected) <= 1 && (
                     <button type="button" onClick={() => setViewing(true)} aria-label="Enlarge photo" className="block size-full">
                       <PlaceholderPicture

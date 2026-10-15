@@ -1,5 +1,5 @@
 import LegalDocument, { LegalList, LegalSection } from "@/app/components/legal-document";
-import { LEGAL, PRIVACY_VERSION } from "@/lib/legal";
+import { LEGAL, LEGAL_LINKS, PRIVACY_VERSION } from "@/lib/legal";
 
 export const metadata = { title: "Privacy Policy – sqrtx" };
 
@@ -11,7 +11,7 @@ export const metadata = { title: "Privacy Policy – sqrtx" };
 // process data.
 export default function Privacy() {
   return (
-    <LegalDocument title="Privacy Policy" version={PRIVACY_VERSION} other={{ href: "/terms", label: "Terms and Conditions" }}>
+    <LegalDocument title="Privacy Policy" version={PRIVACY_VERSION} other={LEGAL_LINKS.filter((link) => link.href !== "/privacy")}>
       <LegalSection title="1. Who we are">
         <p>
           This policy explains how {LEGAL.operator}, an individual operating the sqrtx service (“sqrtx”, “we”, “us”),
@@ -92,8 +92,10 @@ export default function Privacy() {
             Google’s own privacy policy applies to that;
           </li>
           <li>
-            our payment provider, [name], which takes your payments and holds your card details. It tells us whether your
-            subscription is active;
+            our payment provider, {LEGAL.paymentProvider}, the Merchant of Record for our plans, which takes your payments,
+            holds your card details and handles taxes and invoices. It receives your name, email and billing details and tells
+            us whether your subscription is active. {LEGAL.paymentProvider} is responsible for that data under its own privacy
+            policy;
           </li>
           <li>our email delivery provider, [name], which sends the emails in section 2;</li>
           <li>our hosting provider, [name].</li>

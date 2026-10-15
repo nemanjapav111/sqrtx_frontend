@@ -34,7 +34,7 @@ const PAGE_ICONS = { products: productsIcon, services: servicesIcon, companies: 
 export function HomeFooter({ countries }: { countries: readonly string[] }) {
   const current = useCurrent();
   return (
-    <nav aria-label="Pages" className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e5e7eb] bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav aria-label="Pages" className="fixed inset-x-0 bottom-0 z-30 transform-gpu border-t border-[#e5e7eb] bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
       <div className="flex">
         {PAGES.map((page) => (
           <Link

@@ -30,7 +30,11 @@ export default function ProductsStep() {
         const state = await getOnboardingState();
         // Coming back to this page from a later step is fine, as long as products are part of the user's path.
         // Before the profile is saved that path is just the first page, so this also sends them there.
-        if (state.step === "done" || !state.steps.includes("products")) return router.replace(await homePath(state));
+        if (state.step === "done" || !state.steps.includes("products")) {
+          const to = await homePath(state);
+          if (!cancelled) router.replace(to); // not if they have left this page meanwhile
+          return;
+        }
         const categories = await categoriesAsked;
         if (!cancelled) setLoad({ status: "ready", categories });
       } catch {

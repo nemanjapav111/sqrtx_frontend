@@ -1,5 +1,6 @@
-import LegalDocument, { LegalList, LegalSection } from "@/app/components/legal-document";
-import { LEGAL, TERMS_VERSION } from "@/lib/legal";
+import Link from "next/link";
+import LegalDocument,{ LegalList, LegalSection } from "@/app/components/legal-document";
+import { LEGAL, LEGAL_LINKS, TERMS_VERSION } from "@/lib/legal";
 
 export const metadata = { title: "Terms and Conditions – sqrtx" };
 
@@ -10,7 +11,7 @@ export const metadata = { title: "Terms and Conditions – sqrtx" };
 // CURRENT_TERMS_VERSION in the backend together. Keep section 6 true once billing exists.
 export default function Terms() {
   return (
-    <LegalDocument title="Terms and Conditions" version={TERMS_VERSION} other={{ href: "/privacy", label: "Privacy Policy" }}>
+    <LegalDocument title="Terms and Conditions" version={TERMS_VERSION} other={LEGAL_LINKS.filter((link) => link.href !== "/terms")}>
       <LegalSection title="1. About these terms">
         <p>
           These terms are an agreement between you and {LEGAL.operator}, an individual operating the sqrtx service (“sqrtx”,
@@ -93,8 +94,23 @@ export default function Terms() {
         </p>
         <p>
           <strong>Paid plans.</strong> To keep your business page public after the trial, you need a paid plan. The plans are
-          $11.10 per month or $111 per year, per account [confirm whether taxes are included]. You can choose a plan before the
+          $11.10 per month or $111 per year, per account, in US dollars (see <Link href="/pricing" className="underline">Pricing</Link>).
+          Taxes such as VAT or sales tax may be added at checkout, depending on where you are. You can choose a plan before the
           trial ends or at any time after it. We will not charge you unless you have chosen a plan.
+        </p>
+        <p>
+          <strong>Renewal and cancelling.</strong> A paid plan renews automatically at the end of each month or year, at the
+          price shown when you subscribed, until you cancel. You can cancel at any time under “Manage subscription” in your
+          account. Your business page stays public until the end of the period you have paid for, and you will not be charged
+          again.
+        </p>
+        <p>
+          <strong>Refunds.</strong> You can ask for a refund within 14 days of a payment. The details are in our{" "}
+          <Link href="/legal/refunds" className="underline">Refund Policy</Link>.
+        </p>
+        <p>
+          <strong>Price changes.</strong> If we change the price of a plan, we will tell you by email at least 30 days before
+          it applies to your next renewal. If you do not agree, you can cancel before then.
         </p>
         <p>
           <strong>When the trial ends.</strong> If you do not have a paid plan when the trial ends, your business page,
@@ -102,12 +118,10 @@ export default function Terms() {
           subscribe.
         </p>
         <p>
-          <strong>How you pay.</strong> Payments are handled by [payment provider name]. We do not see or store your card
-          details.
-        </p>
-        <p>
-          [To be confirmed before launch: that plans renew automatically until cancelled, how to cancel and whether access
-          continues until the end of the paid period, the refund policy, and how much notice we give before a price change.]
+          <strong>How you pay.</strong> Our order process is conducted by our online reseller {LEGAL.paymentProvider}.{" "}
+          {LEGAL.paymentProvider} is the Merchant of Record for all our orders: it sells the plans to you, takes your payment,
+          collects the taxes, sends your invoice and handles refunds. We do not see or store your card details. Your purchase is
+          also subject to {LEGAL.paymentProvider}’s own terms for buyers, which you are shown at checkout.
         </p>
       </LegalSection>
 

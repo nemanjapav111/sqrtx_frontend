@@ -58,7 +58,10 @@ export default function AccountStep() {
         const extra = Promise.all([getBillingPlans(), supabase.auth.getSession()]);
         extra.catch(() => undefined);
         const { onboarding, company_url, billing } = await getBootstrap();
-        if (onboarding.step !== "done") return router.replace(pathForStep(onboarding.step)); // registration is not finished
+        if (onboarding.step !== "done") {
+          if (!cancelled) router.replace(pathForStep(onboarding.step)); // registration is not finished (not if they have left this page meanwhile)
+          return;
+        }
         const [plans, auth] = await extra;
         const slug = company_url ? slugFromUrl(company_url) : "";
         const offersProducts = !!onboarding.provides && onboarding.provides !== "services";

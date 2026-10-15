@@ -89,6 +89,21 @@ export default function HomeSearch({ variant }: { variant: "line" | "desktop" })
     input.current?.blur(); // closes the phone's keyboard so the results can be seen
   };
 
+  // The X: empties the box AND the search that is on (an empty search shows everything), and leaves the cursor in the box.
+  const clear = () => {
+    setQuery("");
+    submit("");
+    input.current?.focus();
+  };
+  const clearButton =
+    query !== "" ? (
+      <button type="button" onClick={clear} aria-label="Clear search" className="mr-2 flex size-8 shrink-0 cursor-pointer items-center justify-center text-[#8f8f8f]">
+        <svg aria-hidden viewBox="0 0 24 24" className="size-4.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <path d="M6 6l12 12M18 6 6 18" />
+        </svg>
+      </button>
+    ) : null;
+
   if (variant === "line") {
     const line = (
       <form role="search" onSubmit={search} className="flex h-11 min-w-0 flex-1 items-center gap-1 border-b border-[#b8b8b8] px-1.75">
@@ -108,6 +123,7 @@ export default function HomeSearch({ variant }: { variant: "line" | "desktop" })
             className="w-full min-w-0 bg-transparent px-1 text-[16px] outline-none [&::-webkit-search-cancel-button]:hidden"
           />
         </label>
+        {clearButton}
         <CameraButton className="text-black" />
       </form>
     );
@@ -142,6 +158,7 @@ export default function HomeSearch({ variant }: { variant: "line" | "desktop" })
         autoComplete="off"
         className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-black outline-none placeholder:text-[#8f8f8f] [&::-webkit-search-cancel-button]:hidden"
       />
+      {clearButton}
       <CameraButton className="text-black" />
     </form>
   );

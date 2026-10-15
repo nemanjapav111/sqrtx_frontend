@@ -136,7 +136,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
         )}
 
         {/* While a new search / filter / country is loading the companies on screen are dimmed lightly; the new ones fade in one after the other (`fresh`), see home-feed.tsx. */}
-        <ul aria-busy={loading} className={`flex flex-col gap-8.5 transition-opacity duration-150 md:gap-7.5 ${loading ? "opacity-60" : ""}`}>
+        <ul aria-busy={loading} className={`flex flex-col gap-8.5 transition-opacity duration-150 md:gap-7.5 ${loading ? "pointer-events-none opacity-60" : ""}`}>
           {view.items.map((company, index) => (
             <li
               key={company.slug}

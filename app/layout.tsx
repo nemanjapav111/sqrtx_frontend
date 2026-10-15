@@ -22,6 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className={`${inter.className} min-h-full flex flex-col`}>
         <InlineScript code={MEASURE_SCROLLBAR} />
+        <script src="/title-debug.js" /> {/* TEMP title-debug */}
         {children}
       </body>
     </html>

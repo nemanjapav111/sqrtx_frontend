@@ -62,10 +62,10 @@ function forgetMyPage() {
 const ICON_BOTTOM = (40 - 25) / 2 + 25; // 32.5
 const MENU_TOP = ICON_BOTTOM + POPUP_GAP; // 48.5
 
-function MenuRow({ href, children, onClick, disabled }: { href?: string; children: React.ReactNode; onClick?: () => void; disabled?: boolean }) {
+function MenuRow({ href, children, onClick, disabled, className = "" }: { href?: string; children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string }) {
   // The row of every popup (components/popup.tsx).
   return href ? (
-    <Link href={href} className={POPUP_ROW} onClick={onClick}>
+    <Link href={href} className={`${POPUP_ROW} ${className}`} onClick={onClick}>
       {children}
     </Link>
   ) : (
@@ -76,7 +76,10 @@ function MenuRow({ href, children, onClick, disabled }: { href?: string; childre
 }
 
 // `light`: for a dark bar (the home page's black one): the icon is white and the signed-in dot is ringed in black.
-export default function VisitorIcon({ light = false }: { light?: boolean }) {
+// `businessLink`: the marketplace's way to the business landing page (/business) (2026-10-11, the owner): a link at the right of the icon on tablet and desktop, and the
+// last row of the menu on a phone (the bottom bar has no room for it). Shown to everyone, signed in or not (the owner: "don't hide it"). Both are plain links in the page, so a
+// crawler or a payment provider's reviewer sees them (the menu row only while the menu is open).
+export default function VisitorIcon({ light = false, businessLink = false }: { light?: boolean; businessLink?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false); // is there a saved login: read when the menu is opened
@@ -169,6 +172,7 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
   const onNavigate = () => setOpen(false);
 
   return (
+    <div className="group/account flex items-center">
     <div ref={rootRef} suppressHydrationWarning className="group relative flex size-10 items-center">
       <button
         type="button"
@@ -205,6 +209,11 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
               <MenuRow href="/account/settings" onClick={onNavigate}>
                 Settings
               </MenuRow>
+              {businessLink && (
+                <MenuRow href="/business" onClick={onNavigate} className="md:hidden">
+                  For businesses
+                </MenuRow>
+              )}
               <MenuRow onClick={logOut} disabled={leaving}>
                 {leaving ? "Logging out…" : "Log out"}
               </MenuRow>
@@ -217,10 +226,24 @@ export default function VisitorIcon({ light = false }: { light?: boolean }) {
               <MenuRow href="/register" onClick={onNavigate}>
                 Register
               </MenuRow>
+              {businessLink && (
+                <MenuRow href="/business" onClick={onNavigate} className="md:hidden">
+                  For businesses
+                </MenuRow>
+              )}
             </>
           )}
         </div>
       )}
+    </div>
+    {businessLink && (
+      <Link
+        href="/business"
+        className={`ml-1.5 hidden h-8 items-center border px-3 text-[14px] leading-4 font-medium whitespace-nowrap md:flex min-[1120px]:mr-1.75 ${light ? "border-[#a3a3a3] text-[#d4d4d4] hover:border-white hover:text-white focus-visible:border-white focus-visible:text-white" : "border-[#4b5563] text-[#4b5563] hover:border-black hover:text-black focus-visible:border-black focus-visible:text-black"}`}
+      >
+        For businesses
+      </Link>
+    )}
     </div>
   );
 }

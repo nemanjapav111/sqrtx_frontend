@@ -48,6 +48,12 @@ textarea {
 html:not(:has([data-site-header])) {
   scrollbar-gutter: stable;
 }
+/* A black page (the business landing page, data-dark-page): the strip that is kept for the scrollbar is painted with the page's background colour, which is the browser's white unless the page
+   says otherwise, and the scrollbar itself is the light one: a 15px white track beside a black page. Black behind it, and a dark scrollbar. */
+html:has([data-dark-page]) {
+  background-color: #000;
+  color-scheme: dark;
+}
 .keep-width {
   padding-right: max(0px, calc(var(--sbw, 0px) - (100vw - 100%)));
 }
@@ -104,6 +110,39 @@ h3 {
 }
 @media (prefers-reduced-motion: reduce) {
   .result-in {
+    animation: none;
+  }
+}
+
+/* The example page on the business landing page (app/business/showcase.tsx) lands softly when the page opens (2026-10-11, the owner): it rises 22px into place while it fades in
+   and settles from a very slightly smaller size, over 900ms with a long, soft ending, after a short wait (the headline and the buttons are already there, so the eye arrives
+   at the picture last). Its shadow (a glow, the page is black) grows in with it. Not for people who ask for less motion. */
+.float-in {
+  animation: float-in 900ms cubic-bezier(0.22, 0.61, 0.36, 1) 150ms both;
+}
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.985);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .float-in {
+    animation: none;
+  }
+}
+
+/* The inside of the example window fades in (200ms) when the visitor switches between the product and the service example (showcase.tsx); the frame stays still. */
+.example-fade {
+  animation: example-fade 200ms ease-out both;
+}
+@keyframes example-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .example-fade {
     animation: none;
   }
 }

@@ -1,4 +1,5 @@
 import { cache } from "react";
+import type { BillingPlans } from "@/lib/billing-format";
 import { emptyFeedCompaniesPage, emptyFeedPage, emptyFeedServicesPage, feedQuery, type FeedCompaniesPage, type FeedPage, type FeedServicesPage } from "@/lib/feed";
 import { emptyProductsPage, productsPageQuery, type PublicProductsPage } from "@/lib/public-products";
 import type { ServicePriceType } from "@/lib/price";
@@ -200,3 +201,11 @@ export async function getSitemapCount() {
   const { total } = await getSitemapPage(1);
   return Math.max(1, Math.ceil(total / SITEMAP_ENTRIES_PER_FILE));
 }
+
+// The plans and their prices (GET /billing/plans, public): the pricing page shows them. The prices are set in the API, never here.
+// Kept for an hour: they change rarely, and the pricing page is what a payment provider's reviewers and every visitor reads.
+export const getPublicPlans = cache(async () => {
+  const plans = await getJson<BillingPlans>("/billing/plans", 3600);
+  if (!plans) throw new Error("The API has no plans (GET /billing/plans answered 404)");
+  return plans;
+});

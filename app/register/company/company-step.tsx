@@ -38,9 +38,14 @@ export default function CompanyStep({ variant = "registration" }: { variant?: "r
         data.catch(() => undefined);
         const state = await getOnboardingState();
         if (variant === "account") {
-          if (state.step !== "done") return router.replace(pathForStep(state.step)); // registration is not finished
+          if (state.step !== "done") {
+            if (!cancelled) router.replace(pathForStep(state.step)); // registration is not finished (not if they have left this page meanwhile)
+            return;
+          }
         } else if (state.step === "done") {
-          return router.replace(await homePath(state)); // registration is finished
+          const to = await homePath(state); // registration is finished
+          if (!cancelled) router.replace(to);
+          return;
         }
         const [profile, categories] = await data;
         const fresh: Ready = { status: "ready", profile, categories };

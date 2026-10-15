@@ -13,9 +13,10 @@ export default function LegalDocument({
 }: {
   title: string;
   version: string;
-  other: { href: string; label: string }; // the other document
+  other: { href: string; label: string } | { href: string; label: string }[]; // the other documents
   children: React.ReactNode;
 }) {
+  const others = Array.isArray(other) ? other : [other];
   return (
     <main className="flex flex-1 flex-col items-center bg-white pt-17.5 pb-12.5 leading-[normal] text-black md:pb-8">
       <div className="flex w-full max-w-200 flex-col items-center">
@@ -30,9 +31,13 @@ export default function LegalDocument({
             Draft. This text has not been reviewed by a lawyer yet, and the parts in [square brackets] are still to be filled in.
           </p>
           <div className="flex flex-col gap-6 pt-6 pb-10 text-[14px] leading-6">{children}</div>
-          <Link href={other.href} className="inline-block py-3 text-[14px] font-semibold underline">
-            {other.label}
-          </Link>
+          <div className="flex flex-wrap gap-x-5">
+            {others.map((link) => (
+              <Link key={link.href} href={link.href} className="inline-block py-3 text-[14px] font-semibold underline">
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </article>
       </div>
     </main>

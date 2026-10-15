@@ -24,12 +24,12 @@ export default function HomeHeader({ countries }: { countries: readonly string[]
       <div className="border-b border-[#d4d4d4] bg-black">
         <div className="keep-width">
         <div className="mx-auto flex h-17 w-full items-center justify-between min-[1120px]:max-w-297.5 min-[1120px]:px-7.5">
-          {/* The logo (2026-10-10, the owner): a white square of 19 x 19px, then "sqrtx" in bold (the site's bold, 650), 16px, no letter-spacing, 5px between them, the same on phone, tablet and desktop. The square is centered against the "s":
+          {/* The logo (2026-10-10, the owner): a white square of 19 x 19px, then "sqrtx" in bold (the site's bold, 650), 16px, no letter-spacing, 5px between them, the same on phone, tablet and desktop (the word is 1px lower than the square since 2026-10-11, the owner). The square is centered against the "s":
               the middle of the "s" sits lower than the middle of the line, so the square is moved down by 1.3px (measured on the pixels of the logo enlarged 10x: the first row and the last row of the square and of the "s"; the figure worked
               out from the font's metrics, 1.7px, was 0.4px too much). */}
           <Link href="/" className="flex shrink-0 items-center gap-[5px] px-4.75 text-[16px] text-white min-[1120px]:pl-0">
             <span aria-hidden className="size-[19px] bg-white" style={{ transform: "translateY(1.3px)" }} />
-            <span className="leading-[1.21] font-bold tracking-[0]">sqrtx</span>
+            <span className="translate-y-px leading-[1.21] font-bold tracking-[0]">sqrtx</span>
           </Link>
 
           {/* Desktop only: the links, the search and the country, pushed to the right so the country is as far from the account icon (28px) as the search is from the country. */}
@@ -40,7 +40,7 @@ export default function HomeHeader({ countries }: { countries: readonly string[]
           </div>
 
           <div className="flex shrink-0 items-center pr-2.5 min-[1120px]:-mr-1.75 min-[1120px]:ml-5 min-[1120px]:pr-0">
-            <VisitorIcon light />
+            <VisitorIcon light businessLink />
           </div>
         </div>
         </div>

@@ -10,7 +10,11 @@ const nextConfig: NextConfig = {
   // CDN removes this header before the page reaches a visitor. The address pattern is the one of lib/public-site.ts's
   // isPossibleSlug (so /_next/... files and the like get no label); the label's spelling is businessCdnTag in lib/cloudflare-purge.ts.
   async headers() {
-    return [{ source: "/:slug([a-z0-9][a-z0-9-]{1,48}[a-z0-9])/:path*", headers: [{ key: "Cache-Tag", value: "business-:slug" }] }];
+    return [
+      { source: "/:slug([a-z0-9][a-z0-9-]{1,48}[a-z0-9])/:path*", headers: [{ key: "Cache-Tag", value: "business-:slug" }] },
+      // The landing page's pictures (public/landing/): the version is in each file's name (-1), so a changed picture gets a new name and these can be kept for a year.
+      { source: "/landing/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
+    ];
   },
 };
 

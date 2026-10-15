@@ -130,7 +130,7 @@ export default function LocationPicker({ countries, variant, className = "" }: {
           setCitySearch("");
           setOpen((v) => !v);
         }}
-        className={`flex cursor-pointer items-center ${
+        className={`flex cursor-pointer touch-manipulation items-center ${
           bar
             ? "h-14.5 w-full flex-col justify-center gap-1 px-1 text-[12px] leading-[17px] font-medium tracking-[0.02em] text-[#6b7280] [&_svg]:size-5.5 [&_svg]:[stroke-width:1.6]"
             : desktop

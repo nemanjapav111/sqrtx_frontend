@@ -36,7 +36,11 @@ export default function ServicesStep() {
         const state = await getOnboardingState();
         if (!cancelled) setBackHref(state.steps.includes("products") ? "/register/products" : "/register/company");
         // Coming back to this page from a later step is fine, as long as services are part of the user's path.
-        if (state.step === "done" || !state.steps.includes("services")) return router.replace(await homePath(state));
+        if (state.step === "done" || !state.steps.includes("services")) {
+          const to = await homePath(state);
+          if (!cancelled) router.replace(to); // not if they have left this page meanwhile
+          return;
+        }
         const categories = await categoriesAsked;
         if (!cancelled) setLoad({ status: "ready", categories });
       } catch {

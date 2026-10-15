@@ -148,7 +148,10 @@ function ServicesListInBrowser() {
         const data = getMyServicesPage({ q: search, category, page: 1 });
         data.catch(() => undefined);
         const state = await getOnboardingState();
-        if (state.step !== "done") return router.replace(pathForStep(state.step)); // registration is not finished
+        if (state.step !== "done") {
+          if (!cancelled) router.replace(pathForStep(state.step)); // registration is not finished (not if they have left this page meanwhile)
+          return;
+        }
         const result = await data;
         const ready: Ready = { status: "ready", key: listKey(search, category), items: result.items, total: result.total, page: 1, categories: result.categories };
         remember(listKey(search, category), ready); // even if the visitor has already left: an answer that arrived is true

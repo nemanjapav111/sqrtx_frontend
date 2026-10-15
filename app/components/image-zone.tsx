@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { randomId } from "@/lib/random-id";
 import { MAX_IMAGE_BYTES, drawThumbnail, imageProblem, isSaved, shrinkPhoto, type PickedPhoto, type ZonePhoto } from "@/lib/photos";
 
 // A custom drag payload type, so a tile being dragged to reorder is never mistaken for an external file being
@@ -271,7 +272,7 @@ export default function ImageZone({
           );
           continue;
         }
-        ready.push({ id: crypto.randomUUID(), file: shrunk });
+        ready.push({ id: randomId(), file: shrunk });
       }
     } finally {
       setPreparing((n) => n - 1);

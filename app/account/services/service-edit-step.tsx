@@ -52,7 +52,10 @@ export default function ServiceEditStep({ id }: { id: string | null }) {
         serviceAsked.catch(() => undefined);
         categoriesAsked.catch(() => undefined);
         const state = await getOnboardingState();
-        if (state.step !== "done") return router.replace(pathForStep(state.step)); // registration is not finished
+        if (state.step !== "done") {
+          if (!cancelled) router.replace(pathForStep(state.step)); // registration is not finished (not if they have left this page meanwhile)
+          return;
+        }
 
         // The form appears as soon as the service is here. The category list is the slowest answer and only the category box
         // needs it, so it fills in afterwards.
