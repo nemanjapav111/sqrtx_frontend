@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/api";
+import { fill } from "@/lib/i18n";
 import { supabase } from "@/lib/supabase";
 
 // Uploads of photos (a product, a service, the logo) with a progress that is TRUE all the way:
@@ -28,14 +29,25 @@ export function uploadPercent(status: UploadStatus): number {
   return STORING_AT;
 }
 
+/** The words for an upload (common.upload in the dictionaries). */
+export interface UploadTexts {
+  sendingLogo: string;
+  sendingPhoto: string;
+  sendingPhotos: string;
+  preparingLogo: string;
+  preparingPhoto: string;
+  preparingPhotos: string; // {done} and {total}
+  saving: string;
+}
+
 /** What to tell the user: `what` is "photo" or "logo" (several photos say "photos"). */
-export function uploadLabel(status: UploadStatus, what: "photo" | "logo", count = 1): string {
-  const noun = what === "logo" ? "logo" : count === 1 ? "photo" : "photos";
-  if (status.stage === "sending") return `Sending your ${noun}`;
+export function uploadLabel(status: UploadStatus, what: "photo" | "logo", count: number, text: UploadTexts): string {
+  if (status.stage === "sending") return what === "logo" ? text.sendingLogo : count === 1 ? text.sendingPhoto : text.sendingPhotos;
   if (status.stage === "processing") {
-    return status.total > 1 ? `Preparing your photos: ${status.done} of ${status.total} ready` : `Preparing your ${noun}`;
+    if (status.total > 1) return fill(text.preparingPhotos, { done: status.done, total: status.total });
+    return what === "logo" ? text.preparingLogo : text.preparingPhoto;
   }
-  return "Saving";
+  return text.saving;
 }
 
 const toMessages = (message: unknown): string[] => (Array.isArray(message) ? message.map(String) : message ? [String(message)] : []);

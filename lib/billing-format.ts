@@ -28,13 +28,27 @@ export function formatMoney(cents: number, currency: string): string {
   }).format(cents / 100);
 }
 
-/** "October 30, 2026". */
-export const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+// Serbian writes a date's month in the genitive ("14. novembra 2026."), the browser's long format has the plain name ("novembar").
+const SERBIAN_GENITIVE: Record<string, string> = {
+  januar: "januara", februar: "februara", mart: "marta", april: "aprila", maj: "maja", jun: "juna",
+  jul: "jula", avgust: "avgusta", septembar: "septembra", oktobar: "oktobra", novembar: "novembra", decembar: "decembra",
+};
+
+/** "October 30, 2026" (`locale` is a language tag, "en-US" when not given). */
+export const formatDate = (iso: string, locale = "en-US") => {
+  const text = new Date(iso).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" });
+  return locale.startsWith("sr") ? text.replace(/[a-zčćšžđ]+/i, (month) => SERBIAN_GENITIVE[month.toLowerCase()] ?? month) : text;
+};
 
 /** How much the yearly plan saves compared with twelve months of the monthly plan, in cents (0 when it saves nothing). */
 export function yearlySavingCents(plans: Plan[]): number {
   const monthly = plans.find((p) => p.id === "monthly");
   const yearly = plans.find((p) => p.id === "yearly");
   return monthly && yearly ? Math.max(0, monthly.amount_cents * 12 - yearly.amount_cents) : 0;
+}
+
+/** A plan's name in the language of the page, from the plan's id or the API's name ("monthly" / "Monthly"): a plan the page has no word for keeps the API's name. */
+export function planWord(words: { monthly: string; yearly: string }, key: string, fallback = key): string {
+  const lower = key.toLowerCase();
+  return lower === "monthly" ? words.monthly : lower === "yearly" ? words.yearly : fallback;
 }

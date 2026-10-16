@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/:slug([a-z0-9][a-z0-9-]{1,48}[a-z0-9])/:path*", headers: [{ key: "Cache-Tag", value: "business-:slug" }] },
+      // The same label on the business's pages in another language (sqrtx.co/sr/<address>, see lib/i18n.ts), so one purge drops every language's copy.
+      { source: "/sr/:slug([a-z0-9][a-z0-9-]{1,48}[a-z0-9])/:path*", headers: [{ key: "Cache-Tag", value: "business-:slug" }] },
       // The landing page's pictures (public/landing/): the version is in each file's name (-1), so a changed picture gets a new name and these can be kept for a year.
       { source: "/landing/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
     ];

@@ -1,4 +1,6 @@
 import { ApiError, apiFetch, jsonBody } from "@/lib/api";
+import { isCurrencyCode } from "@/lib/currencies";
+import { DEFAULT_CURRENCY } from "@/lib/price";
 import type { PlaceDetails } from "@/lib/places";
 import { apiUpload, type UploadStatus } from "@/lib/upload";
 import { emailOk } from "@/lib/validation";
@@ -51,6 +53,7 @@ export interface BusinessProfile {
   state_province: string | null;
   postal_code: string | null;
   country_code: string;
+  currency: string; // what the prices of its products and services are in (ISO 4217, e.g. "USD")
   coordinates: { type: "Point"; coordinates: [number, number] }; // [longitude, latitude]
   contact_email: string;
   phone: string | null;
@@ -70,6 +73,7 @@ export interface ProfileValues {
   category: string;
   addressText: string; // what is in the address box
   place: PlaceDetails | null; // set only when the user picked a suggestion
+  currency: string; // the currency code of the prices ("" until an address is picked, which suggests it)
   contactEmail: string;
   phone: string;
   hours: string;
@@ -88,6 +92,7 @@ export const emptyValues: ProfileValues = {
   category: "",
   addressText: "",
   place: null,
+  currency: "",
   contactEmail: "",
   phone: "",
   hours: "",
@@ -117,6 +122,7 @@ export function valuesFromProfile(p: BusinessProfile): ProfileValues {
       state: p.state_province,
       postalCode: p.postal_code,
     },
+    currency: p.currency ?? DEFAULT_CURRENCY, // a profile read from an API that has no currency yet: USD
     contactEmail: p.contact_email,
     phone: p.phone ?? "",
     hours: p.hours ?? "",
@@ -145,6 +151,7 @@ export type FieldName =
   | "companyName"
   | "category"
   | "place"
+  | "currency"
   | "contactEmail"
   | "phone"
   | "facebook"
@@ -157,6 +164,17 @@ export type FieldName =
 // Lowercase letters, digits and dashes, 3 to 50 characters, not starting or ending with a dash.
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/;
 export const cleanSlug = (typed: string) => typed.toLowerCase().replace(/[^a-z0-9-]/g, "");
+// A page address suggested from the business name: "Oak & Studio" gives "oak-studio", "Šišanje Đorđe" gives "sisanje-djordje".
+// Accents are dropped, anything else that isn't a letter or digit becomes one dash, and it is cut to the longest allowed address.
+export const slugFromName = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/đ/g, "dj")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .slice(0, 50)
+    .replace(/^-+|-+$/g, "");
 export const slugOk = (slug: string) => SLUG_PATTERN.test(slug) && !RESERVED_SLUGS.includes(slug);
 
 // A link may be typed without "https://" (as in the design's examples), so it is added when missing.
@@ -164,14 +182,18 @@ export const normalizeUrl = (typed: string) => {
   const url = typed.trim();
   return url === "" || /^https?:\/\//i.test(url) ? url : `https://${url}`;
 };
-const urlOk = (typed: string) => {
+const urlOk = (typed: string, domains?: string[]) => {
   try {
     const { hostname } = new URL(normalizeUrl(typed));
-    return hostname.includes(".");
+    // With `domains`, only those sites (and their subdomains, like m.facebook.com) count.
+    return hostname.includes(".") && (!domains || domains.some((d) => hostname === d || hostname.endsWith(`.${d}`)));
   } catch {
     return false;
   }
 };
+// The social links must lead to the site they are named after (shorter addresses included).
+const FACEBOOK_DOMAINS = ["facebook.com", "fb.com", "fb.me"];
+const INSTAGRAM_DOMAINS = ["instagram.com", "instagr.am"];
 
 // Optional. If given: starts with "+" (country code) and has 7 to 15 digits.
 export const phoneOk = (phone: string) => {
@@ -189,31 +211,30 @@ export const MAX_LOGO_BYTES = 10 * 1024 * 1024;
 // as the owner made them. Measured 2026-10-01: a heavier one (a phone photo, a huge export) shrunk to 2400 px as a WebP gives the same
 // final logo as the original, within 0.1 dB for photos and opaque logos.
 export const LOGO_KEEP_AS_IS_BYTES = 3 * 1024 * 1024;
-export const logoTypeProblem = (file: File): string | null => {
+// Why a logo can't be used. The words for each are in the dictionaries (common.logo), so this file has no text of its own.
+export type LogoProblem = { code: "type" } | { code: "tooBig" } | { code: "tooSmall"; width: number; height: number };
+export const logoTypeProblem = (file: File): LogoProblem | null => {
   const typeOk = /^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
-  return typeOk ? null : "Use a JPEG, PNG, WebP or HEIC photo.";
+  return typeOk ? null : { code: "type" };
 };
-export const logoProblem = (file: File, shrinking = false): string | null => {
+export const logoProblem = (file: File, shrinking = false): LogoProblem | null => {
   const wrongType = logoTypeProblem(file);
   if (wrongType) return wrongType;
-  if (!shrinking && file.size > MAX_LOGO_BYTES) return "The photo is larger than 10 MB.";
+  if (!shrinking && file.size > MAX_LOGO_BYTES) return { code: "tooBig" };
   return null;
 };
 
 // The logo is shown at most 100 x 58 (see LOGO_ROW_* in lib/logo.ts; it was 110 x 68 before 2026-10-03), fitted inside without cropping or
 // enlarging. Sharp (retina) screens need twice the pixels, and a picture fitted into that box is limited by its width or its height,
-// whichever runs out first. The API still asks for 220 px wide OR 136 px tall (it stores the logo at 220 x 136, see API.md), which is more than
-// 2x of 100 x 58, so these two numbers are the API's and were not lowered.
-export const MIN_LOGO_WIDTH = 220;
-export const MIN_LOGO_HEIGHT = 136;
-// TODO: placeholder text, there is no design for it.
-export const logoSizeProblem = (size: ProfileValues["logoSize"]): string | null =>
-  size && size.width < MIN_LOGO_WIDTH && size.height < MIN_LOGO_HEIGHT
-    ? `This logo is too small (${size.width} x ${size.height} px). Use one at least ${MIN_LOGO_WIDTH} px wide or ${MIN_LOGO_HEIGHT} px tall.`
-    : null;
+// whichever runs out first. The API asks for 390 px wide OR 204 px tall (2026-10-15: it stores the logo at 390 x 204, see API.md), which is 3x of the
+// largest box (130 x 68 in a phone's top bar), so it is sharp on a 3x phone. These two numbers are the API's: change them together.
+export const MIN_LOGO_WIDTH = 390;
+export const MIN_LOGO_HEIGHT = 204;
+export const logoSizeProblem = (size: ProfileValues["logoSize"]): LogoProblem | null =>
+  size && size.width < MIN_LOGO_WIDTH && size.height < MIN_LOGO_HEIGHT ? { code: "tooSmall", width: size.width, height: size.height } : null;
 
 /** Why the newly chosen logo can't be used, or null. An unknown size passes: the browser can't read every format (HEIC). */
-export const logoProblemOf = (v: Pick<ProfileValues, "logo" | "logoSize">, shrinking = false): string | null =>
+export const logoProblemOf = (v: Pick<ProfileValues, "logo" | "logoSize">, shrinking = false): LogoProblem | null =>
   v.logo ? (logoProblem(v.logo, shrinking) ?? logoSizeProblem(v.logoSize)) : null;
 
 /** The picture's size in pixels, or null when the browser can't decode it. */
@@ -259,10 +280,11 @@ export function invalidFields(
   if (v.companyName.trim() === "" || v.companyName.length > COMPANY_NAME_MAX_LENGTH) bad.push("companyName");
   if (!categories.some((c) => c.id === v.category)) bad.push("category");
   if (!v.place) bad.push("place");
+  if (!isCurrencyCode(v.currency)) bad.push("currency");
   if (!emailOk(v.contactEmail)) bad.push("contactEmail");
   if (!phoneOk(v.phone)) bad.push("phone");
-  if (v.facebook.trim() !== "" && !urlOk(v.facebook)) bad.push("facebook");
-  if (v.instagram.trim() !== "" && !urlOk(v.instagram)) bad.push("instagram");
+  if (v.facebook.trim() !== "" && !urlOk(v.facebook, FACEBOOK_DOMAINS)) bad.push("facebook");
+  if (v.instagram.trim() !== "" && !urlOk(v.instagram, INSTAGRAM_DOMAINS)) bad.push("instagram");
   if (aboutRequired && v.about.trim() === "") bad.push("about");
   if (!slugOk(v.slug)) bad.push("slug");
   if (!providesOf(v)) bad.push("provides");
@@ -296,6 +318,7 @@ function textFields(v: ProfileValues) {
     formatted_address: place.formattedAddress,
     city: place.city,
     country_code: place.countryCode,
+    currency: v.currency,
     contact_email: v.contactEmail.trim(),
     company_url: companyUrl(v.slug),
     provides: providesOf(v)!,

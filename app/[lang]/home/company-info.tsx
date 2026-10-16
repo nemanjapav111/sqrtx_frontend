@@ -1,0 +1,64 @@
+import { BusinessLink } from "@/app/[lang]/components/business-link";
+import PlaceholderPicture from "@/app/[lang]/components/placeholder-picture";
+import { LOGO_ROW_FIT_CLASS, LOGO_ROW_MAX_HEIGHT, LOGO_ROW_MAX_WIDTH, logoDisplaySize } from "@/lib/logo";
+
+// Whose it is, in the marketplace: the business's logo exactly as it is on its own page (business-header.tsx): fitted inside 100 x 58, never
+// cropped or enlarged, no frame, at the left edge of the content, and 13px from it, centered against it,
+// the business's name (semibold 16) and under it its kind of business and its city on one line (13, grey). The whole block is ONE link to the
+// business's own page. Used on the Companies page (`card`: it also has a chevron at its end, which is
+// what says "tap to open it", at the right edge of the row; this replaced the design's separate "Visit >" text link under the block, which looked like a stray word). (Since 2026-10-11 a product's or service's page and the Services list
+// use the slim line of components/company-line.tsx instead.) The parts the page has no value for are left out (a logo is required at registration, so there is always one).
+export interface CompanyLogo {
+  avif: string;
+  webp: string;
+  width: number | null;
+  height: number | null;
+  placeholder: string | null;
+}
+
+export default function CompanyInfo({
+  slug,
+  name,
+  typeName,
+  city,
+  logo,
+  card = false,
+  className = "",
+}: {
+  slug: string; // the business's address (sqrtx.co/<slug>)
+  name: string;
+  typeName: string | null;
+  city: string | null;
+  logo: CompanyLogo | null;
+  card?: boolean; // add the chevron at the end and let the block take all the room it is given (the chevron is at the row's right edge, under which the description is as wide)
+  className?: string;
+}) {
+  const size = logo ? logoDisplaySize(logo.width, logo.height, LOGO_ROW_MAX_WIDTH, LOGO_ROW_MAX_HEIGHT) : null;
+  const place = [typeName, city].filter(Boolean).join(" · ");
+  return (
+    <BusinessLink
+      slug={slug}
+      named={name}
+      className={`flex items-center gap-3.25 ${card ? "w-full" : "w-fit max-w-full"} ${className}`}
+    >
+      <span className="flex h-17 shrink-0 items-center justify-start">
+        {logo && size && <PlaceholderPicture avif={logo.avif} webp={logo.webp} alt="" placeholder={logo.placeholder} className="shrink-0" style={size} />}
+        {logo && !size && (
+          <picture className="contents">
+            <source srcSet={logo.avif} type="image/avif" />
+            <img src={logo.webp} alt="" className={LOGO_ROW_FIT_CLASS} />
+          </picture>
+        )}
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.75">
+        <span className="line-clamp-2 text-[16px] leading-5 font-semibold text-black wrap-break-word">{name}</span>
+        {place && <span className="line-clamp-2 text-[13px] leading-4.5 text-[#636363] wrap-break-word">{place}</span>}
+      </span>
+      {card && (
+        <svg aria-hidden viewBox="0 0 10 16" className="h-4 w-2.5 shrink-0 text-black/50" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M1.5 1.5L8 8l-6.5 6.5" />
+        </svg>
+      )}
+    </BusinessLink>
+  );
+}

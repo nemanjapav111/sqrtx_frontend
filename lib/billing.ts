@@ -2,7 +2,7 @@ import { apiFetch, jsonBody } from "@/lib/api";
 import type { BillingPlans, PlanId } from "@/lib/billing-format";
 
 // The plans and the money/date helpers live in lib/billing-format.ts (also used by server pages); re-exported so imports from here keep working.
-export { formatDate, formatMoney, yearlySavingCents } from "@/lib/billing-format";
+export { formatDate, formatMoney, planWord, yearlySavingCents } from "@/lib/billing-format";
 export type { BillingPlans, Plan, PlanId } from "@/lib/billing-format";
 
 // The free trial and subscription. The API's rules are in API.md in the backend ("Billing").

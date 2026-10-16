@@ -25,7 +25,7 @@ export type ProductImage = ZonePhoto;
 // Everything the user types or picks in the product form.
 export interface ProductValues {
   name: string;
-  price: string; // as typed; empty means "Inquiry"
+  price: string; // as typed; empty means "Price on request"
   category: string;
   description: string;
   images: ProductImage[]; // in the order shown: the first one is the main photo
@@ -141,7 +141,7 @@ export async function saveProductEdits(original: MyProduct, v: ProductValues, on
   if (v.description.trim() !== original.description) changes.description = v.description.trim();
   const price = v.price.trim() === "" ? null : Number(v.price.trim().replace(",", "."));
   const oldPrice = original.price === null || original.price === "" ? null : Number(original.price);
-  if (price !== oldPrice) changes.price = price; // null clears it: "Inquiry"
+  if (price !== oldPrice) changes.price = price; // null clears it: "Price on request"
   if (Object.keys(changes).length > 0) await apiFetch(`/product/${original.id}`, jsonBody("PATCH", changes));
 
   const keptIds = new Set(v.images.filter(isSaved).map((image) => image.id));

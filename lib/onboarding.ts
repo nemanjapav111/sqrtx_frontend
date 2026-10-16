@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase";
 import { refreshPublicPage } from "@/lib/refresh-public-page";
 import { getBootstrap, type Bootstrap } from "@/lib/bootstrap";
 import { slugFromUrl } from "@/lib/business-profile";
+import { addressInLanguage } from "@/lib/i18n";
+import { readLanguageCookie } from "@/lib/language-cookie";
 
 // What GET /onboarding/me returns (see API.md in the backend).
 export type OnboardingStep = "business_profile" | "products" | "services" | "final" | "done";
@@ -70,7 +72,10 @@ export function homePathFor({ onboarding, company_url, billing }: Bootstrap): st
 
 /** Asks the API where the signed-in user belongs (see homePathFor): one request. Throws if it can't be asked. */
 export async function getHomePath(): Promise<string> {
-  return homePathFor(await getBootstrap());
+  const path = homePathFor(await getBootstrap());
+  // The owner's own page is a business's page, whose address carries the language (/sr/vega): they land on the copy in the language they chose.
+  const lang = readLanguageCookie();
+  return lang ? addressInLanguage(path, lang) : path;
 }
 
 /**

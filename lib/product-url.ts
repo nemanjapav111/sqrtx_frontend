@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, businessBase, type Locale } from "@/lib/i18n";
 // The address of a product's own page: sqrtx.co/<business>/product/<name>-<id>, for example
 // sqrtx.co/vega/product/mercedes-benz-bac12b52-362c-42a1-aa0e-2b726ac180c1.
 // The id (a UUID, always the last 36 characters) is what finds the product; the name in front of it is only for people and search
@@ -38,8 +39,8 @@ export function productSegment(name: string, id: string): string {
 }
 
 /** The whole address of a product's page, from its business's address. */
-export const productPath = (businessSlug: string, product: { id: string; product_name: string }) =>
-  `/${businessSlug}/product/${productSegment(product.product_name, product.id)}`;
+export const productPath = (businessSlug: string, product: { id: string; product_name: string }, lang: Locale = DEFAULT_LOCALE) =>
+  `${businessBase(businessSlug, lang)}/product/${productSegment(product.product_name, product.id)}`;
 
 /** A product's page in the sqrtx marketplace (app/(sqrtx)/product/[id]): the address has no business in it, the id at the end finds the product. */
 export const marketProductPath = (product: { id: string; product_name: string }) => `/product/${productSegment(product.product_name, product.id)}`;
@@ -60,8 +61,8 @@ export function slugOfCompanyUrl(url: string): string | null {
 export const serviceSegment = (name: string, id: string): string => productSegment(name, id);
 
 /** The whole address of a service's page, from its business's address. */
-export const servicePath = (businessSlug: string, service: { id: string; service_name: string }) =>
-  `/${businessSlug}/service/${serviceSegment(service.service_name, service.id)}`;
+export const servicePath = (businessSlug: string, service: { id: string; service_name: string }, lang: Locale = DEFAULT_LOCALE) =>
+  `${businessBase(businessSlug, lang)}/service/${serviceSegment(service.service_name, service.id)}`;
 
 /** The product's id from the last part of an address ("<name>-<id>" or the bare id), or null if there is none. */
 export function idFromSegment(segment: string): string | null {

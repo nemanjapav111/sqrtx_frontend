@@ -33,10 +33,12 @@ export const isSaved = (photo: ZonePhoto): photo is SavedPhoto => "url" in photo
 
 // Why one chosen photo can't be used at all, or null. HEIC files often have no type, so the name is checked too.
 // The 10 MB limit is NOT checked here: a big photo is shrunk first (see shrinkPhoto) and the result is checked.
-export function imageProblem(file: File): string | null {
+// Why a picked photo can't be used (the words are in the dictionaries, common.photos).
+export type ImageProblem = { code: "notPhoto" | "over100"; name: string };
+export function imageProblem(file: File): ImageProblem | null {
   const typeOk = /^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
-  if (!typeOk) return `"${file.name}" isn't a JPEG, PNG, WebP or HEIC photo.`;
-  if (file.size > MAX_PICKED_BYTES) return `"${file.name}" is larger than 100 MB.`;
+  if (!typeOk) return { code: "notPhoto", name: file.name };
+  if (file.size > MAX_PICKED_BYTES) return { code: "over100", name: file.name };
   return null;
 }
 

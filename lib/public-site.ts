@@ -30,6 +30,7 @@ export interface PublicBusiness {
   state_province: string | null;
   postal_code: string | null;
   country_code: string; // two letters, e.g. "US"
+  currency: string; // what the prices of its products and services are in (ISO 4217, e.g. "USD")
   coordinates: { type: "Point"; coordinates: [number, number] } | null;
   facebook_link: string | null;
   instagram_link: string | null;

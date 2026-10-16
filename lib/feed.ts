@@ -25,6 +25,7 @@ export interface FeedItem {
   id: string;
   product_name: string;
   price: number | string | null; // a Postgres numeric: reads may come back as a string
+  currency: string; // what the price is in (the business's currency, ISO 4217)
   slug: string; // the business's address (sqrtx.co/<slug>)
   company_name: string;
   image: { card: { avif: string; webp: string }; card3x?: { avif: string }; placeholder: string | null } | null;
@@ -53,6 +54,7 @@ export interface FeedServiceItem {
   id: string;
   service_name: string;
   price: number | string | null;
+  currency: string; // what the price is in (the business's currency, ISO 4217)
   price_type: ServicePriceType; // what the price means: exact, from, per hour, per visit
   description: string;
   description_cut: boolean;
@@ -192,14 +194,8 @@ export async function fetchFeedCompaniesPage(
   return (await response.json()) as FeedCompaniesPage;
 }
 
-/** The country's name from its two-letter code ("US" -> "United States"); the code itself if the browser's list doesn't know it. */
-export function countryName(code: string): string {
-  try {
-    return new Intl.DisplayNames(["en"], { type: "region" }).of(code.toUpperCase()) ?? code;
-  } catch {
-    return code;
-  }
-}
+// The country's name from its code: lib/i18n.ts (the same function serves the business pages).
+export { countryName } from "@/lib/i18n";
 
 /** What the cookie says: a country's code, "" for all countries, or null when the visitor has not chosen. */
 export function countryFromCookie(value: string | undefined): string | null {
