@@ -208,9 +208,9 @@ export const en = {
     },
     about: {
       metaTitle: "About – sqrtx",
-      metaDescription: "What sqrtx is.",
+      metaDescription: "sqrtx is where genuine businesses get found. Search by words or by photo.",
       heading: "About sqrtx",
-      body: "sqrtx is a place where businesses show what they offer and where people find them. Every business gets its own page at sqrtx.co/<its name>, with its products and services, its contact details and a way to write to it.\n\nHere you can look through the newest products and services of all of them, filter by kind of business and by country, and visit a business's own page.\n\nWho is behind it? A small team that wants good local businesses to be easy to find. Write to a business from its Contact page, or tell us what would make sqrtx more useful to you.",
+      body: "sqrtx is where genuine businesses get found. Businesses build a page for their products and services. Visitors search by words or by photo and find exactly what they need.\n\nWe built sqrtx on modern technology, so it is fast, secure and simple for everyone who uses it.\n\nOur mission is to support honest work and genuine businesses.\n\nQuestions? Write to us at support@sqrtx.co.",
       ownerTitle: "Do you run a business?",
     },
   },
