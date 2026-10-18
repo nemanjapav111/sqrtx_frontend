@@ -9,11 +9,15 @@ export default function LegalDocument({
   title,
   version,
   other,
+  updated = LEGAL.updated,
+  draft = true,
   children,
 }: {
   title: string;
   version: string;
   other: { href: string; label: string } | { href: string; label: string }[]; // the other documents
+  updated?: string; // the date of this document's text (LEGAL.updated unless it has its own)
+  draft?: boolean; // show the "draft" notice (true until the document is final)
   children: React.ReactNode;
 }) {
   const others = Array.isArray(other) ? other : [other];
@@ -24,12 +28,14 @@ export default function LegalDocument({
         <article className="w-full max-w-135 px-5 pt-9.5 md:pt-6">
           <h1 className="text-[20px] font-semibold">{title}</h1>
           <p className="pt-1 text-[14px] text-[#4b5563]">
-            Version {version} · Last updated {LEGAL.updated}
+            Version {version} · Last updated {updated}
           </p>
           {/* TODO: remove this notice when a lawyer has reviewed the text and the [brackets] are filled in. */}
-          <p role="note" className="mt-5 border border-black p-3 text-[14px] font-semibold">
-            Draft. This text has not been reviewed by a lawyer yet, and the parts in [square brackets] are still to be filled in.
-          </p>
+          {draft && (
+            <p role="note" className="mt-5 border border-black p-3 text-[14px] font-semibold">
+              Draft. This text has not been reviewed by a lawyer yet, and the parts in [square brackets] are still to be filled in.
+            </p>
+          )}
           <div className="flex flex-col gap-6 pt-6 pb-10 text-[14px] leading-6">{children}</div>
           <div className="flex flex-wrap gap-x-5">
             {others.map((link) => (

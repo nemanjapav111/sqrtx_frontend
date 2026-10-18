@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { lang as pageLang } from "next/root-params";
 import BigLogo from "@/app/[lang]/components/big-logo";
-import { formatMoney, planWord, yearlySavingCents } from "@/lib/billing-format";
 import { asLocale, fill } from "@/lib/i18n";
 import { LEGAL, LEGAL_LINKS } from "@/lib/legal";
 import { getPublicPlans } from "@/lib/public-site";
 import { getDictionary } from "../dictionaries";
+import PricingPlans from "./pricing-plans";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/pricing">): Promise<Metadata> {
   const { pricing } = await getDictionary(asLocale((await params).lang));
@@ -23,12 +24,13 @@ const LEGAL_KEY = { "/pricing": "pricing", "/terms": "terms", "/privacy": "priva
 const INCLUDED = ["page", "items", "marketplace", "contact"] as const;
 
 export default async function Pricing() {
-  const { trial_days, plans } = await getPublicPlans();
+  const { trial_days } = await getPublicPlans();
   const dictionary = await getDictionary(asLocale(await pageLang()));
   const { pricing: text, legal } = dictionary;
   const billing = dictionary.account.billing;
-  const saving = yearlySavingCents(plans);
-  const currency = plans[0]?.currency ?? "USD";
+  // The visitor's country, when the host sends it (Vercel does). Left out otherwise: Paddle then finds it from the visitor's IP address.
+  const header = (await headers()).get("x-vercel-ip-country");
+  const country = header && /^[A-Z]{2}$/.test(header) ? header : undefined;
 
   return (
     <main className="flex flex-1 flex-col items-center bg-white pt-17.5 pb-12.5 leading-[normal] text-black md:pb-8">
@@ -40,22 +42,7 @@ export default async function Pricing() {
             <strong>{fill(text.freeLead, { days: trial_days })}</strong> {text.freeRest}
           </p>
 
-          <div className="flex flex-col gap-4 pt-6">
-            {plans.map((plan) => (
-              <div key={plan.id} className="flex flex-col gap-1 border border-black p-4">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h2 className="text-[16px] font-semibold">{planWord(billing.planNames, plan.id, plan.name)}</h2>
-                  <p className="text-[16px] font-semibold">
-                    {formatMoney(plan.amount_cents, plan.currency)}
-                    <span className="text-[14px] font-normal text-[#4b5563]"> / {billing[plan.interval]}</span>
-                  </p>
-                </div>
-                {plan.id === "yearly" && saving > 0 && (
-                  <p className="text-[14px] text-[#4b5563]">{fill(billing.save, { amount: formatMoney(saving, currency) })}</p>
-                )}
-              </div>
-            ))}
-          </div>
+          <PricingPlans text={billing} country={country} />
 
           <Link
             href="/register"

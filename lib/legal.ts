@@ -13,8 +13,8 @@ export const PRIVACY_VERSION = "1";
 // 1 and 12, Privacy section 1). When a company is set up: change `operator` to the company's name, remove the "run by
 // an individual" sentences, raise both versions, and tell users (Terms section 12 lets the agreement move to the company).
 export const LEGAL = {
-  operator: "[Your full legal name]", // the person (later the company) behind sqrtx: the "we" of both documents
-  address: "[Postal address]", // shown publicly. For a person this is a home address unless a business address or PO box is used
+  operator: "Nemanja Pavlović", // the person (later the company) behind sqrtx: the "we" of both documents
+  address: "14000 Valjevo, Serbia", // shown publicly. For a person this is a home address unless a business address or PO box is used
   email: "support@sqrtx.co", // one monitored address for everything (legal, privacy, refunds, support); the sqrtx.co mailbox must exist (receive + send-as) before launch
   updated: "[Date this version was published]",
   // Takes the payments and is the seller of record (Paddle's "Merchant of Record"): it is the one that charges the card, collects the

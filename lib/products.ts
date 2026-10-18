@@ -85,6 +85,7 @@ export interface MyProductImage {
 // The owner's own product with its images. Unlike the public list this includes products the public can't see (the
 // business no longer offers products, the trial is over), so the owner can always reach them.
 export interface MyProduct extends Product {
+  is_active?: boolean; // false: the owner has hidden it from the public
   images: MyProductImage[];
 }
 
@@ -108,6 +109,10 @@ export function getMyProductsPage({ q, category, page }: { q: string; category: 
 
 /** One of the owner's products with all its photos, whatever the public can see. A 404 ApiError if it isn't theirs. */
 export const getMyProduct = (id: string) => apiFetch<MyProduct>(`/product/mine/${encodeURIComponent(id)}`);
+
+/** Hides the product from the public site and its search (false) or shows it again (true). */
+export const setProductActive = (id: string, isActive: boolean) =>
+  apiFetch<unknown>(`/product/${encodeURIComponent(id)}`, jsonBody("PATCH", { is_active: isActive }));
 
 /** Deletes the product; the API also deletes its photos' files. */
 export const deleteProduct = (id: string) => apiFetch<unknown>(`/product/${id}`, { method: "DELETE" });

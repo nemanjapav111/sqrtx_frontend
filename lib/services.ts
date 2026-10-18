@@ -109,6 +109,7 @@ export interface MyServiceImage {
 // The owner's own service with its images. Unlike the public list this includes services the public can't see (the
 // business no longer offers services, the trial is over), so the owner can always reach them.
 export interface MyService extends Service {
+  is_active?: boolean; // false: the owner has hidden it from the public
   images: MyServiceImage[];
 }
 
@@ -134,6 +135,10 @@ export function getMyServicesPage({ q, category, page }: { q: string; category: 
 export const getMyService = (id: string) => apiFetch<MyService>(`/service/mine/${encodeURIComponent(id)}`);
 
 /** Deletes the service; the API also deletes its photos' files. */
+/** Hides the service from the public site and its search (false) or shows it again (true). */
+export const setServiceActive = (id: string, isActive: boolean) =>
+  apiFetch<unknown>(`/service/${encodeURIComponent(id)}`, jsonBody("PATCH", { is_active: isActive }));
+
 export const deleteService = (id: string) => apiFetch<unknown>(`/service/${id}`, { method: "DELETE" });
 
 const byOrder = (a: MyServiceImage, b: MyServiceImage) => a.sort_order - b.sort_order;

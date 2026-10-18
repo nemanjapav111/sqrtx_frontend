@@ -11,7 +11,7 @@ export const metadata = { title: "Terms and Conditions – sqrtx" };
 // CURRENT_TERMS_VERSION in the backend together. Keep section 6 true once billing exists.
 export default function Terms() {
   return (
-    <LegalDocument title="Terms and Conditions" version={TERMS_VERSION} other={LEGAL_LINKS.filter((link) => link.href !== "/terms")}>
+    <LegalDocument title="Terms and Conditions" version={TERMS_VERSION} updated="October 16, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/terms")}>
       <LegalSection title="1. About these terms">
         <p>
           These terms are an agreement between you and {LEGAL.operator}, an individual operating the sqrtx service (“sqrtx”,
@@ -19,8 +19,8 @@ export default function Terms() {
           their products and services.
         </p>
         <p>
-          sqrtx is currently run by an individual and not by a registered company. Before paid plans begin, the operator and
-          the other details in these terms will be updated as required (see section 12).
+          sqrtx is currently run by an individual and not by a registered company. If a company takes over running sqrtx, we will
+          tell you and update these terms (see section 12).
         </p>
         <p>
           By ticking the box when you finish registration, or by using sqrtx, you accept these terms and our Privacy Policy.
@@ -93,6 +93,11 @@ export default function Terms() {
           You do not need to give us a card, and you will not be charged during the trial.
         </p>
         <p>
+          <strong>Subscribing during the trial.</strong> If you subscribe while the trial is still running, you keep the days
+          you have left: you enter your card when you subscribe, but your first payment is taken only when the free trial
+          would have ended.
+        </p>
+        <p>
           <strong>Paid plans.</strong> To keep your business page public after the trial, you need a paid plan. The plans are
           $11.10 per month or $111 per year, per account, in US dollars (see <Link href="/pricing" className="underline">Pricing</Link>).
           Taxes such as VAT or sales tax may be added at checkout, depending on where you are. You can choose a plan before the
@@ -100,9 +105,16 @@ export default function Terms() {
         </p>
         <p>
           <strong>Renewal and cancelling.</strong> A paid plan renews automatically at the end of each month or year, at the
-          price shown when you subscribed, until you cancel. You can cancel at any time under “Manage subscription” in your
-          account. Your business page stays public until the end of the period you have paid for, and you will not be charged
-          again.
+          price shown when you subscribed, until you cancel. You can cancel at any time with “Cancel subscription” on your
+          account page. Your business page stays public until the end of the period you have paid for, and you will not be charged
+          again. Until that period ends you can change your mind and resume the subscription from the same page. You can also
+          update the card you pay with there.
+        </p>
+        <p>
+          <strong>Changing plan.</strong> You can switch from the monthly plan to the yearly plan at any time. You then pay the
+          difference for the time you have already paid for, and the yearly period starts from the switch. We do not switch a
+          yearly plan to the monthly plan in the middle of a year: you can cancel it, keep your page until the end of the year
+          you paid for, and choose the monthly plan after that.
         </p>
         <p>
           <strong>Refunds.</strong> You can ask for a refund within 14 days of a payment. The details are in our{" "}
@@ -115,7 +127,8 @@ export default function Terms() {
         <p>
           <strong>When the trial ends.</strong> If you do not have a paid plan when the trial ends, your business page,
           products and services are hidden from the public. They are not deleted, and they become public again when you
-          subscribe.
+          subscribe. While they are hidden you can still see them in your account, but you cannot add, change or delete
+          your business page, products or services until you subscribe again.
         </p>
         <p>
           <strong>How you pay.</strong> Our order process is conducted by our online reseller {LEGAL.paymentProvider}.{" "}
@@ -143,9 +156,8 @@ export default function Terms() {
           may change or be removed.
         </p>
         <p>
-          <strong>sqrtx is currently a test version.</strong> While it is being tested, accounts, content and other data may
-          be changed, reset or deleted, features may change or stop working, and we cannot promise that nothing will be lost.
-          Please keep your own copy of anything important.
+          We cannot promise that nothing will ever be lost, so please keep your own copy of anything important, such as your
+          photos and descriptions.
         </p>
       </LegalSection>
 
@@ -156,7 +168,7 @@ export default function Terms() {
         </p>
         <p>
           Our total responsibility to you for anything connected with sqrtx is limited to the amount you paid us for sqrtx in
-          the 12 months before the claim, or to [a small fixed amount, for example 100 euros] if you paid nothing, to the extent
+          the 12 months before the claim, or to 100 euros if you paid nothing, to the extent
           such a limitation is permitted by law.
         </p>
         <p>

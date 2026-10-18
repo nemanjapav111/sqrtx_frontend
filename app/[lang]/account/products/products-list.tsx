@@ -287,7 +287,12 @@ function ProductsListInBrowser({ text }: { text: Dictionary["account"]["products
                       )}
                     </div>
                     <div className="flex min-w-0 flex-col gap-1">
-                      <span className="text-[16px] leading-tight font-semibold wrap-break-word">{product.product_name}</span>
+                      <span className="text-[16px] leading-tight font-semibold wrap-break-word">
+                        {product.product_name}
+                        {product.is_active === false && (
+                          <span className="ml-2 inline-block border border-red-600 px-1.5 align-middle text-[11px] leading-5 font-bold text-red-600 uppercase">{text.hiddenBadge}</span>
+                        )}
+                      </span>
                       <span className="text-[14px] text-[#4b5563]">
                         {product.category} · {formatPrice(product.price, currency, common.price)}
                       </span>

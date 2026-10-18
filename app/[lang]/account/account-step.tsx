@@ -10,15 +10,16 @@ import type { Dictionary } from "@/app/[lang]/dictionaries/en";
 import PendingOverlay from "@/app/[lang]/components/pending-overlay";
 import { getBootstrap } from "@/lib/bootstrap";
 import { getBillingPlans, getBillingStatus, type BillingPlans, type BillingStatus } from "@/lib/billing";
-import { SITE_HOST, slugFromUrl } from "@/lib/business-profile";
+import { getMyProfile, setProfileActive, SITE_HOST, slugFromUrl } from "@/lib/business-profile";
 import { recall, remember } from "@/lib/memory-cache";
-import { pathForStep } from "@/lib/onboarding";
+import { pathForStep, refreshMyPublicPage } from "@/lib/onboarding";
+import VisibilityToggle from "@/app/[lang]/components/visibility-toggle";
 import { supabase } from "@/lib/supabase";
 import { useRequireSession } from "@/lib/use-session";
 import ArrowIcon from "../register/arrow-icon";
 import BillingSection from "./billing-section";
 
-type Ready = { status: "ready"; email: string; billing: BillingStatus; plans: BillingPlans; slug: string; offersProducts: boolean; offersServices: boolean };
+type Ready = { status: "ready"; email: string; billing: BillingStatus; plans: BillingPlans; slug: string; offersProducts: boolean; offersServices: boolean; active: boolean };
 type Load = { status: "loading" } | { status: "error" } | Ready;
 
 // What was on the page last time (see lib/memory-cache.ts): shown at once when the page is opened again, while the API is asked
@@ -71,18 +72,18 @@ export default function AccountStep({ text }: { text: Dictionary["account"] }) {
       try {
         // The bootstrap (registration step, address and billing status in one request) and the plans are asked for at the same
         // time (see products/product-edit-step.tsx); the plans are the same for everyone.
-        const extra = Promise.all([getBillingPlans(), supabase.auth.getSession()]);
+        const extra = Promise.all([getBillingPlans(), supabase.auth.getSession(), getMyProfile()]);
         extra.catch(() => undefined);
         const { onboarding, company_url, billing } = await getBootstrap();
         if (onboarding.step !== "done") {
           if (!cancelled) router.replace(pathForStep(onboarding.step)); // registration is not finished (not if they have left this page meanwhile)
           return;
         }
-        const [plans, auth] = await extra;
+        const [plans, auth, profile] = await extra;
         const slug = company_url ? slugFromUrl(company_url) : "";
         const offersProducts = !!onboarding.provides && onboarding.provides !== "services";
         const offersServices = !!onboarding.provides && onboarding.provides !== "products";
-        const ready: Ready = { status: "ready", email: auth.data.session?.user.email ?? "", billing, plans, slug, offersProducts, offersServices };
+        const ready: Ready = { status: "ready", email: auth.data.session?.user.email ?? "", billing, plans, slug, offersProducts, offersServices, active: profile?.is_active !== false };
         remember(CACHE_KEY, ready);
         if (!cancelled) setLoad(ready);
       } catch {
@@ -155,7 +156,14 @@ export default function AccountStep({ text }: { text: Dictionary["account"] }) {
             </p>
             {/* A row like the ones under "Your business page", so the links of the page all look alike. */}
             <nav aria-label={text.loginNav} className="mt-2 flex flex-col border-b border-[#e5e7eb]">
-              <AccountRow href="/account/settings" label={text.changeLogin} />
+              {load.status === "ready" ? (
+                <AccountRow href="/account/settings" label={text.changeLogin} />
+              ) : (
+                // Same height and line as the row, so nothing moves when it arrives.
+                <div aria-hidden className="flex h-12 items-center border-t border-[#e5e7eb]">
+                  <div className={`h-6 w-full bg-[#e5e7eb] ${loading ? "breathe" : ""}`} />
+                </div>
+              )}
             </nav>
           </section>
 
@@ -164,13 +172,13 @@ export default function AccountStep({ text }: { text: Dictionary["account"] }) {
             {load.status === "ready" ? (
               <>
                 {/* A small square, like the logo: green and pulsing while the page is public (the pulse is dropped for people who ask for less
-                    motion), red and still while it is hidden. */}
+                    motion), yellow and still while it is hidden (by the owner, or because the trial is over). */}
                 <p className="flex items-center gap-2 text-[14px] font-semibold">
                   <span aria-hidden className="relative flex size-2.5">
-                    {load.billing.has_access && <span className="absolute inset-0 animate-ping bg-[#22c55e] opacity-60 motion-reduce:hidden" />}
-                    <span className={`relative size-2.5 ${load.billing.has_access ? "bg-[#22c55e]" : "bg-red-600"}`} />
+                    {load.billing.has_access && load.active && <span className="absolute inset-0 animate-ping bg-[#22c55e] opacity-60 motion-reduce:hidden" />}
+                    <span className={`relative size-2.5 ${load.billing.has_access && load.active ? "bg-[#22c55e]" : "bg-[#eab308]"}`} />
                   </span>
-                  {load.billing.has_access ? text.live : text.hidden}
+                  {load.billing.has_access && load.active ? text.live : text.hidden}
                 </p>
                 {/* "Live" says it all while the page is public; a hidden page gets the explanation. */}
                 {!load.billing.has_access && (
@@ -183,7 +191,7 @@ export default function AccountStep({ text }: { text: Dictionary["account"] }) {
                     like "Change login email" above: for someone whose page is public this is likely the thing they came
                     here to do, so it gets the same weight as "Manage subscription" below, not a line of text next to it. */}
                 {/* The address itself, with a way to copy it: this is where owners come to find the link to share. */}
-                {load.billing.has_access && load.slug && (
+                {load.billing.has_access && load.active && load.slug && (
                   <div className="flex items-center justify-between gap-3">
                     <p className="min-w-0 text-[14px] font-semibold break-all">
                       {SITE_HOST}/{load.slug}
@@ -197,10 +205,29 @@ export default function AccountStep({ text }: { text: Dictionary["account"] }) {
                     </button>
                   </div>
                 )}
-                {load.billing.has_access && load.slug && (
+                {load.billing.has_access && load.active && load.slug && (
                   <BusinessLink slug={load.slug} className="flex h-11 w-full items-center justify-center bg-black text-[14px] font-bold text-white">
                     {text.view}
                   </BusinessLink>
+                )}
+                {/* The owner's own switch: hides the whole page (with its products and services) from the public, or shows it again. Only offered while
+                    the page could be public (a hidden page whose trial is over says why above, and can't be shown by this). */}
+                {load.billing.has_access && (
+                  <VisibilityToggle
+                    bare
+                    text={text.pageVisibility}
+                    active={load.active}
+                    onChange={async (next) => {
+                      await setProfileActive(next);
+                      setLoad((now) => {
+                        if (now.status !== "ready") return now;
+                        const updated = { ...now, active: next };
+                        remember(CACHE_KEY, updated);
+                        return updated;
+                      });
+                      await refreshMyPublicPage();
+                    }}
+                  />
                 )}
                 {/* Where to go next: plain rows, not buttons, so "View my page" above is the only button that stands out. The
                     profile (name, address, contact, logo, ...) is editable whatever the billing state; products and services

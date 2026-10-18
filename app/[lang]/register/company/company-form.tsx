@@ -259,7 +259,8 @@ export default function CompanyForm({
       } catch {
         setError(common.genericError);
       }
-    } else if (err.status === 413) setError(text.logoTooBig);
+    } else if (err.status === 403) setError(common.subscriptionEnded); // the free trial or subscription has ended: editing is closed
+    else if (err.status === 413) setError(text.logoTooBig);
     else if (err.status === 502) setError(text.logoUploadFailed);
     else if (err.status === 400) setError(message || common.genericError); // a rule the form didn't catch (the API's own words)
     else setError(common.genericError);

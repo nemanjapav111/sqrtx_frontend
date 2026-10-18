@@ -9,17 +9,18 @@ export const metadata = { title: "Refund Policy – sqrtx" };
 // the backend together. Keep it true to what the payment provider (LEGAL.paymentProvider) really does with refunds.
 export default function Refunds() {
   return (
-    <LegalDocument title="Refund Policy" version={TERMS_VERSION} other={LEGAL_LINKS.filter((link) => link.href !== "/legal/refunds")}>
+    <LegalDocument title="Refund Policy" version={TERMS_VERSION} updated="October 16, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/legal/refunds")}>
       <LegalSection title="1. Free trial">
         <p>
           Every account starts with a free trial of 30 days, and you do not need to give us a card. You are not charged
-          during the trial, so there is nothing to refund.
+          during the trial, so there is nothing to refund. If you subscribe during the trial, the days you have left are kept
+          and your first payment is taken only when the trial would have ended.
         </p>
       </LegalSection>
 
       <LegalSection title="2. Cancelling">
         <p>
-          You can cancel your subscription at any time under “Manage subscription” in your account. You will not be charged
+          You can cancel your subscription at any time with “Cancel subscription” on your account page. You will not be charged
           again, and your business page stays public until the end of the period you have already paid for. Cancelling does
           not by itself refund the current period.
         </p>
@@ -56,8 +57,8 @@ export default function Refunds() {
 
       <LegalSection title="5. After a refund">
         <p>
-          A refund ends the subscription it was for. If you have no other paid plan, your business page, products and services
-          are hidden from the public, not deleted, and they become public again when you subscribe. See section 6 of the{" "}
+          When we refund a payment, we also end the subscription it was for. If you have no other paid plan, your business page, products and
+          services are hidden from the public, not deleted, and they become public again when you subscribe. See section 6 of the{" "}
           <Link href="/terms" className="underline">
             Terms and Conditions
           </Link>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import BigLogo from "@/app/[lang]/components/big-logo";
 import { useCommonText } from "@/app/[lang]/components/lang-context";
+import VisibilityToggle from "@/app/[lang]/components/visibility-toggle";
 import type { Dictionary } from "@/app/[lang]/dictionaries/en";
 import PendingOverlay from "@/app/[lang]/components/pending-overlay";
 import UploadProgress from "@/app/[lang]/components/upload-progress";
@@ -18,6 +19,7 @@ import {
   emptyService,
   invalidServiceFields,
   saveServiceEdits,
+  setServiceActive,
   valuesFromService,
   type MyService,
   type ServiceField,
@@ -57,11 +59,13 @@ export default function ServiceEditForm({
 }) {
   const router = useRouter();
   const common = useCommonText();
+  const [active, setActive] = useState(service?.is_active !== false); // whether the public can see it (saved at once by the toggle, not with the form)
   const [values, setValues] = useState<ServiceValues>(() => (service ? valuesFromService(service) : emptyService));
   // The saved service was loaded again (after a failed save): show it instead of what was half saved.
   const [shown, setShown] = useState(service);
   if (service !== shown) {
     setShown(service);
+    setActive(service?.is_active !== false);
     setValues(service ? valuesFromService(service) : emptyService);
   }
   const categories = knownCategories; // the page is left after saving, so a new category needn't be added to the list
@@ -80,7 +84,8 @@ export default function ServiceEditForm({
 
   function showError(err: unknown) {
     if (!(err instanceof ApiError)) return setError(common.genericError); // no connection, or the site can't reach the API
-    if (err.status === 413) setError(text.photoTooBig);
+    if (err.status === 403) setError(common.subscriptionEnded); // the free trial or subscription has ended: editing is closed
+    else if (err.status === 413) setError(text.photoTooBig);
     else if (err.status === 502) setError(text.photosUploadFailed);
     else if (err.status === 400) setError(err.messages.join(". ") || common.genericError); // a rule the form didn't catch
     else if (err.status === 404) setError(text.noLonger);
@@ -113,7 +118,7 @@ export default function ServiceEditForm({
       return;
     } catch (err) {
       showError(err);
-      if (service) {
+      if (service && !(err instanceof ApiError && err.status === 403)) { // a 403 means nothing was changed (editing is closed): no "some changes may be saved"
         setError((message) => `${message ?? common.genericError} ${text.partial}`);
         onOutOfSync();
       }
@@ -189,6 +194,19 @@ export default function ServiceEditForm({
               </p>
             )}
           </div>
+
+          {service && (
+            <VisibilityToggle
+              text={text.visibility}
+              active={active}
+              onChange={async (next) => {
+                await setServiceActive(service.id, next);
+                setActive(next);
+                forgetOwnerServices();
+                await refreshMyPublicPage();
+              }}
+            />
+          )}
 
           {editing && (
             <div className="flex w-full max-w-135 flex-col items-center gap-3 px-5 pt-2 pb-10 md:pb-8">

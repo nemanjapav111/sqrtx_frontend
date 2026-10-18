@@ -21,9 +21,19 @@ export interface BillingStatus {
 export const getBillingPlans = () => apiFetch<BillingPlans>("/billing/plans");
 export const getBillingStatus = () => apiFetch<BillingStatus>("/billing/me");
 
-// Both answer the address of a page at the payment provider. The browser is sent there (see goToProvider).
-export const startCheckout = (plan: PlanId) => apiFetch<{ url: string }>("/billing/checkout", jsonBody("POST", { plan }));
-export const openBillingPortal = () => apiFetch<{ url: string }>("/billing/portal", { method: "POST" });
+// Both answer the address of a page at the payment provider (checkout also answers the payment's id, to open it in an overlay). The browser is sent there (see goToProvider).
+export const startCheckout = (plan: PlanId) => apiFetch<{ url: string; transaction_id?: string }>("/billing/checkout", jsonBody("POST", { plan }));
+// `cancel_url` and `update_payment_method_url` open the provider straight on that one action (absent when it has no such link: use `url`).
+// Moves the running subscription to the other plan; the difference for the time already paid for is charged now.
+export const changePlan = (plan: PlanId) => apiFetch<{ plan: PlanId }>("/billing/change-plan", jsonBody("POST", { plan }));
+// Cancels at the end of the paid period: the subscription runs until then and does not renew.
+export const cancelSubscription = () => apiFetch<{ cancelled: true }>("/billing/cancel", { method: "POST" });
+// Takes back a cancellation that has not happened yet (the subscription runs until the end of the paid period).
+export const resumeSubscription = () => apiFetch<{ resumed: true }>("/billing/resume", { method: "POST" });
+// The payment for entering a new card, to open in the provider's overlay (see startPaymentMethodChange in lib/paddle.ts).
+export const getPaymentMethodChange = () => apiFetch<{ transaction_id: string }>("/billing/payment-method", { method: "POST" });
+export const openBillingPortal = () =>
+  apiFetch<{ url: string; cancel_url?: string; update_payment_method_url?: string }>("/billing/portal", { method: "POST" });
 
 /** Sends the browser to a page at the payment provider. Only https addresses: anything else is refused. */
 export function goToProvider(url: string): boolean {

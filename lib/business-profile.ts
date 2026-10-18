@@ -62,6 +62,7 @@ export interface BusinessProfile {
   instagram_link: string | null;
   company_url: string;
   provides: Provides;
+  is_active: boolean; // false: the owner has hidden the whole business page (and its products and services) from the public
   about_company: string | null; // the text of the public About page (written on the last registration page)
   // width and height: pixels of these files. null only for a logo saved before the API kept them (see API.md).
   logo: { avif: string; webp: string; width: number | null; height: number | null } | null;
@@ -298,6 +299,9 @@ export function invalidFields(
 // one-hour rule keeps showing that old list (a hard reload doesn't clear it for requests the page itself makes).
 export const getBusinessCategories = () =>
   apiFetch<BusinessCategory[]>("/business-profile/categories", { cache: "no-cache" });
+
+/** Hides the whole business page from the public site and its search (false) or shows it again (true). */
+export const setProfileActive = (isActive: boolean) => apiFetch<unknown>("/business-profile/me", jsonBody("PATCH", { is_active: isActive }));
 
 export async function getMyProfile(): Promise<BusinessProfile | null> {
   try {

@@ -11,7 +11,7 @@ export const metadata = { title: "Privacy Policy – sqrtx" };
 // process data.
 export default function Privacy() {
   return (
-    <LegalDocument title="Privacy Policy" version={PRIVACY_VERSION} other={LEGAL_LINKS.filter((link) => link.href !== "/privacy")}>
+    <LegalDocument title="Privacy Policy" version={PRIVACY_VERSION} updated="October 16, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/privacy")}>
       <LegalSection title="1. Who we are">
         <p>
           This policy explains how {LEGAL.operator}, an individual operating the sqrtx service (“sqrtx”, “we”, “us”),
@@ -40,8 +40,21 @@ export default function Privacy() {
           </li>
           <li>
             <strong>Your plan:</strong> when your free trial started and ends, and, if you subscribe, which plan you chose, its
-            status and how long it is paid for. Payments are taken by our payment provider (section 5). We never see or store
-            your card details.
+            status, how long it is paid for, whether you cancelled it, and the customer and subscription numbers our payment
+            provider gave you. Payments are taken by our payment provider (section 5). We never see or store your card details.
+          </li>
+          <li>
+            <strong>Messages to a business:</strong> when a visitor uses the contact form on a business page, we receive the
+            visitor’s name, email address and message and send them by email to the business, so that it can answer. We do not
+            keep them in sqrtx’s database.
+          </li>
+          <li>
+            <strong>Searches:</strong> what visitors type in the search and which results they get may be recorded in our server
+            logs, without the visitor’s name. When a visitor searches with a photo, the photo is turned into a list of numbers to
+            find similar products and services. Only those numbers are kept, for about 15 minutes, and never the picture itself.
+          </li>
+          <li>
+            <strong>Your language:</strong> the language you choose for the site.
           </li>
           <li>
             <strong>Your agreement:</strong> when you accepted our terms and this policy, and which versions.
@@ -78,7 +91,6 @@ export default function Privacy() {
           <li>To keep sqrtx secure, prevent misuse and fix problems (our interest in a safe service).</li>
           <li>To keep records of what you accepted, and to meet legal duties (legal obligation, and our interest in proving what was agreed).</li>
         </LegalList>
-        <p>[A lawyer should check the legal grounds above against Serbian data protection law, and against the EU’s GDPR if sqrtx is offered to people in the EU.]</p>
         <p>We do not sell your personal data.</p>
       </LegalSection>
 
@@ -93,11 +105,11 @@ export default function Privacy() {
           </li>
           <li>
             our payment provider, {LEGAL.paymentProvider}, the Merchant of Record for our plans, which takes your payments,
-            holds your card details and handles taxes and invoices. It receives your name, email and billing details and tells
-            us whether your subscription is active. {LEGAL.paymentProvider} is responsible for that data under its own privacy
+            holds your card details and handles taxes and invoices. It receives your name, email and billing details, works out your country from your internet address to show the right price
+            and tax, and tells us whether your subscription is active. {LEGAL.paymentProvider} is responsible for that data under its own privacy
             policy;
           </li>
-          <li>our email delivery provider, [name], which sends the emails in section 2;</li>
+          <li>our email delivery provider, Brevo, which sends the emails in section 2, including messages from visitors to businesses;</li>
           <li>our hosting provider, [name].</li>
         </LegalList>
         <p>
@@ -109,18 +121,17 @@ export default function Privacy() {
       <LegalSection title="6. Data sent to other countries">
         <p>
           Our providers may store or handle data in other countries, including outside your own. Where the law requires it, we
-          make sure the data stays protected, for example with standard contract terms. [Add the regions used once they are
-          confirmed.]
+          make sure the data stays protected, for example with standard contract terms. Our database, which holds your account and
+          the content of your business page, is stored in the United States (US East).
         </p>
       </LegalSection>
 
       <LegalSection title="7. How long we keep it">
         <p>
-          sqrtx is currently a test version, so data may also be reset or deleted while it is tested. We keep your data while
-          your account is open. When you delete your account, your business page, products, services
-          and photos are removed from public view, and we delete the data within [period, for example 30 days], except copies
-          in backups, which are deleted within [period, for example 90 days]. We may keep the record of what you accepted, and
-          anything the law requires us to keep, for [period] after that.
+          We keep your data while your account is open. When you delete your account, your business page, products, services
+          and photos are removed from public view, and we delete the data within 30 days, except copies in backups, which
+          are deleted within 7 days. The record of what you accepted is part of
+          your account and is deleted with it. We may keep anything the law requires us to keep, for as long as the law requires.
         </p>
       </LegalSection>
 
@@ -132,8 +143,11 @@ export default function Privacy() {
           <li>limit how we use it, or object to some uses;</li>
           <li>take your data to another service, where it is technically possible;</li>
           <li>
-            complain to your data protection authority. In Serbia this is the Commissioner for Information of Public Importance
-            and Personal Data Protection. [Confirm the name and add a link.]
+            complain to your data protection authority. In Serbia this is the{" "}
+            <a href="https://www.poverenik.rs/en/" target="_blank" rel="noopener noreferrer" className="underline">
+              Commissioner for Information of Public Importance and Personal Data Protection
+            </a>
+            .
           </li>
         </LegalList>
         <p>To use these rights, write to {LEGAL.email}. We will answer within the time the law sets.</p>
@@ -141,9 +155,10 @@ export default function Privacy() {
 
       <LegalSection title="9. Cookies and browser storage">
         <p>
-          sqrtx keeps your login in your browser so that you stay signed in. It is needed for the service to work. We do not use
-          advertising or tracking cookies. [Confirm before launch, and list anything added later.] Google’s address search is
-          loaded from Google and may store its own data as described in Google’s policies.
+          sqrtx keeps your login in your browser so that you stay signed in, and remembers your language, your country filter and
+          a few settings of the page you are on (for example a search you typed in your account). This is needed for the service to
+          work and is kept in your browser. We do not use advertising or tracking cookies. Google’s address search and our payment
+          provider’s checkout are loaded from those companies and may store their own data as described in their policies.
         </p>
       </LegalSection>
 
