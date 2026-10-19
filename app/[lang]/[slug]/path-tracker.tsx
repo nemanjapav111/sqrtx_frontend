@@ -43,3 +43,5 @@ export const wasBack = () => {
   backAt = 0;
   return yes;
 };
+/** The same, without using it up (to look at it more than once). */
+export const recentBack = () => Date.now() - backAt < 2000;

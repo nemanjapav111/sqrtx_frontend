@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries/en";
 import { categoryNamer, type CategoryNamer, type CategoryTable } from "@/lib/category-names";
-import { wasBack } from "@/app/[lang]/[slug]/path-tracker";
+import { recentBack, wasBack } from "@/app/[lang]/[slug]/path-tracker";
 import { ApiError, COUNTRY_COOKIE, countryFromCookie, uploadSearchPhoto } from "@/lib/feed";
 
 // What the visitor typed in the search box, which country (and city) they chose on the home page and which photo they picked to search by. The search
@@ -73,6 +73,11 @@ class Arrivals {
 }
 
 const noSubscription = () => () => {};
+// What the marketplace remembers (the lists as they were left, the search, the place) lives for the whole visit, not only as long as the shell is on screen: a visit to a
+// business's page (a company's) takes the visitor out of the shell, and Back must find everything as it was. A plain variable is enough: it lives as long as the visitor stays in
+// the site and starts empty on a fresh load or a refresh. On the server a variable would be shared by all visitors, so there every call gets its own.
+let kept: Map<string, unknown> | undefined;
+const visitMemory = () => (typeof window === "undefined" ? new Map<string, unknown>() : (kept ??= new Map<string, unknown>()));
 /** The country in the cookie the picker writes (null when there is none). */
 function cookieCountry(): string | null {
   const entry = document.cookie.split("; ").find((part) => part.startsWith(`${COUNTRY_COOKIE}=`));
@@ -101,19 +106,24 @@ export function HomeProvider({
   children: React.ReactNode;
 }) {
   const namer = useMemo(() => categoryNamer(categoryTable), [categoryTable]);
-  const [query, setQuery] = useState("");
-  const [submitted, setSubmitted] = useState("");
+  // The lists are rebuilt each time the visitor leaves them (to a product's page) and returns; this provider is not, so what they showed is kept here
+  // for the visit (lost on a reload, like the search text). A list starts from it when its `key` (search + category + country...) still matches.
+  const [memory] = useState(visitMemory);
+  const [kept0] = useState(() => memory.get("ui") as { query: string; submitted: string; city: string } | undefined); // what the visitor had typed and chosen before the shell was built again
+  const [query, setQuery] = useState(kept0?.query ?? "");
+  const [submitted, setSubmitted] = useState(kept0?.submitted ?? "");
   const submit = useCallback((value: string) => setSubmitted(value.trim()), []);
   // The shell does not know the visitor's country (that would need the cookie and the connection's header, and every page in it, a product's page too, would then
   // be drawn again for every visit): the browser asks for it, and for the countries of the picker, once per visit (app/api/home-view/route.ts). The lists of the
   // home, services and companies pages (drawn for the visitor's country, they know it) use theirs until this one is here.
   const [chosen, setChosen] = useState<string | null>(null); // chosen in the picker during this visit
-  const [fetched, setFetched] = useState<string | null>(null); // the answer of the route
+  // The answer of the route; the one of an earlier visit to the shell is used at once (the shell is built again after a visit to a business's page), so the picker never waits for it twice.
+  const [fetched, setFetched] = useState<string | null>(() => (memory.get("view") as { country: string } | undefined)?.country ?? null);
   // The cookie says it at once (the picker writes it), also when the shell is built again after a visit to a business's page and Back: no moment without it. On the server (and while
   // hydrating) there is no cookie to read, so it is null there and the answer of the route fills it in.
   const remembered = useSyncExternalStore(noSubscription, cookieCountry, () => null);
   const country = chosen ?? remembered ?? fetched;
-  const [countries, setCountries] = useState<readonly string[]>([]);
+  const [countries, setCountries] = useState<readonly string[]>(() => (memory.get("view") as { countries: string[] } | undefined)?.countries ?? []);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/home-view", { signal: controller.signal })
@@ -121,33 +131,37 @@ export function HomeProvider({
       .then((view) => {
         setCountries(view.countries);
         setFetched(view.country);
+        memory.set("view", view);
       })
       .catch(() => {
         if (!controller.signal.aborted) setFetched("");
       });
     return () => controller.abort();
-  }, []);
-  const [city, setCity] = useState("");
+  }, [memory]);
+  const [city, setCity] = useState(kept0?.city ?? "");
   const setCountry = useCallback((value: string) => {
     setChosen(value);
     setCity("");
     document.cookie = `${COUNTRY_COOKIE}=${value || "all"}; path=/; max-age=31536000; samesite=lax`;
   }, []);
 
-  // The lists are rebuilt each time the visitor leaves them (to a product's page) and returns; this provider is not, so what they showed is kept here
-  // for the visit (lost on a reload, like the search text). A list starts from it when its `key` (search + category + country...) still matches.
-  const [memory] = useState(() => new Map<string, unknown>());
   // The remembered lists are for the browser's Back / Forward only (which also restores the scroll position). Any other way of arriving at a list (the logo,
   // a menu link, a Link) must show a fresh one, so the memory is emptied when the path changes without a popstate (Back / Forward fire it just before the
   // path changes) and the new page is not a product's or service's own page (those are left again by Back, which needs the lists as they were). Done while
   // rendering, because the list built for the new path reads the memory in its first render, before any effect of this provider could run.
   const pathname = usePathname();
   const [nav] = useState(() => new Arrivals(pathname));
+  // The shell built again for a path (after a visit to a business's page): by Back / Forward everything comes back as it was, by a link it counts as an arrival.
+  useState(() => {
+    if (memory.size > 0 && !recentBack()) memory.set("arrival", ((memory.get("arrival") as number | undefined) ?? 0) + 1);
+  });
   const arrived = nav.arrive(pathname);
-  if (arrived) {
-    memory.clear();
-    memory.set("reload", true); // the list asks the API for its first page again (the browser may have kept an older copy of the page itself)
-  }
+  // A new arrival by a link: the lists show what they had (nothing the visitor chose is lost: the search, the place, the page they were on) and ask the API for the
+  // first page again quietly, see useListStart. (Emptying the memory instead made a list start from nothing, or from the page's own unfiltered list, and show that dimmed.)
+  if (arrived) memory.set("arrival", ((memory.get("arrival") as number | undefined) ?? 0) + 1);
+  useEffect(() => {
+    memory.set("ui", { query, submitted, city });
+  }, [memory, query, submitted, city]);
   const [searching, setSearching] = useState(false);
 
   const [photo, setPhoto] = useState<HomePhoto | null>(null);
@@ -219,6 +233,23 @@ export function HomeProvider({
       {children}
     </HomeContext.Provider>
   );
+}
+
+/**
+ * What a list (products, services, companies) starts from when it is built: `saved` is what it showed when it was left, `link` is true when the visitor got here by a link (the
+ * logo, a menu link) and not with Back / Forward: the list then asks the API for its first page again, quietly (not dimmed, no fade-in), so it is up to date; with Back / Forward
+ * it comes back exactly as it was and nothing is asked.
+ */
+export function useListStart<T>(name: string): { saved: T | undefined; link: boolean } {
+  const { memory } = useHome();
+  const [start] = useState(() => {
+    const arrival = memory.get("arrival");
+    return { saved: memory.get(name) as T | undefined, link: arrival !== undefined && memory.get(`seen:${name}`) !== arrival };
+  });
+  useEffect(() => {
+    memory.set(`seen:${name}`, memory.get("arrival")); // this arrival is dealt with: coming back to the list later (Back) is not a new one
+  }, [memory, name]);
+  return start;
 }
 
 export function useHome() {

@@ -5,7 +5,7 @@ import CategoryFilter from "@/app/[lang]/[slug]/category-filter";
 import { useCommonText } from "@/app/[lang]/components/lang-context";
 import { fetchFeedCompaniesPage, type FeedCategory, type FeedCompaniesPage, type FeedCompanyItem } from "@/lib/feed";
 import CompanyInfo from "./company-info";
-import { useHome } from "./home-context";
+import { useHome, useListStart } from "./home-context";
 import PhotoSearchNotice from "./photo-search";
 
 // The Companies page's list (Figma "sqrtx Companies Phone/Tablet/Desktop new"): the newest businesses, one block each: its company block (logo,
@@ -33,15 +33,15 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
   const country = homeCountry ?? initialCountry; // the page was drawn for the visitor's country; the shell learns it a moment later (home-context.tsx)
   const pageFits = country === initialCountry && !search && !city; // see home-feed.tsx
   // Coming back to this list (from another tab of the marketplace) it starts from what it showed when it was left (see home-feed.tsx).
-  const [saved] = useState(() => memory.get("companies") as { chosen: { country: string; id: string }; view: View } | undefined);
-  // Arrived by a link, not Back: the page's own copy of the first page may be an older one the browser kept (the logo does not ask the server again), so the API is asked again at once (home-context.tsx).
-  const [reload] = useState(() => !saved && memory.get("reload") === true);
+  const { saved, link } = useListStart<{ chosen: { country: string; id: string }; view: View }>("companies");
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
-  const [chosen, setChosen] = useState(saved?.chosen ?? { country: initialCountry, id: ALL });
+  // Arrived by a link (not Back): what the list showed is used only if it is what is wanted now (no other category), and the API is asked again quietly (home-context.tsx, useListStart).
+  const remembered = saved && (!link || (saved.chosen.id === ALL && saved.view.key.replace(/|reload$/, "") === keyOf(search, ALL, country, city))) ? saved : undefined;
+  const [chosen, setChosen] = useState(remembered?.chosen ?? { country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
   const [view, setView] = useState<View>(
-    saved?.view ?? {
-      key: keyOf("", ALL, initialCountry, "") + (reload ? "|reload" : ""),
+    (remembered && link ? { ...remembered.view, key: remembered.view.key.replace(/|reload$/, "") + "|reload", fresh: false } : remembered?.view) ?? {
+      key: keyOf("", ALL, initialCountry, "") + (link ? "|reload" : ""),
       // The page may be an older one (Back from a business's page brings back the copy the browser kept, drawn for another country): then nothing of it is shown, the right list is asked for.
       items: pageFits ? initial.items : [],
       hasMore: pageFits && initial.has_more,
@@ -64,9 +64,9 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
   // The search box shows a spinner in place of its magnifier meanwhile (home-search.tsx).
   const { setSearching } = useHome();
   useEffect(() => {
-    setSearching(loading);
+    setSearching(loading || reloading); // a quiet refresh shows the search box's spinner too, though the list is not dimmed
     return () => setSearching(false);
-  }, [loading, setSearching]);
+  }, [loading, reloading, setSearching]);
 
   // A different search, category or country: its first page. The old companies stay (a little faded) until the new ones are here.
   useEffect(() => {
@@ -80,7 +80,10 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
         const page = await fetchFeedCompaniesPage({ q: search, category, country, city }, controller.signal);
         if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [], fresh: !reloading });
       } catch {
-        if (id === latest.current && !controller.signal.aborted) setFailed(true);
+        if (id !== latest.current || controller.signal.aborted) return;
+        // A quiet second ask that could not be answered: what is on screen stays, with no error (it is only a refresh).
+        if (reloading) setView((now) => ({ ...now, key }));
+        else setFailed(true);
       } finally {
         if (id === latest.current) setBusy(false);
       }
