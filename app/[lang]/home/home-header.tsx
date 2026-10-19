@@ -18,7 +18,7 @@ import HomeSearch, { HomeSearchLine } from "./home-search";
 // On desktop what is in the bar (the logo at the left, the account icon at the right) lines up with the products' rows below (the same 1190px
 // box with 30px at its sides as the lists), not with the window's corners. Stays on screen while the page scrolls. No room is kept for a scrollbar (the page has data-site-header, see globals.css): the black goes
 // all the way across the window, and what is in the bars is padded by the scrollbar's width instead (keep-width), like the business pages.
-export default function HomeHeader({ countries }: { countries: readonly string[] }) {
+export default function HomeHeader() {
   return (
     <header data-site-header className="sticky top-0 z-30 bg-white">
       <div className="border-b border-[#d4d4d4] bg-black">
@@ -36,7 +36,7 @@ export default function HomeHeader({ countries }: { countries: readonly string[]
           <div className="hidden min-w-0 flex-1 items-center justify-end gap-5 min-[1280px]:gap-7 min-[1120px]:flex">
             <HomeLinks variant="desktop" />
             <HomeSearch variant="desktop" />
-            <LocationPicker countries={countries} variant="desktop" />
+            <LocationPicker variant="desktop" />
           </div>
 
           <div className="flex shrink-0 items-center pr-2.5 min-[1120px]:-mr-1.75 min-[1120px]:ml-5 min-[1120px]:pr-0">
@@ -50,7 +50,7 @@ export default function HomeHeader({ countries }: { countries: readonly string[]
       <div className="hidden bg-black md:max-[1120px]:block">
         <div className="keep-width mx-auto flex h-13.5 max-w-550 items-center justify-center gap-5.75 px-4.25">
           <HomeLinks variant="tablet" />
-          <LocationPicker countries={countries} variant="tablet" />
+          <LocationPicker variant="tablet" />
         </div>
       </div>
 

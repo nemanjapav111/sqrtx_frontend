@@ -41,8 +41,9 @@ function useKind(): FeedKind {
 // The look of the list (card, rows, tick) is the site's popup look, shared with the other popups (components/popup.tsx).
 const ROW = POPUP_ROW;
 
-export default function LocationPicker({ countries, variant, className = "" }: { countries: readonly string[]; variant: "bar" | "tablet" | "desktop"; className?: string }) {
-  const { country, setCountry, city, setCity, text } = useHome();
+export default function LocationPicker({ variant, className = "" }: { variant: "bar" | "tablet" | "desktop"; className?: string }) {
+  const { country: chosenCountry, countries, setCountry, city, setCity, text } = useHome();
+  const country = chosenCountry ?? ""; // not known yet (home-context.tsx): the button says nothing until it is
   const t = text.location;
   const lang = useLang();
   const kind = useKind();
@@ -157,7 +158,7 @@ export default function LocationPicker({ countries, variant, className = "" }: {
         )}
         {/* On desktop and tablet the button has a FIXED width (the label is cut with "..." when it is long), so what is beside it never moves when a city is chosen. */}
         <span className={bar ? "inline-flex max-w-full min-w-0 items-center gap-0.5" : "flex min-w-0 flex-1 items-center justify-between gap-1"}>
-          <span className={`truncate ${bar ? "max-w-18 text-center" : "text-left"}`}>{label}</span>
+          <span className={`truncate ${bar ? "max-w-18 text-center" : "text-left"} ${chosenCountry === null ? "invisible" : ""}`}>{label}</span>
           {!bar && CHEVRON}
         </span>
       </button>

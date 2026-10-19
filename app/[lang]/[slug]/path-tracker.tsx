@@ -18,6 +18,10 @@ export const hasVisited = () => current !== null;
 export default function PathTracker() {
   const pathname = usePathname();
   useEffect(() => {
+    window.addEventListener("popstate", signalBack);
+    return () => window.removeEventListener("popstate", signalBack);
+  }, []);
+  useEffect(() => {
     if (current !== pathname) {
       previous = current;
       current = pathname;
@@ -25,3 +29,17 @@ export default function PathTracker() {
   }, [pathname]);
   return null;
 }
+
+// "The visitor is going BACK in the history" (the browser's Back / Forward, or an arrow that does router.back()): the marketplace's lists then come back as they were
+// (home/home-context.tsx), while any other way to a list shows a fresh one. Kept here, not in the marketplace's shell, because that is built again after a visit to a
+// business's page and Back, and must not lose it. A signal counts for two seconds (the path changes at once after it); a popstate that does not change the path leaves nothing behind.
+let backAt = 0;
+export const signalBack = () => {
+  backAt = Date.now();
+};
+/** True once for a path change that came with a Back / Forward. */
+export const wasBack = () => {
+  const yes = Date.now() - backAt < 2000;
+  backAt = 0;
+  return yes;
+};

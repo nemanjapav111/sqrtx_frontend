@@ -1,10 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries/en";
 import { categoryNamer, type CategoryNamer, type CategoryTable } from "@/lib/category-names";
-import { ApiError, COUNTRY_COOKIE, uploadSearchPhoto } from "@/lib/feed";
+import { wasBack } from "@/app/[lang]/[slug]/path-tracker";
+import { ApiError, COUNTRY_COOKIE, countryFromCookie, uploadSearchPhoto } from "@/lib/feed";
 
 // What the visitor typed in the search box, which country (and city) they chose on the home page and which photo they picked to search by. The search
 // box is in the top bar, the location picker in the bottom bar (or the top bar) and the list is in the page, so the three share it through this (the
@@ -39,7 +40,10 @@ interface Home {
   setQuery: (value: string) => void;
   submitted: string; // trimmed; "" = no search
   submit: (value: string) => void;
-  country: string; // two letters, "" for all countries
+  /** Two letters, "" for all countries; null until it is known (the shell cannot know it, see below): a list then uses the country its page was drawn for. */
+  country: string | null;
+  /** The countries the location picker lists ([] until they are known). */
+  countries: readonly string[];
   setCountry: (value: string) => void;
   city: string; // "" = the whole country (or all countries)
   setCity: (value: string) => void;
@@ -54,24 +58,25 @@ interface Home {
   searching: boolean;
   setSearching: (value: boolean) => void;
 }
-// Tells how the visitor arrived at a path: with the browser's Back / Forward (a popstate came just before) or by a link.
+// Tells how the visitor arrived at a path: with Back / Forward (the signal of app/[lang]/[slug]/path-tracker.tsx) or by a link.
 class Arrivals {
   private path: string;
-  private popped = false;
   constructor(path: string) {
     this.path = path;
-  }
-  pop() {
-    this.popped = true;
   }
   /** True when the path changed by a link to a list page, which must show a fresh list; a product's or service's own page keeps what the lists show. */
   arrive(path: string): boolean {
     if (path === this.path) return false;
-    const back = this.popped;
-    this.popped = false;
     this.path = path;
-    return !back && !/\/(product|service)\/[^/]+\/?$/.test(path);
+    return !wasBack() && !/\/(product|service)\/[^/]+\/?$/.test(path);
   }
+}
+
+const noSubscription = () => () => {};
+/** The country in the cookie the picker writes (null when there is none). */
+function cookieCountry(): string | null {
+  const entry = document.cookie.split("; ").find((part) => part.startsWith(`${COUNTRY_COOKIE}=`));
+  return countryFromCookie(entry?.slice(COUNTRY_COOKIE.length + 1));
 }
 
 const HomeContext = createContext<Home | null>(null);
@@ -87,12 +92,10 @@ function problemOf(err: unknown): PhotoProblem {
 }
 
 export function HomeProvider({
-  initialCountry,
   text,
   categoryTable,
   children,
 }: {
-  initialCountry: string;
   text: Dictionary["home"];
   categoryTable: CategoryTable | null;
   children: React.ReactNode;
@@ -101,10 +104,32 @@ export function HomeProvider({
   const [query, setQuery] = useState("");
   const [submitted, setSubmitted] = useState("");
   const submit = useCallback((value: string) => setSubmitted(value.trim()), []);
-  const [country, setCountryState] = useState(initialCountry);
+  // The shell does not know the visitor's country (that would need the cookie and the connection's header, and every page in it, a product's page too, would then
+  // be drawn again for every visit): the browser asks for it, and for the countries of the picker, once per visit (app/api/home-view/route.ts). The lists of the
+  // home, services and companies pages (drawn for the visitor's country, they know it) use theirs until this one is here.
+  const [chosen, setChosen] = useState<string | null>(null); // chosen in the picker during this visit
+  const [fetched, setFetched] = useState<string | null>(null); // the answer of the route
+  // The cookie says it at once (the picker writes it), also when the shell is built again after a visit to a business's page and Back: no moment without it. On the server (and while
+  // hydrating) there is no cookie to read, so it is null there and the answer of the route fills it in.
+  const remembered = useSyncExternalStore(noSubscription, cookieCountry, () => null);
+  const country = chosen ?? remembered ?? fetched;
+  const [countries, setCountries] = useState<readonly string[]>([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/home-view", { signal: controller.signal })
+      .then((response) => (response.ok ? (response.json() as Promise<{ country: string; countries: string[] }>) : Promise.reject(new Error("home-view"))))
+      .then((view) => {
+        setCountries(view.countries);
+        setFetched(view.country);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setFetched("");
+      });
+    return () => controller.abort();
+  }, []);
   const [city, setCity] = useState("");
   const setCountry = useCallback((value: string) => {
-    setCountryState(value);
+    setChosen(value);
     setCity("");
     document.cookie = `${COUNTRY_COOKIE}=${value || "all"}; path=/; max-age=31536000; samesite=lax`;
   }, []);
@@ -118,13 +143,6 @@ export function HomeProvider({
   // rendering, because the list built for the new path reads the memory in its first render, before any effect of this provider could run.
   const pathname = usePathname();
   const [nav] = useState(() => new Arrivals(pathname));
-  useEffect(() => {
-    const onPop = () => {
-      nav.pop();
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, [nav]);
   const arrived = nav.arrive(pathname);
   if (arrived) {
     memory.clear();
@@ -197,7 +215,7 @@ export function HomeProvider({
   );
 
   return (
-    <HomeContext.Provider value={{ text, categoryNamer: namer, query, setQuery, submitted, submit, country, setCountry, city, setCity, photo, choosePhoto, clearPhoto, photoFetch, memory, searching, setSearching }}>
+    <HomeContext.Provider value={{ text, categoryNamer: namer, query, setQuery, submitted, submit, country, countries, setCountry, city, setCity, photo, choosePhoto, clearPhoto, photoFetch, memory, searching, setSearching }}>
       {children}
     </HomeContext.Provider>
   );

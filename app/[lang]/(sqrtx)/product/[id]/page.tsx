@@ -14,6 +14,12 @@ import { getDictionary } from "../../../dictionaries";
 // (a bare id, or an old name after a rename, is sent to the current address, as there). A product the API does not show to the public (its
 // owner's registration isn't finished, the trial is over, the business no longer offers products) is a 404.
 // Two addresses show one product, so the business's own is the one search engines are told about (canonical).
+// Pre-built like a business's own pages: no address is built ahead of time, each on its first visit, and the page is then kept until it is renewed (after a minute, or as soon as an owner saves something: lib/refresh-public-page.ts).
+// Nothing in it depends on the visitor's country (the shell asks the browser for that: home/home-context.tsx), so it is the same for everyone.
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const id = idFromSegment((await params).id);
   if (!id) return {};

@@ -36,8 +36,11 @@ interface View {
 const keyOf = (q: string, category: string, country: string, city: string, photo: string) => `${q}|${category}|${country}|${city}|${photo}`;
 
 export default function HomeFeed({ initial, initialCountry }: { initial: FeedPage; initialCountry: string }) {
-  const { submitted: search, country, city, photo, photoFetch, memory, text, categoryNamer } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
+  const { submitted: search, country: homeCountry, city, photo, photoFetch, memory, text, categoryNamer } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
   const common = useCommonText();
+  const country = homeCountry ?? initialCountry; // the page was drawn for the visitor's country; the shell learns it a moment later (home-context.tsx)
+  // The page's own list is the unfiltered one of its country: with a search, a city or a photo already chosen (kept by the shell when the visitor went to another page and back) it is not what is wanted, so nothing is shown until the right one is here.
+  const pageFits = country === initialCountry && !search && !city && !photo;
   // Coming back from a product's page this list is built again: it starts from what it showed when it was left (the search, the pages
   // already loaded) instead of the server's first page, so nothing is asked of the API again.
   const [saved] = useState(() => memory.get("products") as { chosen: { country: string; id: string }; view: View } | undefined);
@@ -49,10 +52,11 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
   const [view, setView] = useState<View>(
     saved?.view ?? {
       key: keyOf("", ALL, initialCountry, "", "") + (reload ? "|reload" : ""),
-      items: initial.items,
-      hasMore: initial.has_more,
+      // The page may be an older one (Back from a business's page brings back the copy the browser kept, drawn for another country): then nothing of it is shown, the right list is asked for.
+      items: pageFits ? initial.items : [],
+      hasMore: pageFits && initial.has_more,
       page: 1,
-      categories: initial.categories ?? [],
+      categories: pageFits ? (initial.categories ?? []) : [],
     },
   );
   useEffect(() => {
@@ -69,7 +73,9 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
   // Loading from the very render in which the search / filter / country changed (the key no longer matches what is on screen), not one render later when the effect
   // below sets `busy`: the products on screen are then dimmed at once, not at full strength for a moment first.
   // A photo that is still being uploaded counts as loading too (no "looking at your photo" message).
-  const loading = photo?.state === "uploading" || (!failed && (busy || key !== view.key));
+  // Asking again for a list that is on screen already (arrived by a link, see home-context.tsx): not dimmed, and the new cards do not fade in, so nothing flashes.
+  const reloading = view.key === `${key}|reload`;
+  const loading = photo?.state === "uploading" || (!failed && !reloading && (busy || key !== view.key));
   // The search box shows a spinner in place of its magnifier meanwhile (home-search.tsx).
   const { setSearching } = useHome();
   useEffect(() => {
@@ -89,7 +95,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
         const page = photoKey
           ? await photoFetch((token) => fetchFeedPage({ q: search, category, country, city, photoToken: token }, controller.signal))
           : await fetchFeedPage({ q: search, category, country, city }, controller.signal);
-        if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [], searchId: page.search_id, fresh: true });
+        if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [], searchId: page.search_id, fresh: !reloading });
       } catch {
         if (id === latest.current && !controller.signal.aborted) setFailed(true);
       } finally {

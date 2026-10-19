@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useBusinessBase } from "@/app/[lang]/components/business-link";
-import { previousPath } from "./path-tracker";
+import { previousPath, signalBack } from "./path-tracker";
 
 // The arrow on a product's (or service's) page that leads back to its list. A link to the list (so it also works opened in a
 // new tab), but when the visitor came FROM the list it goes back in the browser's history instead: with hundreds of
@@ -33,6 +33,7 @@ export default function BackToProducts({
       onClick={(event) => {
         if (previousPath() !== to) return; // not from the list: follow the link
         event.preventDefault();
+        signalBack();
         router.back();
       }}
     >

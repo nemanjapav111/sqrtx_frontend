@@ -32,7 +32,7 @@ const PAGE_ICONS = { products: productsIcon, services: servicesIcon, companies: 
  * The bottom bar of the PHONE design (Figma "sqrtx footer_links"): the four pages and the location picker, five equal cells. New look 2026-10-08, the same as
  * the business pages' bar (business-footer.tsx): 58px high, thin 22px icons, the current page black with a line on top of its cell, the others grey.
  */
-export function HomeFooter({ countries }: { countries: readonly string[] }) {
+export function HomeFooter() {
   const current = useCurrent();
   const { text } = useHome();
   return (
@@ -50,7 +50,7 @@ export function HomeFooter({ countries }: { countries: readonly string[] }) {
             {text.pages[page.key]}
           </Link>
         ))}
-        <LocationPicker countries={countries} variant="bar" />
+        <LocationPicker variant="bar" />
       </div>
     </nav>
   );

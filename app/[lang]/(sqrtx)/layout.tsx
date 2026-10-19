@@ -1,6 +1,5 @@
 import { loadCategoryTable } from "@/lib/category-tables";
 import { asLocale } from "@/lib/i18n";
-import { getHomeView } from "@/lib/home-view";
 import { getDictionary } from "../dictionaries";
 import { HomeProvider } from "../home/home-context";
 import HomeHeader from "../home/home-header";
@@ -15,17 +14,15 @@ export default async function SqrtxLayout({ children, params }: { children: Reac
   const { lang } = await params;
   const { home } = await getDictionary(asLocale(lang));
   const categoryTable = await loadCategoryTable(asLocale(lang));
-  const { country, initial } = await getHomeView();
-  const countries = initial.countries ?? [];
 
   return (
-    <HomeProvider initialCountry={country} text={home} categoryTable={categoryTable}>
+    <HomeProvider text={home} categoryTable={categoryTable}>
       <div className="flex min-h-dvh flex-col bg-white leading-[normal] text-black">
-        <HomeHeader countries={countries} />
+        <HomeHeader />
         <LightenIn />
         {/* pb: on a phone, room for the fixed bottom bar (58px + its 1px top line, plus the phone's own bottom edge where it has one). */}
         <div className="keep-width flex flex-1 flex-col pb-[calc(59px+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
-        <HomeFooter countries={countries} />
+        <HomeFooter />
       </div>
     </HomeProvider>
   );

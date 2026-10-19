@@ -28,8 +28,10 @@ interface View {
 const keyOf = (q: string, category: string, country: string, city: string) => `${q}|${category}|${country}|${city}`;
 
 export default function HomeCompanies({ initial, initialCountry }: { initial: FeedCompaniesPage; initialCountry: string }) {
-  const { submitted: search, country, city, photo, memory, text, categoryNamer } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
+  const { submitted: search, country: homeCountry, city, photo, memory, text, categoryNamer } = useHome(); // searched on Enter / the search button, not while typing (home-context.tsx)
   const common = useCommonText();
+  const country = homeCountry ?? initialCountry; // the page was drawn for the visitor's country; the shell learns it a moment later (home-context.tsx)
+  const pageFits = country === initialCountry && !search && !city; // see home-feed.tsx
   // Coming back to this list (from another tab of the marketplace) it starts from what it showed when it was left (see home-feed.tsx).
   const [saved] = useState(() => memory.get("companies") as { chosen: { country: string; id: string }; view: View } | undefined);
   // Arrived by a link, not Back: the page's own copy of the first page may be an older one the browser kept (the logo does not ask the server again), so the API is asked again at once (home-context.tsx).
@@ -40,10 +42,11 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
   const [view, setView] = useState<View>(
     saved?.view ?? {
       key: keyOf("", ALL, initialCountry, "") + (reload ? "|reload" : ""),
-      items: initial.items,
-      hasMore: initial.has_more,
+      // The page may be an older one (Back from a business's page brings back the copy the browser kept, drawn for another country): then nothing of it is shown, the right list is asked for.
+      items: pageFits ? initial.items : [],
+      hasMore: pageFits && initial.has_more,
       page: 1,
-      categories: initial.categories ?? [],
+      categories: pageFits ? (initial.categories ?? []) : [],
     },
   );
   useEffect(() => {
@@ -56,7 +59,8 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
 
   const key = keyOf(search, category, country, city);
   // Loading from the very render in which the key changed, not one render later (see home-feed.tsx).
-  const loading = !failed && (busy || key !== view.key);
+  const reloading = view.key === `${key}|reload`; // see home-feed.tsx
+  const loading = !failed && !reloading && (busy || key !== view.key);
   // The search box shows a spinner in place of its magnifier meanwhile (home-search.tsx).
   const { setSearching } = useHome();
   useEffect(() => {
@@ -74,7 +78,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
       setFailed(false);
       try {
         const page = await fetchFeedCompaniesPage({ q: search, category, country, city }, controller.signal);
-        if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [], fresh: true });
+        if (id === latest.current) setView({ key, items: page.items, hasMore: page.has_more, page: 1, categories: page.categories ?? [], fresh: !reloading });
       } catch {
         if (id === latest.current && !controller.signal.aborted) setFailed(true);
       } finally {
