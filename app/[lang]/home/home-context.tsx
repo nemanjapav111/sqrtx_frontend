@@ -125,7 +125,11 @@ export function HomeProvider({
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [nav]);
-  if (nav.arrive(pathname)) memory.clear();
+  const arrived = nav.arrive(pathname);
+  if (arrived) {
+    memory.clear();
+    memory.set("reload", true); // the list asks the API for its first page again (the browser may have kept an older copy of the page itself)
+  }
   const [searching, setSearching] = useState(false);
 
   const [photo, setPhoto] = useState<HomePhoto | null>(null);

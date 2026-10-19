@@ -32,12 +32,14 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
   const common = useCommonText();
   // Coming back to this list (from another tab of the marketplace) it starts from what it showed when it was left (see home-feed.tsx).
   const [saved] = useState(() => memory.get("companies") as { chosen: { country: string; id: string }; view: View } | undefined);
+  // Arrived by a link, not Back: the page's own copy of the first page may be an older one the browser kept (the logo does not ask the server again), so the API is asked again at once (home-context.tsx).
+  const [reload] = useState(() => !saved && memory.get("reload") === true);
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
   const [chosen, setChosen] = useState(saved?.chosen ?? { country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
   const [view, setView] = useState<View>(
     saved?.view ?? {
-      key: keyOf("", ALL, initialCountry, ""),
+      key: keyOf("", ALL, initialCountry, "") + (reload ? "|reload" : ""),
       items: initial.items,
       hasMore: initial.has_more,
       page: 1,
