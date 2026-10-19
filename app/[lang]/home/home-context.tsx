@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries/en";
 import { categoryNamer, type CategoryNamer, type CategoryTable } from "@/lib/category-names";
@@ -54,26 +53,6 @@ interface Home {
   searching: boolean;
   setSearching: (value: boolean) => void;
 }
-// Tells how the visitor arrived at a path: with the browser's Back / Forward (a popstate came just before) or by a link.
-class Arrivals {
-  private path: string;
-  private popped = false;
-  constructor(path: string) {
-    this.path = path;
-  }
-  pop() {
-    this.popped = true;
-  }
-  /** True when the path changed by a link to a list page, which must show a fresh list; a product's or service's own page keeps what the lists show. */
-  arrive(path: string): boolean {
-    if (path === this.path) return false;
-    const back = this.popped;
-    this.popped = false;
-    this.path = path;
-    return !back && !/\/(product|service)\/[^/]+\/?$/.test(path);
-  }
-}
-
 const HomeContext = createContext<Home | null>(null);
 
 /** Why the photo could not be used (the words are home.photo.<code>). */
@@ -112,20 +91,6 @@ export function HomeProvider({
   // The lists are rebuilt each time the visitor leaves them (to a product's page) and returns; this provider is not, so what they showed is kept here
   // for the visit (lost on a reload, like the search text). A list starts from it when its `key` (search + category + country...) still matches.
   const [memory] = useState(() => new Map<string, unknown>());
-  // The remembered lists are for the browser's Back / Forward only (which also restores the scroll position). Any other way of arriving at a list (the logo,
-  // a menu link, a Link) must show a fresh one, so the memory is emptied when the path changes without a popstate (Back / Forward fire it just before the
-  // path changes) and the new page is not a product's or service's own page (those are left again by Back, which needs the lists as they were). Done while
-  // rendering, because the list built for the new path reads the memory in its first render, before any effect of this provider could run.
-  const pathname = usePathname();
-  const [nav] = useState(() => new Arrivals(pathname));
-  useEffect(() => {
-    const onPop = () => {
-      nav.pop();
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, [nav]);
-  if (nav.arrive(pathname)) memory.clear();
   const [searching, setSearching] = useState(false);
 
   const [photo, setPhoto] = useState<HomePhoto | null>(null);
