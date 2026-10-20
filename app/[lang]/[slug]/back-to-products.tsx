@@ -31,7 +31,16 @@ export default function BackToProducts({
       aria-label={label}
       className={className}
       onClick={(event) => {
-        if (previousPath() !== to) return; // not from the list: follow the link
+        if (previousPath() !== to) {
+          // Not from the list as far as this load of the site knows (the product's page was opened by a full page load, which forgets everything): follow the link, but leave a note
+          // so the marketplace's list (home/home-feed.tsx) puts itself back as it was left.
+          try {
+            sessionStorage.setItem("sqrtx:back-to", to);
+          } catch {
+            // no storage: the list starts again
+          }
+          return;
+        }
         event.preventDefault();
         signalBack();
         router.back();

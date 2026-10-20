@@ -75,7 +75,9 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
     try {
       const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
       const raw = sessionStorage.getItem(SAVED);
-      if (nav?.type !== "back_forward" || !raw) return;
+      const arrow = sessionStorage.getItem("sqrtx:back-to") === location.pathname; // the back arrow of a product's page that was opened by a full load (back-to-products.tsx)
+      sessionStorage.removeItem("sqrtx:back-to");
+      if ((nav?.type !== "back_forward" && !arrow) || !raw) return;
       const stored = JSON.parse(raw) as { y: number; chosen: { country: string; id: string }; view: View; path: string };
       if (stored.path !== location.pathname || stored.chosen.country !== country || stored.view.key !== keyOf(search, stored.chosen.id, country, city, startPhoto)) return;
       setChosen(stored.chosen);
