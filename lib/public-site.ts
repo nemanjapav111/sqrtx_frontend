@@ -9,7 +9,9 @@ import { emptyServicesPage, servicesPageQuery, type PublicServicesPage } from "@
 // pages that use this are server components, so it doesn't use lib/api.ts (that one belongs to the logged-in browser).
 // The API's rules are in API.md in the backend ("What the public sees").
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+// API_INTERNAL_URL (server only, optional, e.g. http://127.0.0.1:3000): where this server reaches the API directly, skipping the CDN, whose bot
+// challenge answers the server's own requests with 403. Browsers keep using NEXT_PUBLIC_API_URL.
+const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
 // What GET /business-profile/by-url/:slug returns (only the parts the public page uses).
 export interface PublicBusiness {
