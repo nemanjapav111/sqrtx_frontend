@@ -11,6 +11,7 @@ import { marketProductPath } from "@/lib/product-url";
 import { useHome, useListStart } from "./home-context";
 import { rememberList, savedScrollY, takeSavedList } from "@/app/[lang]/[slug]/saved-list";
 import PhotoSearchNotice from "./photo-search";
+import Loading from "@/app/[lang]/components/loading";
 
 // The home page's list (Figma "sqrtx Phone new", 2167): the newest products of every business, the same cards as a business's own Products
 // page (product-list.tsx: a grey box with the picture shown whole, the name, the price, 350px wide, wrapping into one, two or three
@@ -244,14 +245,18 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
         {/* The end of the list: what the observer above watches. */}
         <div ref={end} className="flex flex-col items-center gap-2 pt-10 pb-6">
           {view.hasMore && !loading && (
-            <button
+            moreBusy ? (
+              <Loading />
+            ) : (
+              <button
               type="button"
               onClick={() => void showMore()}
               disabled={moreBusy}
               className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
             >
-              {moreBusy ? common.list.loadingMore : common.list.showMore}
+              {common.list.showMore}
             </button>
+            )
           )}
           {failed && (
             <p role="alert" className="text-[14px] text-red-600">

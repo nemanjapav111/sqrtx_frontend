@@ -7,6 +7,7 @@ import { fetchFeedCompaniesPage, type FeedCategory, type FeedCompaniesPage, type
 import CompanyInfo from "./company-info";
 import { useHome, useListStart } from "./home-context";
 import PhotoSearchNotice from "./photo-search";
+import Loading from "@/app/[lang]/components/loading";
 
 // The Companies page's list (Figma "sqrtx Companies Phone/Tablet/Desktop new"): the newest businesses, one block each: its company block (logo,
 // name, kind of business, city and a chevron, all one link to its own page: company-info.tsx; the design's separate "Visit" link is gone) and the first 5 lines of its About text under it.
@@ -164,14 +165,18 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
         {/* The end of the list: what the observer above watches. The phone's design has 50px under the last company, a tablet's and a desktop's 40px. */}
         <div ref={end} className="flex flex-col items-center gap-2 pt-8.5 pb-12.5 md:pt-7.5 md:pb-10">
           {view.hasMore && !loading && (
-            <button
+            moreBusy ? (
+              <Loading />
+            ) : (
+              <button
               type="button"
               onClick={() => void showMore()}
               disabled={moreBusy}
               className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
             >
-              {moreBusy ? common.list.loadingMore : common.list.showMore}
+              {common.list.showMore}
             </button>
+            )
           )}
           {failed && (
             <p role="alert" className="text-[14px] text-red-600">

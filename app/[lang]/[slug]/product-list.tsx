@@ -12,6 +12,7 @@ import { useArrivalPop } from "./business-content";
 import CategoryFilter from "./category-filter";
 import { rememberList, savedScrollY, takeSavedList } from "./saved-list";
 import { useBusinessText, useSearch } from "./search-context";
+import Loading from "@/app/[lang]/components/loading";
 
 // The Products page content: the category filter ("ALL") and the products, each in a grey box with its picture. The
 // search box is in the top bar (business-header.tsx) and this list follows it.
@@ -206,14 +207,18 @@ export default function ProductList({ initial, userId, slug, currency, intro }: 
         {/* The end of the list: what the observer above watches. */}
         <div ref={end} className="flex flex-col items-center gap-2 pt-10 pb-6">
           {hasMore && (
-            <button
+            moreBusy ? (
+              <Loading />
+            ) : (
+              <button
               type="button"
               onClick={() => void showMore()}
               disabled={moreBusy}
               className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
             >
-              {moreBusy ? common.list.loadingMore : common.list.showMore}
+              {common.list.showMore}
             </button>
+            )
           )}
           {failed && (
             <p role="alert" className="text-[14px] text-red-600">

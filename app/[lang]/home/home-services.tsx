@@ -13,6 +13,7 @@ import { marketServicePath } from "@/lib/product-url";
 import FitText from "@/app/[lang]/components/fit-text";
 import { useHome, useListStart } from "./home-context";
 import PhotoSearchNotice from "./photo-search";
+import Loading from "@/app/[lang]/components/loading";
 
 // The Services page's list (Figma "sqrtx Services Phone/Tablet/Desktop new"): the newest services of every business, one row each, like a
 // business's own Services page (service-list.tsx: the photo cropped to fill its box, the name, the price, the small black "See more" button and the first
@@ -229,14 +230,18 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
         {/* The end of the list: what the observer above watches. */}
         <div ref={end} className="flex flex-col items-center gap-2 pt-10 pb-6">
           {view.hasMore && !loading && (
-            <button
+            moreBusy ? (
+              <Loading />
+            ) : (
+              <button
               type="button"
               onClick={() => void showMore()}
               disabled={moreBusy}
               className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
             >
-              {moreBusy ? common.list.loadingMore : common.list.showMore}
+              {common.list.showMore}
             </button>
+            )
           )}
           {failed && (
             <p role="alert" className="text-[14px] text-red-600">

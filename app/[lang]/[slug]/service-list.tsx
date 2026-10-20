@@ -14,6 +14,7 @@ import BusinessIntro, { type BusinessIntroData } from "./business-intro";
 import CategoryFilter from "./category-filter";
 import { rememberList, savedScrollY, takeSavedList } from "./saved-list";
 import { useBusinessText, useSearch } from "./search-context";
+import Loading from "@/app/[lang]/components/loading";
 
 // The Services page content: the category filter ("ALL") and the services, one row each: a photo, the name, the price, a black
 // "See more" button (small, to the service's own page) and the first lines of the description. The search box is in the top bar
@@ -239,14 +240,18 @@ export default function ServiceList({ initial, userId, slug, currency, intro }: 
         {/* The end of the list: what the observer above watches. */}
         <div ref={end} className="flex flex-col items-center gap-2 pt-10 pb-6">
           {hasMore && (
-            <button
+            moreBusy ? (
+              <Loading />
+            ) : (
+              <button
               type="button"
               onClick={() => void showMore()}
               disabled={moreBusy}
               className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
             >
-              {moreBusy ? common.list.loadingMore : common.list.showMore}
+              {common.list.showMore}
             </button>
+            )
           )}
           {failed && (
             <p role="alert" className="text-[14px] text-red-600">
