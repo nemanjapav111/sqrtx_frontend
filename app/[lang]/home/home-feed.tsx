@@ -66,6 +66,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
   }, [memory, chosen, view]);
   // Back into a freshly loaded document (memory empty, see saved-list.ts): put the list back as it was left, then its scroll position, both before the next paint.
   const restored = useRef(false);
+  const skipReload = useRef(false); // the list was put back from storage: the quiet ask for a fresh first page (a link arrival, see useListStart) must not replace it
   const [restoreY, setRestoreY] = useState<number | null>(null);
   /* eslint-disable react-hooks/set-state-in-effect -- the list can only be put back after it is first drawn (the server's page has no sessionStorage) */
   useLayoutEffect(() => {
@@ -81,6 +82,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
     setChosen(stored.data.chosen);
     setView({ ...stored.data.view, fresh: false });
     setRestoreY(stored.y);
+    skipReload.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the list is first drawn
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -113,6 +115,10 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
 
   // A different search, category or country: its first page. The old products stay (a little faded) until the new ones are here.
   useEffect(() => {
+    if (skipReload.current) {
+      skipReload.current = false; // the effect of the first drawing, before the restored list is on screen: nothing to ask for
+      return;
+    }
     if (key === view.key) return;
     const id = ++latest.current;
     const controller = new AbortController();
