@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCommonText, useLang } from "@/app/[lang]/components/lang-context";
 import PlaceholderPicture from "@/app/[lang]/components/placeholder-picture";
 import { formatPrice } from "@/lib/price";
@@ -10,7 +10,7 @@ import { fetchProductsPage, type PublicProductCard, type PublicProductsPage } fr
 import BusinessIntro, { type BusinessIntroData } from "./business-intro";
 import { useArrivalPop } from "./business-content";
 import CategoryFilter from "./category-filter";
-import { rememberList, savedScrollY, takeSavedList } from "./saved-list";
+import { useListRestore } from "@/app/[lang]/components/list-restore";
 import { useBusinessText, useSearch } from "./search-context";
 import Loading from "@/app/[lang]/components/loading";
 
@@ -43,6 +43,11 @@ interface View {
   total: number;
   page: number;
 }
+/** What a list keeps for coming back to it: the category chosen and what is on screen. */
+interface ListState {
+  category: string;
+  view: View;
+}
 const keyOf = (q: string, category: string) => `${q}|${category}`;
 
 // `intro`: the city and the start of the About text, only on the business's opening page (page.tsx), not on a page of its own.
@@ -54,38 +59,21 @@ export default function ProductList({ initial, userId, slug, currency, intro }: 
   const pop = useArrivalPop();
   // Coming back from a product's page this list is built again: it starts from what it showed when it was left (the pages already loaded, the category) instead of the
   // server's first page, so the page is as long as it was and the browser returns to where the visitor was.
-  const [saved] = useState(() => memory.get("products") as { category: string; view: View } | undefined);
-  const [category, setCategory] = useState(saved?.category ?? ALL);
-  const [view, setView] = useState<View>(saved?.view ?? { key: keyOf("", ALL), items: initial.items, total: initial.total, page: 1 });
+  const [saved] = useState(() => memory.get("products") as ListState | undefined);
+  const kept = useListRestore<ListState>({
+    name: "business-products",
+    inMemory: saved !== undefined,
+    accepts: (state) => state.view.key === keyOf(search, state.category),
+    apply: (state) => {
+      setCategory(state.category);
+      setView(state.view);
+    },
+  });
+  const [category, setCategory] = useState(saved?.category ?? kept.start?.category ?? ALL);
+  const [view, setView] = useState<View>(saved?.view ?? kept.start?.view ?? { key: keyOf("", ALL), items: initial.items, total: initial.total, page: 1 });
   useEffect(() => {
     memory.set("products", { category, view });
   }, [memory, category, view]);
-  // Back into a freshly loaded document (memory empty, see saved-list.ts): put the list back as it was left, then its scroll position, both before the next paint.
-  const restored = useRef(false);
-  const [restoreY, setRestoreY] = useState<number | null>(null);
-  /* eslint-disable react-hooks/set-state-in-effect -- the list can only be put back after it is first drawn (the server's page has no sessionStorage) */
-  useLayoutEffect(() => {
-    if (restored.current) return;
-    restored.current = true;
-    if (saved) {
-      const y = savedScrollY("business-products"); // drawn again from memory by a way back: scrolled before the first paint
-      if (y !== null) window.scrollTo(0, y);
-      return;
-    }
-    const stored = takeSavedList<{ category: string; view: View }>("business-products");
-    if (!stored || stored.data.view.key !== keyOf(search, stored.data.category)) return;
-    setCategory(stored.data.category);
-    setView(stored.data.view);
-    setRestoreY(stored.y);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the list is first drawn
-  }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
-  useLayoutEffect(() => {
-    if (restoreY === null) return;
-    window.scrollTo(0, restoreY);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- done once
-    setRestoreY(null);
-  }, [restoreY]);
   const [busy, setBusy] = useState(false); // a search / category is being loaded
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
@@ -177,7 +165,7 @@ export default function ProductList({ initial, userId, slug, currency, intro }: 
           {view.items.map((product, index) => (
             <li key={product.id} className="min-h-108 w-full @min-[350px]:w-87.5">
               {/* The whole card (picture, name, price) leads to the product's own page (product/[id]). */}
-              <Link href={productPath(slug, product, lang)} onClick={() => rememberList("business-products", { category, view })} className="block">
+              <Link href={productPath(slug, product, lang)} onClick={() => kept.remember({ category, view })} className="block">
                 {/* The picture is shown whole (never cropped) inside a grey box with square corners and a soft shadow: the owner's original design, back on 2026-10-08 (the white box with a thin grey stroke of 2026-10-02 is gone). No hover effect. */}
                 <div className="flex h-87.5 items-center justify-center bg-[#f9f9f9] p-6 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
                   {product.image && (
@@ -211,13 +199,13 @@ export default function ProductList({ initial, userId, slug, currency, intro }: 
               <Loading />
             ) : (
               <button
-              type="button"
-              onClick={() => void showMore()}
-              disabled={moreBusy}
-              className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
-            >
-              {common.list.showMore}
-            </button>
+                type="button"
+                onClick={() => void showMore()}
+                disabled={moreBusy}
+                className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
+              >
+                {common.list.showMore}
+              </button>
             )
           )}
           {failed && (

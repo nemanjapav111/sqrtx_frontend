@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CategoryFilter from "@/app/[lang]/[slug]/category-filter";
 import { useCommonText } from "@/app/[lang]/components/lang-context";
 import PlaceholderPicture from "@/app/[lang]/components/placeholder-picture";
@@ -9,7 +9,7 @@ import { fetchFeedPage, reportSearchClick, type FeedCategory, type FeedItem, typ
 import { formatPrice } from "@/lib/price";
 import { marketProductPath } from "@/lib/product-url";
 import { useHome, useListStart } from "./home-context";
-import { rememberList, savedScrollY, takeSavedList } from "@/app/[lang]/[slug]/saved-list";
+import { useListRestore } from "@/app/[lang]/components/list-restore";
 import PhotoSearchNotice from "./photo-search";
 import Loading from "@/app/[lang]/components/loading";
 
@@ -35,6 +35,11 @@ interface View {
   searchId?: string; // the id of the search these products answer (from its first page), sent back with a click
   fresh?: boolean; // a new result set just arrived: its cards fade in one after the other (`result-in`, globals.css); not after "Show more" or when the list is restored
 }
+/** What a list keeps for coming back to it: the category chosen (with its country) and what is on screen. */
+interface ListState {
+  chosen: { country: string; id: string };
+  view: View;
+}
 const keyOf = (q: string, category: string, country: string, city: string, photo: string) => `${q}|${category}|${country}|${city}|${photo}`;
 
 export default function HomeFeed({ initial, initialCountry }: { initial: FeedPage; initialCountry: string }) {
@@ -45,15 +50,24 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
   const pageFits = country === initialCountry && !search && !city && !photo;
   // Coming back from a product's page this list is built again: it starts from what it showed when it was left (the search, the pages
   // already loaded) instead of the server's first page, so nothing is asked of the API again.
-  const { saved, link } = useListStart<{ chosen: { country: string; id: string }; view: View }>("products");
+  const { saved, link } = useListStart<ListState>("products");
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
   const startPhoto = photo?.state === "ready" ? photo.url : "";
   // Arrived by a link (not Back): what the list showed is used only if it is what is wanted now (no other category), and the API is asked again quietly (home-context.tsx, useListStart).
   const remembered = saved && (!link || (saved.chosen.id === ALL && saved.view.key.replace(/|reload$/, "") === keyOf(search, ALL, country, city, startPhoto))) ? saved : undefined;
-  const [chosen, setChosen] = useState(remembered?.chosen ?? { country: initialCountry, id: ALL });
+  const kept = useListRestore<ListState>({
+    name: "products",
+    inMemory: saved !== undefined,
+    accepts: (state) => state.chosen.country === country && state.view.key === keyOf(search, state.chosen.id, country, city, startPhoto),
+    apply: (state) => {
+      setChosen(state.chosen);
+      setView({ ...state.view, fresh: false });
+    },
+  });
+  const [chosen, setChosen] = useState(remembered?.chosen ?? kept.start?.chosen ?? { country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
   const [view, setView] = useState<View>(
-    (remembered && link ? { ...remembered.view, key: remembered.view.key.replace(/|reload$/, "") + "|reload", fresh: false } : remembered?.view) ?? {
+    (remembered && link ? { ...remembered.view, key: remembered.view.key.replace(/|reload$/, "") + "|reload", fresh: false } : remembered?.view) ?? (kept.start ? { ...kept.start.view, fresh: false } : undefined) ?? {
       key: keyOf("", ALL, initialCountry, "", "") + (link ? "|reload" : ""),
       // The page may be an older one (Back from a business's page brings back the copy the browser kept, drawn for another country): then nothing of it is shown, the right list is asked for.
       items: pageFits ? initial.items : [],
@@ -65,34 +79,6 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
   useEffect(() => {
     memory.set("products", { chosen, view: { ...view, fresh: false } }); // coming back, the cards are simply there: no fade-in again
   }, [memory, chosen, view]);
-  // Back into a freshly loaded document (memory empty, see saved-list.ts): put the list back as it was left, then its scroll position, both before the next paint.
-  const restored = useRef(false);
-  const skipReload = useRef(false); // the list was put back from storage: the quiet ask for a fresh first page (a link arrival, see useListStart) must not replace it
-  const [restoreY, setRestoreY] = useState<number | null>(null);
-  /* eslint-disable react-hooks/set-state-in-effect -- the list can only be put back after it is first drawn (the server's page has no sessionStorage) */
-  useLayoutEffect(() => {
-    if (restored.current) return;
-    restored.current = true;
-    if (saved) {
-      const y = savedScrollY("products"); // drawn again from memory by a way back: scrolled before the first paint
-      if (y !== null) window.scrollTo(0, y);
-      return;
-    }
-    const stored = takeSavedList<{ chosen: { country: string; id: string }; view: View }>("products");
-    if (!stored || stored.data.chosen.country !== country || stored.data.view.key !== keyOf(search, stored.data.chosen.id, country, city, startPhoto)) return;
-    setChosen(stored.data.chosen);
-    setView({ ...stored.data.view, fresh: false });
-    setRestoreY(stored.y);
-    skipReload.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the list is first drawn
-  }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
-  useLayoutEffect(() => {
-    if (restoreY === null) return;
-    window.scrollTo(0, restoreY); // the restored list is in the page by now (this runs in the commit that drew it)
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- done once
-    setRestoreY(null);
-  }, [restoreY]);
   const [busy, setBusy] = useState(false); // a search / filter / country is being loaded
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
@@ -116,10 +102,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
 
   // A different search, category or country: its first page. The old products stay (a little faded) until the new ones are here.
   useEffect(() => {
-    if (skipReload.current) {
-      skipReload.current = false; // the effect of the first drawing, before the restored list is on screen: nothing to ask for
-      return;
-    }
+    if (kept.consumeRestored()) return; // the list was just put back from storage: the quiet ask for a fresh first page (a link arrival) would replace it
     if (key === view.key) return;
     const id = ++latest.current;
     const controller = new AbortController();
@@ -213,7 +196,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
               {/* The whole card (picture, name, price, company) leads to the product's own page in the marketplace (its business's logo and page are there). */}
               <Link href={marketProductPath(product)} onClick={() => {
                   reportSearchClick(view.searchId, product.id, index);
-                  rememberList("products", { chosen, view: { ...view, fresh: false } });
+                  kept.remember({ chosen, view: { ...view, fresh: false } });
                 }} className="block">
                 {/* The picture is shown whole (never cropped) inside a grey box with square corners and a soft shadow: the owner's original design, back on 2026-10-08 (the white box with a thin grey stroke of 2026-10-02 is gone). No hover effect. */}
                 <div className="flex h-87.5 items-center justify-center bg-[#f9f9f9] p-6 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
@@ -249,13 +232,13 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
               <Loading />
             ) : (
               <button
-              type="button"
-              onClick={() => void showMore()}
-              disabled={moreBusy}
-              className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
-            >
-              {common.list.showMore}
-            </button>
+                type="button"
+                onClick={() => void showMore()}
+                disabled={moreBusy}
+                className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
+              >
+                {common.list.showMore}
+              </button>
             )
           )}
           {failed && (

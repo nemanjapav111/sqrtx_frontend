@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { inter } from './fonts';
 import { InlineScript } from "./components/inline-script";
+import { HIDE_UNTIL_RESTORED_SCRIPT } from "@/lib/list-restore-keys";
 import PathTracker from "./[slug]/path-tracker";
 import { notFound } from "next/navigation";
 import { LOCALES, hasLocale } from "@/lib/i18n";
@@ -36,6 +37,7 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
     >
       <body className={`${inter.className} min-h-full flex flex-col`}>
         <InlineScript code={MEASURE_SCROLLBAR} />
+        <InlineScript code={HIDE_UNTIL_RESTORED_SCRIPT} />
         {/* In the root layout so it sees EVERY page (the account page too): "← sqrtx" must know the page before the business. */}
         <PathTracker />
         <LangProvider lang={lang} shell={shell} common={common}>

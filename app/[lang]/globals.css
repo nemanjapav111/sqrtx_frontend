@@ -45,6 +45,10 @@ textarea {
    what is in them is padded on the right by the scrollbar's width minus the scrollbar that is there now: the content stays where it
    is, whether the scrollbar is there or not. `--sbw` is the scrollbar's width, measured by the script in layout.tsx;
    100vw - 100% is the width of the scrollbar that is there now (100vw counts it, the parent's width does not). */
+/* A freshly loaded page whose list is about to be put back (lib/list-restore-keys.ts): its first page at the top must not show meanwhile. */
+html[data-restoring] main {
+  visibility: hidden;
+}
 html:not(:has([data-site-header])) {
   scrollbar-gutter: stable;
 }

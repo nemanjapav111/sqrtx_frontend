@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useListRestore } from "@/app/[lang]/components/list-restore";
 import CategoryFilter from "@/app/[lang]/[slug]/category-filter";
 import { CompanyLine } from "@/app/[lang]/components/company-line";
 import { useCommonText } from "@/app/[lang]/components/lang-context";
@@ -41,6 +42,11 @@ interface View {
   searchId?: string; // the id of the search these services answer (from its first page), sent back with a click
   fresh?: boolean; // a new result set just arrived: its rows fade in one after the other (see home-feed.tsx)
 }
+/** What a list keeps for coming back to it: the category chosen (with its country) and what is on screen. */
+interface ListState {
+  chosen: { country: string; id: string };
+  view: View;
+}
 const keyOf = (q: string, category: string, country: string, city: string, photo: string) => `${q}|${category}|${country}|${city}|${photo}`;
 
 export default function HomeServices({ initial, initialCountry }: { initial: FeedServicesPage; initialCountry: string }) {
@@ -50,15 +56,24 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
   // The page's own list is the unfiltered one of its country: with a search, a city or a photo already chosen (kept by the shell when the visitor went to another page and back) it is not what is wanted, so nothing is shown until the right one is here.
   const pageFits = country === initialCountry && !search && !city && !photo;
   // Coming back from a service's page this list is built again: it starts from what it showed when it was left (see home-feed.tsx).
-  const { saved, link } = useListStart<{ chosen: { country: string; id: string }; view: View }>("services");
+  const { saved, link } = useListStart<ListState>("services");
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
   const startPhoto = photo?.state === "ready" ? photo.url : "";
   // Arrived by a link (not Back): what the list showed is used only if it is what is wanted now (no other category), and the API is asked again quietly (home-context.tsx, useListStart).
   const remembered = saved && (!link || (saved.chosen.id === ALL && saved.view.key.replace(/|reload$/, "") === keyOf(search, ALL, country, city, startPhoto))) ? saved : undefined;
-  const [chosen, setChosen] = useState(remembered?.chosen ?? { country: initialCountry, id: ALL });
+  const kept = useListRestore<ListState>({
+    name: "services",
+    inMemory: saved !== undefined,
+    accepts: (state) => state.chosen.country === country && state.view.key === keyOf(search, state.chosen.id, country, city, startPhoto),
+    apply: (state) => {
+      setChosen(state.chosen);
+      setView({ ...state.view, fresh: false });
+    },
+  });
+  const [chosen, setChosen] = useState(remembered?.chosen ?? kept.start?.chosen ?? { country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
   const [view, setView] = useState<View>(
-    (remembered && link ? { ...remembered.view, key: remembered.view.key.replace(/|reload$/, "") + "|reload", fresh: false } : remembered?.view) ?? {
+    (remembered && link ? { ...remembered.view, key: remembered.view.key.replace(/|reload$/, "") + "|reload", fresh: false } : remembered?.view) ?? (kept.start ? { ...kept.start.view, fresh: false } : undefined) ?? {
       key: keyOf("", ALL, initialCountry, "", "") + (link ? "|reload" : ""),
       // The page may be an older one (Back from a business's page brings back the copy the browser kept, drawn for another country): then nothing of it is shown, the right list is asked for.
       items: pageFits ? initial.items : [],
@@ -91,6 +106,7 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
 
   // A different search, category or country: its first page. The old rows stay (a little faded) until the new ones are here.
   useEffect(() => {
+    if (kept.consumeRestored()) return; // the list was just put back from storage: the quiet ask for a fresh first page (a link arrival) would replace it
     if (key === view.key) return;
     const id = ++latest.current;
     const controller = new AbortController();
@@ -177,6 +193,7 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
             return (
               <li
                 key={service.id}
+                onClick={(event) => (event.target as HTMLElement).closest("a") && kept.remember({ chosen, view: { ...view, fresh: false } })} // any link of the row leaves the list
                 style={view.fresh ? ({ "--i": Math.min(index, 8) } as React.CSSProperties) : undefined}
                 // A thin grey line between two rows, with the same space above and below it (25px on a phone, 10px beside the photo's own 10px on the others), as in service-list.tsx.
                 className={`${view.fresh ? "result-in " : ""}grid grid-cols-1 border-t border-[#e5e7eb] py-6.25 first:border-t-0 first:pt-0 last:pb-0 @min-[700px]:grid-cols-[328fr_400fr] @min-[700px]:py-2.5 @min-[700px]:first:pt-0 @min-[700px]:last:pb-0 @min-[1030px]:grid-cols-[420px_600px] @min-[1030px]:gap-x-2.5`}
@@ -234,13 +251,13 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
               <Loading />
             ) : (
               <button
-              type="button"
-              onClick={() => void showMore()}
-              disabled={moreBusy}
-              className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
-            >
-              {common.list.showMore}
-            </button>
+                type="button"
+                onClick={() => void showMore()}
+                disabled={moreBusy}
+                className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
+              >
+                {common.list.showMore}
+              </button>
             )
           )}
           {failed && (

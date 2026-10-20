@@ -44,7 +44,7 @@ export function HomeFooter() {
             href={page.href}
             prefetch={page.exists}
             aria-current={page.key === current ? "page" : undefined}
-            className={`${TAB} tracking-[0.02em] ${page.key === current ? TAB_ON : TAB_OFF}`}
+            className={`${TAB} ${page.key === current ? TAB_ON : TAB_OFF}`}
           >
             {PAGE_ICONS[page.key](page.key === current)}
             {text.pages[page.key]}

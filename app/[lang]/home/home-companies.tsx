@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useListRestore } from "@/app/[lang]/components/list-restore";
 import CategoryFilter from "@/app/[lang]/[slug]/category-filter";
 import { useCommonText } from "@/app/[lang]/components/lang-context";
 import { fetchFeedCompaniesPage, type FeedCategory, type FeedCompaniesPage, type FeedCompanyItem } from "@/lib/feed";
@@ -26,6 +27,11 @@ interface View {
   categories: FeedCategory[]; // the business categories of the businesses in this country
   fresh?: boolean; // a new result set just arrived: its blocks fade in one after the other (see home-feed.tsx)
 }
+/** What a list keeps for coming back to it: the category chosen (with its country) and what is on screen. */
+interface ListState {
+  chosen: { country: string; id: string };
+  view: View;
+}
 const keyOf = (q: string, category: string, country: string, city: string) => `${q}|${category}|${country}|${city}`;
 
 export default function HomeCompanies({ initial, initialCountry }: { initial: FeedCompaniesPage; initialCountry: string }) {
@@ -34,14 +40,23 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
   const country = homeCountry ?? initialCountry; // the page was drawn for the visitor's country; the shell learns it a moment later (home-context.tsx)
   const pageFits = country === initialCountry && !search && !city; // see home-feed.tsx
   // Coming back to this list (from another tab of the marketplace) it starts from what it showed when it was left (see home-feed.tsx).
-  const { saved, link } = useListStart<{ chosen: { country: string; id: string }; view: View }>("companies");
+  const { saved, link } = useListStart<ListState>("companies");
   // The chosen category belongs to the country it was chosen in: another country has other categories, so it starts again from "All".
   // Arrived by a link (not Back): what the list showed is used only if it is what is wanted now (no other category), and the API is asked again quietly (home-context.tsx, useListStart).
   const remembered = saved && (!link || (saved.chosen.id === ALL && saved.view.key.replace(/|reload$/, "") === keyOf(search, ALL, country, city))) ? saved : undefined;
-  const [chosen, setChosen] = useState(remembered?.chosen ?? { country: initialCountry, id: ALL });
+  const kept = useListRestore<ListState>({
+    name: "companies",
+    inMemory: saved !== undefined,
+    accepts: (state) => state.chosen.country === country && state.view.key === keyOf(search, state.chosen.id, country, city),
+    apply: (state) => {
+      setChosen(state.chosen);
+      setView({ ...state.view, fresh: false });
+    },
+  });
+  const [chosen, setChosen] = useState(remembered?.chosen ?? kept.start?.chosen ?? { country: initialCountry, id: ALL });
   const category = chosen.country === country ? chosen.id : ALL;
   const [view, setView] = useState<View>(
-    (remembered && link ? { ...remembered.view, key: remembered.view.key.replace(/|reload$/, "") + "|reload", fresh: false } : remembered?.view) ?? {
+    (remembered && link ? { ...remembered.view, key: remembered.view.key.replace(/|reload$/, "") + "|reload", fresh: false } : remembered?.view) ?? (kept.start ? { ...kept.start.view, fresh: false } : undefined) ?? {
       key: keyOf("", ALL, initialCountry, "") + (link ? "|reload" : ""),
       // The page may be an older one (Back from a business's page brings back the copy the browser kept, drawn for another country): then nothing of it is shown, the right list is asked for.
       items: pageFits ? initial.items : [],
@@ -71,6 +86,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
 
   // A different search, category or country: its first page. The old companies stay (a little faded) until the new ones are here.
   useEffect(() => {
+    if (kept.consumeRestored()) return; // the list was just put back from storage: the quiet ask for a fresh first page (a link arrival) would replace it
     if (key === view.key) return;
     const id = ++latest.current;
     const controller = new AbortController();
@@ -152,6 +168,7 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
           {view.items.map((company, index) => (
             <li
               key={company.slug}
+              onClick={(event) => (event.target as HTMLElement).closest("a") && kept.remember({ chosen, view: { ...view, fresh: false } })} // any link of the row leaves the list
               className={`flex flex-col gap-3 ${view.fresh ? "result-in" : ""}`}
               style={view.fresh ? ({ "--i": Math.min(index, 8) } as React.CSSProperties) : undefined}
             >
@@ -169,13 +186,13 @@ export default function HomeCompanies({ initial, initialCountry }: { initial: Fe
               <Loading />
             ) : (
               <button
-              type="button"
-              onClick={() => void showMore()}
-              disabled={moreBusy}
-              className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
-            >
-              {common.list.showMore}
-            </button>
+                type="button"
+                onClick={() => void showMore()}
+                disabled={moreBusy}
+                className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
+              >
+                {common.list.showMore}
+              </button>
             )
           )}
           {failed && (

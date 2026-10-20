@@ -25,23 +25,29 @@ export default function PathTracker() {
     if (current !== pathname) {
       previous = current;
       current = pathname;
+      backAt = 0; // the page the visitor was going to is on screen: the "going back" signal is used up (the code that reads it runs while this page is drawn, before this effect)
     }
   }, [pathname]);
   return null;
 }
 
 // "The visitor is going BACK in the history" (the browser's Back / Forward, or an arrow that does router.back()): the marketplace's lists then come back as they were
-// (home/home-context.tsx), while any other way to a list shows a fresh one. Kept here, not in the marketplace's shell, because that is built again after a visit to a
-// business's page and Back, and must not lose it. A signal counts for two seconds (the path changes at once after it); a popstate that does not change the path leaves nothing behind.
+// (home/home-context.tsx, components/list-restore.ts), while any other way to a list shows a fresh one. Kept here, not in the marketplace's shell, because that is built again after a
+// visit to a business's page and Back, and must not lose it.
+// The signal stays until the page that Back leads to is on screen (the effect above clears it), because that can take long: when the router has no copy of the list's page any more
+// (it keeps one for five minutes) it asks the server for it, and on a slow connection that takes seconds, during which the browser has already changed the address. A signal that
+// expired meanwhile (it used to last two seconds) made the list look like one arrived at by a link: it asked for a fresh first page and replaced everything the visitor had loaded.
+// A popstate that never leads to a new page (an address with only a # changed) would leave the signal behind, so it also ends after a minute.
+const BACK_SIGNAL_MS = 60_000;
 let backAt = 0;
 export const signalBack = () => {
   backAt = Date.now();
 };
 /** True once for a path change that came with a Back / Forward. */
 export const wasBack = () => {
-  const yes = Date.now() - backAt < 2000;
+  const yes = recentBack();
   backAt = 0;
   return yes;
 };
 /** The same, without using it up (to look at it more than once). */
-export const recentBack = () => Date.now() - backAt < 2000;
+export const recentBack = () => Date.now() - backAt < BACK_SIGNAL_MS;

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useBusinessBase } from "@/app/[lang]/components/business-link";
+import { BACK_NOTE } from "@/lib/list-restore-keys";
 import { previousPath, signalBack } from "./path-tracker";
 
 // The arrow on a product's (or service's) page that leads back to its list. A link to the list (so it also works opened in a
@@ -33,9 +34,9 @@ export default function BackToProducts({
       onClick={(event) => {
         if (previousPath() !== to) {
           // Not from the list as far as this load of the site knows (the product's page was opened by a full page load, which forgets everything): follow the link, but leave a note
-          // so the marketplace's list (home/home-feed.tsx) puts itself back as it was left.
+          // so the list (components/list-restore.ts) puts itself back as it was left.
           try {
-            sessionStorage.setItem("sqrtx:back-to", to);
+            sessionStorage.setItem(BACK_NOTE, to);
           } catch {
             // no storage: the list starts again
           }

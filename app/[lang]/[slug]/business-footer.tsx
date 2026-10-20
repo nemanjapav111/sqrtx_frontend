@@ -26,7 +26,7 @@ export const ICONS: Record<TabKey, (on: boolean) => React.ReactNode> = {
 // text), the others grey (#6b7280). The last cell, the way back to sqrtx, is a chevron over "sqrtx" like the others. The line over the bar is the light
 // grey of the rows. The layout's bottom padding (layout.tsx) is 58px + this line.
 export const TAB =
-  "relative flex h-14.5 flex-1 touch-manipulation flex-col items-center justify-center gap-1 text-[12px] leading-[17px] [&_svg]:size-5.5 [&_svg]:[stroke-width:1.6]";
+  "relative flex h-14.5 flex-1 touch-manipulation flex-col items-center justify-center gap-1 text-[12px] leading-[17px] tracking-[0.02em] [&_svg]:size-5.5 [&_svg]:[stroke-width:1.6]";
 export const TAB_ON = "font-semibold text-black before:absolute before:inset-x-[18%] before:-top-px before:h-0.5 before:bg-black";
 export const TAB_OFF = "font-medium text-[#6b7280]";
 

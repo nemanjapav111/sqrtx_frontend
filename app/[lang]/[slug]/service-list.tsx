@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCommonText, useLang } from "@/app/[lang]/components/lang-context";
 import PlaceholderPicture from "@/app/[lang]/components/placeholder-picture";
 import { formatServicePrice } from "@/lib/price";
@@ -12,7 +12,7 @@ import FitText from "@/app/[lang]/components/fit-text";
 import { useArrivalPop } from "./business-content";
 import BusinessIntro, { type BusinessIntroData } from "./business-intro";
 import CategoryFilter from "./category-filter";
-import { rememberList, savedScrollY, takeSavedList } from "./saved-list";
+import { useListRestore } from "@/app/[lang]/components/list-restore";
 import { useBusinessText, useSearch } from "./search-context";
 import Loading from "@/app/[lang]/components/loading";
 
@@ -51,6 +51,11 @@ interface View {
   total: number;
   page: number;
 }
+/** What a list keeps for coming back to it: the category chosen and what is on screen. */
+interface ListState {
+  category: string;
+  view: View;
+}
 const keyOf = (q: string, category: string) => `${q}|${category}`;
 
 // `intro`: the city and the start of the About text, only when this is the business's opening page (a services-only business, see page.tsx).
@@ -61,38 +66,21 @@ export default function ServiceList({ initial, userId, slug, currency, intro }: 
   const { submitted: search, setSearching, memory } = useSearch(); // searched on Enter / the search button, not while typing (search-context.tsx)
   const pop = useArrivalPop();
   // Coming back from a service's page this list is built again from what it showed when it was left (see product-list.tsx).
-  const [saved] = useState(() => memory.get("services") as { category: string; view: View } | undefined);
-  const [category, setCategory] = useState(saved?.category ?? ALL);
-  const [view, setView] = useState<View>(saved?.view ?? { key: keyOf("", ALL), items: initial.items, total: initial.total, page: 1 });
+  const [saved] = useState(() => memory.get("services") as ListState | undefined);
+  const kept = useListRestore<ListState>({
+    name: "business-services",
+    inMemory: saved !== undefined,
+    accepts: (state) => state.view.key === keyOf(search, state.category),
+    apply: (state) => {
+      setCategory(state.category);
+      setView(state.view);
+    },
+  });
+  const [category, setCategory] = useState(saved?.category ?? kept.start?.category ?? ALL);
+  const [view, setView] = useState<View>(saved?.view ?? kept.start?.view ?? { key: keyOf("", ALL), items: initial.items, total: initial.total, page: 1 });
   useEffect(() => {
     memory.set("services", { category, view });
   }, [memory, category, view]);
-  // Back into a freshly loaded document (memory empty, see saved-list.ts): put the list back as it was left, then its scroll position, both before the next paint.
-  const restored = useRef(false);
-  const [restoreY, setRestoreY] = useState<number | null>(null);
-  /* eslint-disable react-hooks/set-state-in-effect -- the list can only be put back after it is first drawn (the server's page has no sessionStorage) */
-  useLayoutEffect(() => {
-    if (restored.current) return;
-    restored.current = true;
-    if (saved) {
-      const y = savedScrollY("business-services"); // drawn again from memory by a way back: scrolled before the first paint
-      if (y !== null) window.scrollTo(0, y);
-      return;
-    }
-    const stored = takeSavedList<{ category: string; view: View }>("business-services");
-    if (!stored || stored.data.view.key !== keyOf(search, stored.data.category)) return;
-    setCategory(stored.data.category);
-    setView(stored.data.view);
-    setRestoreY(stored.y);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the list is first drawn
-  }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
-  useLayoutEffect(() => {
-    if (restoreY === null) return;
-    window.scrollTo(0, restoreY);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- done once
-    setRestoreY(null);
-  }, [restoreY]);
   const [busy, setBusy] = useState(false); // a search / category is being loaded
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
@@ -188,7 +176,7 @@ export default function ServiceList({ initial, userId, slug, currency, intro }: 
             return (
               <li
                 key={service.id}
-                onClick={(event) => (event.target as HTMLElement).closest("a") && rememberList("business-services", { category, view })} // either link of the row leads to the service's page
+                onClick={(event) => (event.target as HTMLElement).closest("a") && kept.remember({ category, view })} // either link of the row leads to the service's page
                 // A thin grey line between two rows, with the same space above and below it (21px on a phone, 20px beside the photo's own 10px on the others).
                 className="grid grid-cols-1 gap-5 border-t border-[#e5e7eb] py-5.25 first:border-t-0 first:pt-0 last:pb-0 @min-[700px]:grid-cols-[328fr_400fr] @min-[700px]:gap-0 @min-[700px]:py-2.5 @min-[700px]:first:pt-0 @min-[700px]:last:pb-0 @min-[1030px]:grid-cols-[420px_600px] @min-[1030px]:gap-x-2.5"
               >
@@ -244,13 +232,13 @@ export default function ServiceList({ initial, userId, slug, currency, intro }: 
               <Loading />
             ) : (
               <button
-              type="button"
-              onClick={() => void showMore()}
-              disabled={moreBusy}
-              className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
-            >
-              {common.list.showMore}
-            </button>
+                type="button"
+                onClick={() => void showMore()}
+                disabled={moreBusy}
+                className="flex h-11 cursor-pointer items-center justify-center border-2 border-black bg-white px-8 text-[14px] font-bold disabled:cursor-wait disabled:opacity-60"
+              >
+                {common.list.showMore}
+              </button>
             )
           )}
           {failed && (
