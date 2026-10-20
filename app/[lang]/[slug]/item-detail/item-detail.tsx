@@ -11,7 +11,7 @@ import { fill } from "@/lib/i18n";
 import { formatPrice, formatServicePrice } from "@/lib/price";
 import type { PublicBusiness, PublicProductImage } from "@/lib/public-site";
 import BackToProducts from "../back-to-products";
-import { hasVisited } from "../path-tracker";
+import { hasVisited, recentBack } from "../path-tracker";
 import PhotoViewer from "./photo-viewer";
 
 // A product's or a service's own page (the services' designs, Figma "Service Details Phone/Tablet/Desktop new" 2151:368, 2036:612,
@@ -98,6 +98,11 @@ export default function ItemDetail({
   }, [contactOpen]);
   // The contact box floats over the page, so it closes like the account menu does: a click outside it (that click does nothing else), or Escape.
   usePopupDismiss(contactOpen, contactRef, () => setContactOpen(false));
+  // Opened by a click on a card, the page starts at its top. Next.js scrolls there itself only when it finds a first element of this page to scroll to, which it does not always on a business's
+  // pages (the page is left at the list's scroll position, partly down), so it is done here. Not after Back / Forward or on a fresh load: the browser puts the page where the visitor left it.
+  useLayoutEffect(() => {
+    if (hasVisited() && !recentBack()) window.scrollTo(0, 0); // hasVisited: false on a fresh load, where the browser decides (a reload, Back into this page)
+  }, []);
   const shown = images[selected] ?? images[0];
   // The photos whose big version is loaded before it is asked for, so choosing one shows it at once instead of after a
   // download: the two next to the shown one (also going round, as the arrows do), and any small photo the visitor's

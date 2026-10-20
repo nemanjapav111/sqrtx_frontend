@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCommonText, useLang } from "@/app/[lang]/components/lang-context";
 import PlaceholderPicture from "@/app/[lang]/components/placeholder-picture";
 import { formatPrice } from "@/lib/price";
@@ -10,6 +10,7 @@ import { fetchProductsPage, type PublicProductCard, type PublicProductsPage } fr
 import BusinessIntro, { type BusinessIntroData } from "./business-intro";
 import { useArrivalPop } from "./business-content";
 import CategoryFilter from "./category-filter";
+import { rememberList, takeSavedList } from "./saved-list";
 import { useBusinessText, useSearch } from "./search-context";
 
 // The Products page content: the category filter ("ALL") and the products, each in a grey box with its picture. The
@@ -58,6 +59,27 @@ export default function ProductList({ initial, userId, slug, currency, intro }: 
   useEffect(() => {
     memory.set("products", { category, view });
   }, [memory, category, view]);
+  // Back into a freshly loaded document (memory empty, see saved-list.ts): put the list back as it was left, then its scroll position, both before the next paint.
+  const restored = useRef(false);
+  const [restoreY, setRestoreY] = useState<number | null>(null);
+  /* eslint-disable react-hooks/set-state-in-effect -- the list can only be put back after it is first drawn (the server's page has no sessionStorage) */
+  useLayoutEffect(() => {
+    if (restored.current || saved) return;
+    restored.current = true;
+    const stored = takeSavedList<{ category: string; view: View }>("business-products");
+    if (!stored || stored.data.view.key !== keyOf(search, stored.data.category)) return;
+    setCategory(stored.data.category);
+    setView(stored.data.view);
+    setRestoreY(stored.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the list is first drawn
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+  useLayoutEffect(() => {
+    if (restoreY === null) return;
+    window.scrollTo(0, restoreY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- done once
+    setRestoreY(null);
+  }, [restoreY]);
   const [busy, setBusy] = useState(false); // a search / category is being loaded
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
@@ -149,7 +171,7 @@ export default function ProductList({ initial, userId, slug, currency, intro }: 
           {view.items.map((product, index) => (
             <li key={product.id} className="min-h-108 w-full @min-[350px]:w-87.5">
               {/* The whole card (picture, name, price) leads to the product's own page (product/[id]). */}
-              <Link href={productPath(slug, product, lang)} className="block">
+              <Link href={productPath(slug, product, lang)} onClick={() => rememberList("business-products", { category, view })} className="block">
                 {/* The picture is shown whole (never cropped) inside a grey box with square corners and a soft shadow: the owner's original design, back on 2026-10-08 (the white box with a thin grey stroke of 2026-10-02 is gone). No hover effect. */}
                 <div className="flex h-87.5 items-center justify-center bg-[#f9f9f9] p-6 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
                   {product.image && (

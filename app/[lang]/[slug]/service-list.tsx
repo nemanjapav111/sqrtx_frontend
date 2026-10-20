@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCommonText, useLang } from "@/app/[lang]/components/lang-context";
 import PlaceholderPicture from "@/app/[lang]/components/placeholder-picture";
 import { formatServicePrice } from "@/lib/price";
@@ -12,6 +12,7 @@ import FitText from "@/app/[lang]/components/fit-text";
 import { useArrivalPop } from "./business-content";
 import BusinessIntro, { type BusinessIntroData } from "./business-intro";
 import CategoryFilter from "./category-filter";
+import { rememberList, takeSavedList } from "./saved-list";
 import { useBusinessText, useSearch } from "./search-context";
 
 // The Services page content: the category filter ("ALL") and the services, one row each: a photo, the name, the price, a black
@@ -65,6 +66,27 @@ export default function ServiceList({ initial, userId, slug, currency, intro }: 
   useEffect(() => {
     memory.set("services", { category, view });
   }, [memory, category, view]);
+  // Back into a freshly loaded document (memory empty, see saved-list.ts): put the list back as it was left, then its scroll position, both before the next paint.
+  const restored = useRef(false);
+  const [restoreY, setRestoreY] = useState<number | null>(null);
+  /* eslint-disable react-hooks/set-state-in-effect -- the list can only be put back after it is first drawn (the server's page has no sessionStorage) */
+  useLayoutEffect(() => {
+    if (restored.current || saved) return;
+    restored.current = true;
+    const stored = takeSavedList<{ category: string; view: View }>("business-services");
+    if (!stored || stored.data.view.key !== keyOf(search, stored.data.category)) return;
+    setCategory(stored.data.category);
+    setView(stored.data.view);
+    setRestoreY(stored.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the list is first drawn
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+  useLayoutEffect(() => {
+    if (restoreY === null) return;
+    window.scrollTo(0, restoreY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- done once
+    setRestoreY(null);
+  }, [restoreY]);
   const [busy, setBusy] = useState(false); // a search / category is being loaded
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
@@ -160,6 +182,7 @@ export default function ServiceList({ initial, userId, slug, currency, intro }: 
             return (
               <li
                 key={service.id}
+                onClick={(event) => (event.target as HTMLElement).closest("a") && rememberList("business-services", { category, view })} // either link of the row leads to the service's page
                 // A thin grey line between two rows, with the same space above and below it (21px on a phone, 20px beside the photo's own 10px on the others).
                 className="grid grid-cols-1 gap-5 border-t border-[#e5e7eb] py-5.25 first:border-t-0 first:pt-0 last:pb-0 @min-[700px]:grid-cols-[328fr_400fr] @min-[700px]:gap-0 @min-[700px]:py-2.5 @min-[700px]:first:pt-0 @min-[700px]:last:pb-0 @min-[1030px]:grid-cols-[420px_600px] @min-[1030px]:gap-x-2.5"
               >

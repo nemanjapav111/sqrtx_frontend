@@ -9,6 +9,7 @@ import { fetchFeedPage, reportSearchClick, type FeedCategory, type FeedItem, typ
 import { formatPrice } from "@/lib/price";
 import { marketProductPath } from "@/lib/product-url";
 import { useHome, useListStart } from "./home-context";
+import { rememberList, takeSavedList } from "@/app/[lang]/[slug]/saved-list";
 import PhotoSearchNotice from "./photo-search";
 
 // The home page's list (Figma "sqrtx Phone new", 2167): the newest products of every business, the same cards as a business's own Products
@@ -33,10 +34,6 @@ interface View {
   searchId?: string; // the id of the search these products answer (from its first page), sent back with a click
   fresh?: boolean; // a new result set just arrived: its cards fade in one after the other (`result-in`, globals.css); not after "Show more" or when the list is restored
 }
-// A product page that is slow to build (its first visit) can be opened by a full page load instead of a move inside the site; the list's memory (home-context.tsx) is then gone
-// and Back would draw the server's first page at the top. So when a card is clicked the list (pages loaded, filter, scroll position) is also written to sessionStorage, and a
-// list drawn by Back / Forward after a full load is put back from it (the layout effect in HomeFeed).
-const SAVED = "sqrtx:list";
 const keyOf = (q: string, category: string, country: string, city: string, photo: string) => `${q}|${category}|${country}|${city}|${photo}`;
 
 export default function HomeFeed({ initial, initialCountry }: { initial: FeedPage; initialCountry: string }) {
@@ -67,27 +64,27 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
   useEffect(() => {
     memory.set("products", { chosen, view: { ...view, fresh: false } }); // coming back, the cards are simply there: no fade-in again
   }, [memory, chosen, view]);
-  // Back / Forward into a freshly loaded document (memory empty): put the list back as it was left, then its scroll position. Before paint, so the short list never shows.
+  // Back into a freshly loaded document (memory empty, see saved-list.ts): put the list back as it was left, then its scroll position, both before the next paint.
   const restored = useRef(false);
+  const [restoreY, setRestoreY] = useState<number | null>(null);
+  /* eslint-disable react-hooks/set-state-in-effect -- the list can only be put back after it is first drawn (the server's page has no sessionStorage) */
   useLayoutEffect(() => {
     if (restored.current || saved) return;
     restored.current = true;
-    try {
-      const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
-      const raw = sessionStorage.getItem(SAVED);
-      const arrow = sessionStorage.getItem("sqrtx:back-to") === location.pathname; // the back arrow of a product's page that was opened by a full load (back-to-products.tsx)
-      sessionStorage.removeItem("sqrtx:back-to");
-      if ((nav?.type !== "back_forward" && !arrow) || !raw) return;
-      const stored = JSON.parse(raw) as { y: number; chosen: { country: string; id: string }; view: View; path: string };
-      if (stored.path !== location.pathname || stored.chosen.country !== country || stored.view.key !== keyOf(search, stored.chosen.id, country, city, startPhoto)) return;
-      setChosen(stored.chosen);
-      setView({ ...stored.view, fresh: false });
-      requestAnimationFrame(() => window.scrollTo(0, stored.y));
-    } catch {
-      // no storage: the list simply starts again
-    }
+    const stored = takeSavedList<{ chosen: { country: string; id: string }; view: View }>("products");
+    if (!stored || stored.data.chosen.country !== country || stored.data.view.key !== keyOf(search, stored.data.chosen.id, country, city, startPhoto)) return;
+    setChosen(stored.data.chosen);
+    setView({ ...stored.data.view, fresh: false });
+    setRestoreY(stored.y);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the list is first drawn
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+  useLayoutEffect(() => {
+    if (restoreY === null) return;
+    window.scrollTo(0, restoreY); // the restored list is in the page by now (this runs in the commit that drew it)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- done once
+    setRestoreY(null);
+  }, [restoreY]);
   const [busy, setBusy] = useState(false); // a search / filter / country is being loaded
   const [moreBusy, setMoreBusy] = useState(false); // the next page is being loaded
   const [failed, setFailed] = useState(false);
@@ -204,11 +201,7 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
               {/* The whole card (picture, name, price, company) leads to the product's own page in the marketplace (its business's logo and page are there). */}
               <Link href={marketProductPath(product)} onClick={() => {
                   reportSearchClick(view.searchId, product.id, index);
-                  try {
-                    sessionStorage.setItem(SAVED, JSON.stringify({ y: window.scrollY, chosen, view: { ...view, fresh: false }, path: location.pathname }));
-                  } catch {
-                    // storage full or blocked: Back still works inside the site
-                  }
+                  rememberList("products", { chosen, view: { ...view, fresh: false } });
                 }} className="block">
                 {/* The picture is shown whole (never cropped) inside a grey box with square corners and a soft shadow: the owner's original design, back on 2026-10-08 (the white box with a thin grey stroke of 2026-10-02 is gone). No hover effect. */}
                 <div className="flex h-87.5 items-center justify-center bg-[#f9f9f9] p-6 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
