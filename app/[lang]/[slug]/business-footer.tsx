@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BackToSqrtxLink from "./back-to-sqrtx-link";
 import { usePathname } from "next/navigation";
 import { aboutIcon, backIcon, contactIcon, productsIcon, servicesIcon } from "@/app/[lang]/components/bar-icons";
 import { useBusinessBase } from "@/app/[lang]/components/business-link";
@@ -51,10 +52,10 @@ export default function BusinessFooter({ slug, provides }: { slug: string; provi
             {text.pages[tab.key]}
           </Link>
         ))}
-        <Link href="/" aria-label={text.backToSqrtx} className={`${TAB} ${TAB_OFF}`}>
+        <BackToSqrtxLink ariaLabel={text.backToSqrtx} className={`${TAB} ${TAB_OFF}`}>
           {backIcon}
           sqrtx
-        </Link>
+        </BackToSqrtxLink>
       </div>
     </nav>
   );
