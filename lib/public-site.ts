@@ -84,6 +84,10 @@ async function getJson<T>(path: string, revalidate: number, tags: string[] = [])
   return (await response.json()) as T;
 }
 
+// How long a saved answer may live at most (12 hours). Changes are cleared on demand (owner saves: lib/refresh-public-page.ts; the API hiding, showing or
+// deleting a business: app/api/revalidate-business), so this only heals a missed call.
+const REVALIDATE_BACKSTOP = 43200;
+
 // The labels of the saved answers. An address is lowercase everywhere it is stored, so the label is too.
 export const businessTag = (slug: string) => `business:${slug.toLowerCase()}`;
 export const productsTag = (userId: string) => `products:${userId}`;
@@ -97,7 +101,7 @@ export const isPossibleSlug = (slug: string) => /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9
 // cache(): the layout and the page both ask for the same business in one request, and only one call is made.
 export const getBusiness = cache((slug: string) =>
   isPossibleSlug(slug.toLowerCase())
-    ? getJson<PublicBusiness>(`/business-profile/by-url/${encodeURIComponent(slug)}`, 60, [businessTag(slug)])
+    ? getJson<PublicBusiness>(`/business-profile/by-url/${encodeURIComponent(slug)}`, REVALIDATE_BACKSTOP, [businessTag(slug)])
     : Promise.resolve(null),
 );
 
@@ -114,28 +118,28 @@ export const isProductId = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}
 // shows is sent, see GET /product/summary in the API notes. Nothing found (a hidden business) is an empty page.
 export const getProductsPage = cache(
   async (userId: string) =>
-    (await getJson<PublicProductsPage>(`/product/summary?${productsPageQuery(userId, {})}`, 60, [productsTag(userId)])) ?? emptyProductsPage,
+    (await getJson<PublicProductsPage>(`/product/summary?${productsPageQuery(userId, {})}`, REVALIDATE_BACKSTOP, [productsTag(userId)])) ?? emptyProductsPage,
 );
 
 // The FIRST page of the business's service list (24 rows, with the categories for the filter), the services' version of the above: see
 // GET /service/summary in the API notes. The next pages, and any search or category, are asked for by the browser.
 export const getServicesPage = cache(
   async (userId: string) =>
-    (await getJson<PublicServicesPage>(`/service/summary?${servicesPageQuery(userId, {})}`, 60, [servicesTag(userId)])) ?? emptyServicesPage,
+    (await getJson<PublicServicesPage>(`/service/summary?${servicesPageQuery(userId, {})}`, REVALIDATE_BACKSTOP, [servicesTag(userId)])) ?? emptyServicesPage,
 );
 
 // The FIRST page of the home page's list (the newest products of every business, in one country or in all of them), with the lists for the
 // two pickers: see GET /feed/products in the API notes. The next pages, and any search or filter, are asked for by the browser.
-export const getFeedPage = cache(async (country: string) => (await getJson<FeedPage>(`/feed/products?${feedQuery({ country })}`, 60, [feedTag])) ?? emptyFeedPage);
+export const getFeedPage = cache(async (country: string) => (await getJson<FeedPage>(`/feed/products?${feedQuery({ country })}`, REVALIDATE_BACKSTOP, [feedTag])) ?? emptyFeedPage);
 
 // The same for the Companies page (GET /feed/companies).
 export const getFeedCompaniesPage = cache(
-  async (country: string) => (await getJson<FeedCompaniesPage>(`/feed/companies?${feedQuery({ country })}`, 60, [feedTag])) ?? emptyFeedCompaniesPage,
+  async (country: string) => (await getJson<FeedCompaniesPage>(`/feed/companies?${feedQuery({ country })}`, REVALIDATE_BACKSTOP, [feedTag])) ?? emptyFeedCompaniesPage,
 );
 
 // The same for the Services page (GET /feed/services).
 export const getFeedServicesPage = cache(
-  async (country: string) => (await getJson<FeedServicesPage>(`/feed/services?${feedQuery({ country })}`, 60, [feedTag])) ?? emptyFeedServicesPage,
+  async (country: string) => (await getJson<FeedServicesPage>(`/feed/services?${feedQuery({ country })}`, REVALIDATE_BACKSTOP, [feedTag])) ?? emptyFeedServicesPage,
 );
 
 // What GET /service/:id returns: a service with ALL its images, in order (the same sizes as a product's).
@@ -155,22 +159,22 @@ export interface PublicServiceDetail {
 // `userId`: the business the page is under (the caller must check the service really belongs to it). One small request for this one
 // service (the service's own page needs its whole description and all its photos, which the light list doesn't have).
 export const getService = cache((id: string, userId: string) =>
-  isProductId(id) ? getJson<PublicServiceDetail>(`/service/${id}`, 60, [servicesTag(userId)]) : Promise.resolve(null),
+  isProductId(id) ? getJson<PublicServiceDetail>(`/service/${id}`, REVALIDATE_BACKSTOP, [servicesTag(userId)]) : Promise.resolve(null),
 );
 
 // `userId`: the business the page is under (the caller must check the product really belongs to it). One small request for
 // this one product (the product's own page needs its description and all its photos, which the light list doesn't have).
 export const getProduct = cache((id: string, userId: string) =>
-  isProductId(id) ? getJson<PublicProductDetail>(`/product/${id}`, 60, [productsTag(userId)]) : Promise.resolve(null),
+  isProductId(id) ? getJson<PublicProductDetail>(`/product/${id}`, REVALIDATE_BACKSTOP, [productsTag(userId)]) : Promise.resolve(null),
 );
 
 // A product asked for by its id ALONE (a product's page in the sqrtx marketplace, app/(sqrtx)/product/[id]: the address has no business in it)
 // and the business that owns it, by the owner's id. Their saved copies carry the home page's label: the owner's save clears it
 // (lib/refresh-public-page.ts), and the business is not known before the product has been read.
-export const getProductAnywhere = cache((id: string) => (isProductId(id) ? getJson<PublicProductDetail>(`/product/${id}`, 60, [feedTag]) : Promise.resolve(null)));
-export const getServiceAnywhere = cache((id: string) => (isProductId(id) ? getJson<PublicServiceDetail>(`/service/${id}`, 60, [feedTag]) : Promise.resolve(null)));
+export const getProductAnywhere = cache((id: string) => (isProductId(id) ? getJson<PublicProductDetail>(`/product/${id}`, REVALIDATE_BACKSTOP, [feedTag]) : Promise.resolve(null)));
+export const getServiceAnywhere = cache((id: string) => (isProductId(id) ? getJson<PublicServiceDetail>(`/service/${id}`, REVALIDATE_BACKSTOP, [feedTag]) : Promise.resolve(null)));
 export const getBusinessByUserId = cache((userId: string) =>
-  isProductId(userId) ? getJson<PublicBusiness>(`/business-profile/${userId}`, 60, [feedTag]) : Promise.resolve(null),
+  isProductId(userId) ? getJson<PublicBusiness>(`/business-profile/${userId}`, REVALIDATE_BACKSTOP, [feedTag]) : Promise.resolve(null),
 );
 
 /** The name of a business category from its id ("supplements" -> "Vitamins & supplements"), or null if unknown. */
