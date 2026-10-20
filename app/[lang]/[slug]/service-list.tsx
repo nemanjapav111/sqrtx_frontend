@@ -12,7 +12,7 @@ import FitText from "@/app/[lang]/components/fit-text";
 import { useArrivalPop } from "./business-content";
 import BusinessIntro, { type BusinessIntroData } from "./business-intro";
 import CategoryFilter from "./category-filter";
-import { rememberList, takeSavedList } from "./saved-list";
+import { rememberList, savedScrollY, takeSavedList } from "./saved-list";
 import { useBusinessText, useSearch } from "./search-context";
 
 // The Services page content: the category filter ("ALL") and the services, one row each: a photo, the name, the price, a black
@@ -71,8 +71,13 @@ export default function ServiceList({ initial, userId, slug, currency, intro }: 
   const [restoreY, setRestoreY] = useState<number | null>(null);
   /* eslint-disable react-hooks/set-state-in-effect -- the list can only be put back after it is first drawn (the server's page has no sessionStorage) */
   useLayoutEffect(() => {
-    if (restored.current || saved) return;
+    if (restored.current) return;
     restored.current = true;
+    if (saved) {
+      const y = savedScrollY("business-services"); // drawn again from memory by a way back: scrolled before the first paint
+      if (y !== null) window.scrollTo(0, y);
+      return;
+    }
     const stored = takeSavedList<{ category: string; view: View }>("business-services");
     if (!stored || stored.data.view.key !== keyOf(search, stored.data.category)) return;
     setCategory(stored.data.category);

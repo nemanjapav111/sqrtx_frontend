@@ -9,7 +9,7 @@ import { fetchFeedPage, reportSearchClick, type FeedCategory, type FeedItem, typ
 import { formatPrice } from "@/lib/price";
 import { marketProductPath } from "@/lib/product-url";
 import { useHome, useListStart } from "./home-context";
-import { rememberList, takeSavedList } from "@/app/[lang]/[slug]/saved-list";
+import { rememberList, savedScrollY, takeSavedList } from "@/app/[lang]/[slug]/saved-list";
 import PhotoSearchNotice from "./photo-search";
 
 // The home page's list (Figma "sqrtx Phone new", 2167): the newest products of every business, the same cards as a business's own Products
@@ -69,8 +69,13 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
   const [restoreY, setRestoreY] = useState<number | null>(null);
   /* eslint-disable react-hooks/set-state-in-effect -- the list can only be put back after it is first drawn (the server's page has no sessionStorage) */
   useLayoutEffect(() => {
-    if (restored.current || saved) return;
+    if (restored.current) return;
     restored.current = true;
+    if (saved) {
+      const y = savedScrollY("products"); // drawn again from memory by a way back: scrolled before the first paint
+      if (y !== null) window.scrollTo(0, y);
+      return;
+    }
     const stored = takeSavedList<{ chosen: { country: string; id: string }; view: View }>("products");
     if (!stored || stored.data.chosen.country !== country || stored.data.view.key !== keyOf(search, stored.data.chosen.id, country, city, startPhoto)) return;
     setChosen(stored.data.chosen);
