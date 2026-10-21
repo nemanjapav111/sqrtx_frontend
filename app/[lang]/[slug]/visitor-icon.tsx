@@ -65,10 +65,20 @@ function forgetMyPage() {
 const ICON_BOTTOM = (40 - 25) / 2 + 25; // 32.5
 const MENU_TOP = ICON_BOTTOM + POPUP_GAP; // 48.5
 
-function MenuRow({ href, children, onClick, disabled, className = "" }: { href?: string; children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string }) {
+// `reload`: a click loads the page again from the server instead of moving inside the site (the owner's "View my page": the site may still hold the copy shown before they saved).
+function MenuRow({ href, children, onClick, disabled, className = "", reload = false }: { href?: string; children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string; reload?: boolean }) {
   // The row of every popup (components/popup.tsx).
   return href ? (
-    <Link href={href} className={`${POPUP_ROW} ${className}`} onClick={onClick}>
+    <Link
+      href={href}
+      className={`${POPUP_ROW} ${className}`}
+      onClick={(event) => {
+        onClick?.();
+        if (!reload || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        window.location.assign(href);
+      }}
+    >
       {children}
     </Link>
   ) : (
@@ -253,7 +263,7 @@ export default function VisitorIcon({ light = false, businessLink = false }: { l
           ) : signedIn ? (
             <>
               {myPage && (
-                <MenuRow href={addressInLanguage(myPage, lang)} onClick={onNavigate}>
+                <MenuRow href={addressInLanguage(myPage, lang)} onClick={onNavigate} reload>
                   {t.viewMyPage}
                 </MenuRow>
               )}
