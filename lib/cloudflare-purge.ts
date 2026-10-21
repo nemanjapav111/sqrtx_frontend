@@ -28,6 +28,7 @@ export async function purgeBusinessCache(slugs: string[]): Promise<void> {
       signal: AbortSignal.timeout(3000), // the owner is waiting for their save to finish
     });
     if (!response.ok) console.error(`Cloudflare cache purge was refused (HTTP ${response.status}); the copies will expire by themselves.`);
+    else console.info(`Cloudflare cache purged for ${tags.join(", ")}`);
   } catch (error) {
     console.error("Cloudflare cache purge failed; the copies will expire by themselves:", error instanceof Error ? error.message : error);
   }

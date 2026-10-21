@@ -35,7 +35,11 @@ export async function refreshPublicPage(accessToken: string, previousSlug?: stri
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   });
-  if (!response.ok) return;
+  if (!response.ok) {
+    // Said in the server's log, because the owner's browser swallows this on purpose and nothing else shows why the pages were not refreshed.
+    console.error(`refreshPublicPage: the API answered ${response.status} for the owner's profile, so the saved copies were not cleared.`);
+    return;
+  }
   const { user_id, company_url } = (await response.json()) as { user_id: string; company_url: string };
 
   let slug = "";
