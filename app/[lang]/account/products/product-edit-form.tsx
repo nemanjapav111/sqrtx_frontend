@@ -12,6 +12,7 @@ import ProductFields, { CONTROL_NAME } from "@/app/[lang]/components/product-fie
 import { ApiError } from "@/lib/api";
 import { forgetOwnerProducts } from "@/lib/memory-cache";
 import { refreshMyPublicPage } from "@/lib/onboarding";
+import { productSegment } from "@/lib/product-url";
 import { isSaved } from "@/lib/photos";
 import {
   createProduct,
@@ -113,7 +114,7 @@ export default function ProductEditForm({
         setUpload(null);
         forgetOwnerProducts(); // what the list and the product pages remembered is out of date, even if this only half worked
       }
-      await refreshMyPublicPage();
+      await refreshMyPublicPage(undefined, product ? [`product/${productSegment(product.product_name, product.id)}`, `product/${productSegment(values.name, product.id)}`] : []); // the page(s) the saved product had before and has now
       router.push(LIST_PATH);
       return;
     } catch (err) {
@@ -138,7 +139,7 @@ export default function ProductEditForm({
       } finally {
         forgetOwnerProducts();
       }
-      await refreshMyPublicPage();
+      await refreshMyPublicPage(undefined, product ? [`product/${productSegment(product.product_name, product.id)}`] : []);
       router.push(LIST_PATH);
       return;
     } catch (err) {
@@ -203,7 +204,7 @@ export default function ProductEditForm({
                 await setProductActive(product.id, next);
                 setActive(next);
                 forgetOwnerProducts();
-                await refreshMyPublicPage();
+                await refreshMyPublicPage(undefined, product ? [`product/${productSegment(product.product_name, product.id)}`] : []);
               }}
             />
           )}

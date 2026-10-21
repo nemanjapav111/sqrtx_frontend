@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { refreshPublicPage } from "@/lib/refresh-public-page";
 import { getBootstrap, type Bootstrap } from "@/lib/bootstrap";
 import { slugFromUrl } from "@/lib/business-profile";
-import { addressInLanguage } from "@/lib/i18n";
+import { DEFAULT_LOCALE, LOCALES, addressInLanguage } from "@/lib/i18n";
 import { readLanguageCookie } from "@/lib/language-cookie";
 
 // What GET /onboarding/me returns (see API.md in the backend).
@@ -38,25 +38,36 @@ export async function finishOnboarding(aboutCompany: string) {
  * before, when the address was changed). Best effort: if it fails the page
  * simply catches up by itself within a minute, so it must never fail the action it follows.
  */
-export async function refreshMyPublicPage(previousSlug?: string) {
+export async function refreshMyPublicPage(previousSlug?: string, items: string[] = []) {
+  let slug: string | null = null;
   try {
     const { data } = await supabase.auth.getSession();
-    if (data.session) await refreshPublicPage(data.session.access_token, previousSlug);
-  } catch {
-    // ignored on purpose, see above
+    if (data.session) slug = await refreshPublicPage(data.session.access_token, previousSlug);
+  } catch (error) {
+    // Never fails the save, but said in the browser's console: otherwise a refresh that did not happen (for example a page opened before a deploy) leaves no trace.
+    console.error("The site's saved copies of the owner's page were not cleared:", error);
   }
-  await clearBrowserCache();
+  await refreshBrowserCopies([slug, previousSlug], items, slug);
 }
 
 // The site's saved copies are cleared by the call above, but this browser keeps its own (pages the owner opened before the save, which it shows first while it
-// asks again): the server's answer here tells it to drop them (app/api/clear-browser-cache), in every tab of this browser. Pictures come from another address and stay.
-// A server action's own answer cannot carry that header, hence a call of its own, made after the saved copies were cleared so nothing is saved again from the old ones.
-async function clearBrowserCache() {
-  try {
-    await fetch("/api/clear-browser-cache", { method: "POST", cache: "no-store", signal: AbortSignal.timeout(2000) });
-  } catch {
-    // best effort, like the rest
+// asks again). So it asks again, right now and bypassing what it kept, for exactly the pages the save changed: the business's page(s) and each saved item
+// ("product/<name>-<id>" or "service/...", under the marketplace's address and under the business's own, in every language). One saved copy per address is
+// kept, so this replaces the link-click version of the page as well. Best effort, like the rest.
+async function refreshBrowserCopies(slugs: (string | null | undefined)[], items: string[], slug: string | null) {
+  const langs = LOCALES.filter((lang) => lang !== DEFAULT_LOCALE).map((lang) => `/${lang}`);
+  const bases = ["", ...langs];
+  const paths = new Set<string>();
+  for (const base of bases) {
+    for (const address of slugs) if (address) paths.add(`${base}/${address}`);
+    for (const item of items) {
+      paths.add(`${base}/${item}`);
+      if (slug) paths.add(`${base}/${slug}/${item}`);
+    }
   }
+  await Promise.all(
+    [...paths].map((path) => fetch(path, { cache: "reload", credentials: "same-origin", signal: AbortSignal.timeout(4000) }).catch(() => undefined)),
+  );
 }
 
 // Which page each step lives on. Change a route here and everything that sends users to it follows.
