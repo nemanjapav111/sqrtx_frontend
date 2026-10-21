@@ -10,7 +10,8 @@ import { HomeFooter } from "../home/home-nav";
 // search, the page, and, on a phone, the bottom bar with the pages and the country. The shell stays when the visitor moves between the two,
 // so what was typed in the search box (and the country) is still there, and the box keeps the cursor when typing takes the visitor from a
 // product's page back to the list. (The folder name in brackets only groups the pages: it is not part of the address.)
-export default async function SqrtxLayout({ children, params }: { children: React.ReactNode; params: Promise<{ lang: string }> }) {
+// `modal`: a product opened from a list is drawn above the list (@modal/(.)product/[id]), which stays where it is.
+export default async function SqrtxLayout({ children, modal, params }: { children: React.ReactNode; modal: React.ReactNode; params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   const { home } = await getDictionary(asLocale(lang));
   const categoryTable = await loadCategoryTable(asLocale(lang));
@@ -22,6 +23,7 @@ export default async function SqrtxLayout({ children, params }: { children: Reac
         <LightenIn />
         {/* pb: on a phone, room for the fixed bottom bar (58px + its 1px top line, plus the phone's own bottom edge where it has one). */}
         <div className="keep-width flex flex-1 flex-col pb-[calc(59px+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
+        {modal}
         <HomeFooter />
       </div>
     </HomeProvider>

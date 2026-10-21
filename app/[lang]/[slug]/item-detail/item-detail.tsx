@@ -101,6 +101,7 @@ export default function ItemDetail({
   // Opened by a click on a card, the page starts at its top. Next.js scrolls there itself only when it finds a first element of this page to scroll to, which it does not always on a business's
   // pages (the page is left at the list's scroll position, partly down), so it is done here. Not after Back / Forward or on a fresh load: the browser puts the page where the visitor left it.
   useLayoutEffect(() => {
+    if (photo.current?.closest("[data-product-overlay]")) return; // drawn above a list (components/item-overlay.tsx): it starts at its own top, and the list behind must not move
     if (hasVisited() && !recentBack()) window.scrollTo(0, 0); // hasVisited: false on a fresh load, where the browser decides (a reload, Back into this page)
   }, []);
   const shown = images[selected] ?? images[0];

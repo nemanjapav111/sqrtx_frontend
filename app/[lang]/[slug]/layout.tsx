@@ -25,7 +25,8 @@ export function generateStaticParams() {
   return [];
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+// (`modal` is only here to satisfy the generated type check of a layout that has a slot: Next.js passes the params only.)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }>; modal: React.ReactNode }): Promise<Metadata> {
   const { slug } = await params;
   const business = await getBusiness(slug);
   if (!business) return {};
@@ -35,11 +36,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+// `modal`: a product or a service opened from one of the lists is drawn above it (@modal/(.)product/[id], @modal/(.)service/[id]), and the list stays where it is.
 export default async function BusinessLayout({
   children,
+  modal,
   params,
 }: {
   children: React.ReactNode;
+  modal: React.ReactNode;
   params: Promise<{ lang: string; slug: string }>;
 }) {
   const { lang: langPart, slug } = await params;
@@ -60,6 +64,7 @@ export default async function BusinessLayout({
         {/* pb: on a phone, room for the fixed bottom bar (58px + its 1px top line, plus the phone's own bottom edge
             where it has one). Tablet and desktop have no bottom bar. */}
         <BusinessContent className="keep-width flex flex-1 flex-col pb-[calc(59px+env(safe-area-inset-bottom))] md:pb-0">{children}</BusinessContent>
+        {modal}
         <BusinessFooter slug={slug} provides={business.provides} />
         <LanguageOffer />
       </div>

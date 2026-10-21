@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
 import { idFromSegment, serviceSegment } from "@/lib/product-url";
 import { SITE_ORIGIN, getBusiness, getService } from "@/lib/public-site";
-import ItemDetail from "../../item-detail/item-detail";
-import { getDictionary } from "../../../dictionaries";
-import { tabPath } from "../../tabs";
+import { BusinessService } from "./business-service";
 import { asLocale, businessBase } from "@/lib/i18n";
 
 // A service's own page: sqrtx.co/<address>/service/<name>-<id>, the "See More" of the services' list. The same page as a product's
@@ -35,34 +32,6 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default async function ServicePage({ params }: { params: Promise<{ lang: string; slug: string; id: string }> }) {
-  const { lang: langPart, slug, id: segment } = await params;
-  const lang = asLocale(langPart);
-  const id = idFromSegment(segment);
-  if (!id) notFound();
-  const business = await getBusiness(slug);
-  if (!business) notFound();
-  const service = await getService(id, business.user_id);
-  if (!service || service.user_id !== business.user_id) notFound();
-  // Any other form of the address (the bare id, an old name, other capitals) goes to the current one.
-  const current = serviceSegment(service.service_name, service.id);
-  if (segment !== current) permanentRedirect(`${businessBase(slug.toLowerCase(), lang)}/service/${current}`);
-  const item = {
-    name: service.service_name,
-    price: service.price,
-    priceType: service.price_type,
-    description: service.description,
-    images: service.images,
-    service: { duration: service.duration, area: service.service_area },
-  };
-  const dictionary = await getDictionary(lang);
-  return (
-    <ItemDetail
-      item={item}
-      business={business}
-      slug={slug.toLowerCase()}
-      backTo={tabPath(slug, business.provides, "services", lang)}
-      backLabel={dictionary.business.search.backToServices}
-      text={dictionary.item}
-    />
-  );
+  const { lang, slug, id } = await params;
+  return <BusinessService lang={lang} slug={slug} segment={id} />;
 }

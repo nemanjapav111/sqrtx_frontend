@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
-import ItemDetail from "@/app/[lang]/[slug]/item-detail/item-detail";
 import { idFromSegment, serviceSegment, slugOfCompanyUrl } from "@/lib/product-url";
 import { SITE_ORIGIN, getBusinessByUserId, getServiceAnywhere } from "@/lib/public-site";
-import { CompanyLine } from "@/app/[lang]/components/company-line";
-import { asLocale } from "@/lib/i18n";
-import { getDictionary } from "../../../dictionaries";
+import { MarketService } from "./market-service";
 
 // A service's own page in the sqrtx marketplace: sqrtx.co/service/<name>-<id>, where a row of the Services page leads ("See More"). The
 // services' version of the marketplace's product page (../../product/[id]/page.tsx: the same page and rules, the same layout, see
@@ -32,35 +28,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default async function MarketServicePage({ params }: { params: Promise<{ lang: string; id: string }> }) {
-  const { lang, id: segment } = await params;
-  const id = idFromSegment(segment);
-  if (!id) notFound();
-  const service = await getServiceAnywhere(id);
-  if (!service) notFound();
-  const business = await getBusinessByUserId(service.user_id);
-  const slug = business && slugOfCompanyUrl(business.company_url);
-  if (!business || !slug) notFound();
-  const current = serviceSegment(service.service_name, service.id);
-  if (segment !== current) permanentRedirect(`/service/${current}`);
-
-  const dictionary = await getDictionary(asLocale(lang));
-  const item = {
-    name: service.service_name,
-    price: service.price,
-    priceType: service.price_type,
-    description: service.description,
-    images: service.images,
-    service: { duration: service.duration, area: service.service_area },
-  };
-  return (
-    <ItemDetail
-      item={item}
-      business={business}
-      slug={slug}
-      backTo="/services"
-      backLabel={dictionary.home.search.backToServices}
-      text={dictionary.item}
-      companyLine={<CompanyLine slug={slug} name={business.company_name} city={business.city} logo={business.logo} />}
-    />
-  );
+  const { lang, id } = await params;
+  return <MarketService lang={lang} segment={id} />;
 }

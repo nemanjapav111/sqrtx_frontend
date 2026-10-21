@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { notFound, permanentRedirect } from "next/navigation";
 import { idFromSegment, productSegment } from "@/lib/product-url";
 import { SITE_ORIGIN, getBusiness, getProduct } from "@/lib/public-site";
-import ItemDetail from "../../item-detail/item-detail";
+import { BusinessProduct } from "./business-product";
 import { asLocale, businessBase } from "@/lib/i18n";
-import { getDictionary } from "../../../dictionaries";
 
 // A product's own page: sqrtx.co/<address>/product/<name>-<id> (lib/product-url.ts: the id at the end finds the product, the name is
 // for people and search engines; a bare id, or an old name after a rename, is redirected to the current address, so a product has
@@ -39,18 +37,6 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ lang: string; slug: string; id: string }> }) {
-  const { lang: langPart, slug, id: segment } = await params;
-  const lang = asLocale(langPart);
-  const id = idFromSegment(segment);
-  if (!id) notFound();
-  const business = await getBusiness(slug);
-  if (!business) notFound();
-  const product = await getProduct(id, business.user_id);
-  if (!product || product.user_id !== business.user_id) notFound();
-  // Any other form of the address (the bare id, an old name, other capitals) goes to the current one.
-  const current = productSegment(product.product_name, product.id);
-  if (segment !== current) permanentRedirect(`${businessBase(slug.toLowerCase(), lang)}/product/${current}`);
-  const item = { name: product.product_name, price: product.price, description: product.description, images: product.images };
-  const dictionary = await getDictionary(lang);
-  return <ItemDetail item={item} business={business} slug={slug.toLowerCase()} backTo={businessBase(slug.toLowerCase(), lang)} backLabel={dictionary.business.search.backToProducts} text={dictionary.item} />;
+  const { lang, slug, id } = await params;
+  return <BusinessProduct lang={lang} slug={slug} segment={id} />;
 }

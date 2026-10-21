@@ -4,7 +4,9 @@ import { updateTag } from "next/cache";
 import { purgeBusinessCache } from "@/lib/cloudflare-purge";
 import { businessTag, feedTag, isPossibleSlug, productsTag, servicesTag } from "@/lib/public-site";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+// Where this server reaches the API directly, skipping the CDN whose bot challenge answers the server's own requests with 403 (see lib/public-site.ts).
+// Through the public address this call failed quietly, so a save neither cleared the site's saved copies nor the CDN's.
+const API_URL = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
 // How often one owner may make the CDN drop their pages: the free Cloudflare plan allows only 5 such calls a minute for the
 // WHOLE site, so nobody (by mistake or on purpose) may use them all up. Beyond this their copies just expire by themselves.

@@ -24,7 +24,8 @@ export function generateStaticParams() {
   return LOCALES.map((lang) => ({ lang }));
 }
 
-export default async function RootLayout({ children, params }: LayoutProps<"/[lang]">) {
+// (Typed by hand: LayoutProps<"/[lang]"> also asks for the `modal` slot, which belongs to the layout of the (sqrtx) group below it.)
+export default async function RootLayout({ children, params }: { children: React.ReactNode; params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   if (!hasLocale(lang)) notFound();
   const { shell, common } = await getDictionary(lang);
