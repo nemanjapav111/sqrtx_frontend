@@ -12,7 +12,6 @@ import ServiceFields, { CONTROL_NAME } from "@/app/[lang]/components/service-fie
 import { ApiError } from "@/lib/api";
 import { forgetOwnerServices } from "@/lib/memory-cache";
 import { refreshMyPublicPage } from "@/lib/onboarding";
-import { serviceSegment } from "@/lib/product-url";
 import { isSaved } from "@/lib/photos";
 import {
   createService,
@@ -114,7 +113,7 @@ export default function ServiceEditForm({
         setUpload(null);
         forgetOwnerServices(); // what the list and the service pages remembered is out of date, even if this only half worked
       }
-      await refreshMyPublicPage(undefined, service ? [`service/${serviceSegment(service.service_name, service.id)}`, `service/${serviceSegment(values.name, service.id)}`] : []); // the page(s) the saved service had before and has now
+      await refreshMyPublicPage();
       router.push(LIST_PATH);
       return;
     } catch (err) {
@@ -139,7 +138,7 @@ export default function ServiceEditForm({
       } finally {
         forgetOwnerServices();
       }
-      await refreshMyPublicPage(undefined, service ? [`service/${serviceSegment(service.service_name, service.id)}`] : []);
+      await refreshMyPublicPage();
       router.push(LIST_PATH);
       return;
     } catch (err) {
@@ -204,7 +203,7 @@ export default function ServiceEditForm({
                 await setServiceActive(service.id, next);
                 setActive(next);
                 forgetOwnerServices();
-                await refreshMyPublicPage(undefined, service ? [`service/${serviceSegment(service.service_name, service.id)}`] : []);
+                await refreshMyPublicPage();
               }}
             />
           )}

@@ -29,8 +29,8 @@ function mayPurge(owner: string): boolean {
 // Which page is theirs is NOT taken from the caller: the owner's own profile is read from the API with their access
 // token, so nobody can use this to clear someone else's page. `updateTag` (not revalidateTag) because the very next
 // request, the owner opening their page, must wait for fresh data instead of being handed the old copy meanwhile.
-export async function refreshPublicPage(accessToken: string, previousSlug?: string): Promise<string | null> {
-  if (!API_URL) return null;
+export async function refreshPublicPage(accessToken: string, previousSlug?: string): Promise<void> {
+  if (!API_URL) return;
   const response = await fetch(`${API_URL}/business-profile/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
@@ -38,7 +38,7 @@ export async function refreshPublicPage(accessToken: string, previousSlug?: stri
   if (!response.ok) {
     // Said in the server's log, because the owner's browser swallows this on purpose and nothing else shows why the pages were not refreshed.
     console.error(`refreshPublicPage: the API answered ${response.status} for the owner's profile, so the saved copies were not cleared.`);
-    return null;
+    return;
   }
   const { user_id, company_url } = (await response.json()) as { user_id: string; company_url: string };
 
@@ -62,7 +62,6 @@ export async function refreshPublicPage(accessToken: string, previousSlug?: stri
   const stale = slug ? [slug] : [];
   if (old && isPossibleSlug(old.toLowerCase()) && (await isAddressFree(old))) stale.push(old);
   if (stale.length > 0 && mayPurge(user_id)) await purgeBusinessCache(stale);
-  return slug || null; // the owner's address, so their browser can ask again for exactly their pages (refreshMyPublicPage in lib/onboarding.ts)
 }
 
 // Is nobody at this address (the API says 404)? Any other answer, or none, counts as taken: better to leave a copy than to clear a stranger's.
