@@ -7,6 +7,17 @@
 const projectName = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/^https?:\/\//, "").split(".")[0];
 export const SAVED_LOGIN_KEY = `sb-${projectName}-auth-token`;
 
+/** Who the saved login belongs to (the user's id), read the same way, or null. Lets a copy kept for one account be told apart from another's. */
+export function savedLoginUser(): string | null {
+  try {
+    const raw = localStorage.getItem(SAVED_LOGIN_KEY);
+    const id = raw ? (JSON.parse(raw) as { user?: { id?: unknown } } | null)?.user?.id : null;
+    return typeof id === "string" ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 export function hasSavedLogin(): boolean {
   try {
     return !!localStorage.getItem(SAVED_LOGIN_KEY);

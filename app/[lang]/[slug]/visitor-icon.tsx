@@ -9,7 +9,7 @@ import { usePopupDismiss } from "@/app/[lang]/components/use-popup-dismiss";
 import { useLang, useShellText } from "@/app/[lang]/components/lang-context";
 import { LANGUAGE_NAMES, LOCALES, addressInLanguage, type Locale } from "@/lib/i18n";
 import { followAccountLanguage, offersLanguageChoice, writeLanguageCookie } from "@/lib/language-cookie";
-import { SAVED_LOGIN_KEY, hasSavedLogin } from "@/lib/saved-login";
+import { SAVED_LOGIN_KEY, hasSavedLogin, savedLoginUser } from "@/lib/saved-login";
 
 // The account icon at the right of the top bar (Figma "visitor_icon" opens "visitor_account_dropdown", node 495:51):
 // tapping or clicking it opens a small menu right under it. The design only shows the signed-OUT menu (Log In / Register,
@@ -35,25 +35,36 @@ const MENU_WIDTH = "w-50.75"; // 203px, the design's width
 // checked again in the background) and asked for as soon as the page knows the visitor is signed in, not only when the menu is opened:
 // asked on opening it arrived after the menu was already on screen, a moment late.
 const MY_PAGE_KEY = "sqrtx:my-page";
+// What is kept belongs to the account that was signed in when it was asked (myPageUser): another account signing in in the same tab
+// (the first one logged out on a page that has no menu, so nothing forgot it) never gets the first one's page.
 let myPageCache: string | null | undefined;
+let myPageUser: string | null = null;
 let myPageAsked = false; // asked on this page load already
 function readMyPage(): string | null | undefined {
-  if (myPageCache !== undefined) return myPageCache;
+  const user = savedLoginUser();
+  if (myPageCache !== undefined) {
+    if (myPageUser === user) return myPageCache;
+    myPageCache = undefined; // another account (or none) is signed in now
+    myPageAsked = false;
+  }
   try {
-    const kept = sessionStorage.getItem(MY_PAGE_KEY);
-    return kept === null ? undefined : kept === "" ? null : kept;
+    const kept = JSON.parse(sessionStorage.getItem(MY_PAGE_KEY) ?? "null") as { u?: string; p?: string | null } | null;
+    if (!kept || !user || kept.u !== user) return undefined;
+    return kept.p ?? null;
   } catch {
     return undefined;
   }
 }
 function keepMyPage(path: string | null) {
   myPageCache = path;
+  myPageUser = savedLoginUser();
   try {
-    sessionStorage.setItem(MY_PAGE_KEY, path ?? "");
+    sessionStorage.setItem(MY_PAGE_KEY, JSON.stringify({ u: myPageUser, p: path }));
   } catch {}
 }
 function forgetMyPage() {
   myPageCache = undefined;
+  myPageUser = null;
   myPageAsked = false;
   try {
     sessionStorage.removeItem(MY_PAGE_KEY);
@@ -115,6 +126,10 @@ export default function VisitorIcon({ light = false, businessLink = false }: { l
         const answer = (session: unknown) => {
           showDot(!!session);
           if (!session) forgetMyPage(); // the login is gone (it expired, or was ended in another tab): the kept page is no one's
+          else if (myPageCache !== undefined && myPageUser !== savedLoginUser()) {
+            forgetMyPage(); // another account signed in while this menu stayed on screen
+            setMyPage(undefined);
+          }
           setConfirmed(!!session);
         };
         supabase.auth.getSession().then(({ data }) => !cancelled && answer(data.session));
