@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useCommonText } from "@/app/[lang]/components/lang-context";
 import type { Dictionary } from "@/app/[lang]/dictionaries/en";
 import { fill } from "@/lib/i18n";
@@ -85,7 +86,8 @@ export default function PhotoViewer({
   const neighbours = images.length > 1 ? [images[(index + 1) % images.length], images[(index - 1 + images.length) % images.length]] : [];
   const control = "flex size-11 cursor-pointer items-center justify-center bg-black/50 text-white hover:bg-black/70";
 
-  return (
+  // Drawn straight into the page's body, not inside the product's overlay (components/item-overlay.tsx): that sits under the top bar so the account menu can open over it, and the viewer must cover the whole window.
+  return createPortal(
     <div
       ref={dialog}
       role="dialog"
@@ -158,6 +160,7 @@ export default function PhotoViewer({
           </picture>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

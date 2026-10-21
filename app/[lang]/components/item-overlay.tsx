@@ -7,6 +7,7 @@ import { useLayoutEffect, useState } from "react";
 // and scroll position untouched, so the back arrow only takes this away and nothing is drawn again (before, the list was thrown away and rebuilt on Back, and
 // every picture started again from its blurred preview). A shared link, a reload or a new tab still gets the full page (the routes without the "(.)").
 // It fills the window under the top bar (which is sticky, so its height is its bottom edge) and, on a phone, above the bottom bar, and scrolls on its own;
+// It sits BELOW the sticky top bar and the phone's bottom bar (z-30), so the account menu, which hangs down from the top bar, opens over it; the photo viewer is drawn outside of it (photo-viewer.tsx).
 // `overscroll-contain` keeps the list behind from scrolling along. It does not lock the page, so no scrollbar appears or disappears and nothing moves.
 export default function ItemOverlay({ children }: { children: React.ReactNode }) {
   const [top, setTop] = useState(0);
@@ -20,7 +21,7 @@ export default function ItemOverlay({ children }: { children: React.ReactNode })
     <div
       data-product-overlay
       style={{ top }}
-      className="keep-width fixed inset-x-0 bottom-[calc(59px+env(safe-area-inset-bottom))] z-40 flex flex-col overflow-y-auto overscroll-contain bg-white md:bottom-0"
+      className="keep-width fixed inset-x-0 bottom-[calc(59px+env(safe-area-inset-bottom))] z-20 flex flex-col overflow-y-auto overscroll-contain bg-white md:bottom-0"
     >
       {children}
     </div>
