@@ -11,7 +11,7 @@ export const metadata = { title: "Privacy Policy – sqrtx" };
 // process data.
 export default function Privacy() {
   return (
-    <LegalDocument title="Privacy Policy" version={PRIVACY_VERSION} updated="October 16, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/privacy")}>
+    <LegalDocument title="Privacy Policy" version={PRIVACY_VERSION} updated="October 21, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/privacy")}>
       <LegalSection title="1. Who we are">
         <p>
           This policy explains how {LEGAL.operator}, an individual operating the sqrtx service (“sqrtx”, “we”, “us”),
@@ -61,7 +61,8 @@ export default function Privacy() {
           </li>
           <li>
             <strong>Technical data:</strong> our providers may record things such as your IP address, browser type and the
-            times you sign in, to keep the service secure and running.
+            times you sign in, to keep the service secure and running. Our server logs may keep your IP address for security
+            and troubleshooting.
           </li>
           <li>
             <strong>Emails:</strong> we send you emails needed for the service, such as confirming your email address and
@@ -98,7 +99,10 @@ export default function Privacy() {
         <p>We use other companies to run sqrtx. They handle data only to provide their service to us:</p>
         <LegalList>
           <li>our login and database provider (Supabase), which stores accounts and the information you give us;</li>
-          <li>our image storage provider (Cloudflare), which stores your logo and photos;</li>
+          <li>
+            our network, security and image storage provider (Cloudflare), which delivers sqrtx to visitors, protects it against
+            attacks and automated abuse, measures visits without using cookies, and stores your logo and photos;
+          </li>
           <li>
             Google, whose address search suggests addresses as you type. What you type in the address box is sent to Google.
             Google’s own privacy policy applies to that;
@@ -109,8 +113,17 @@ export default function Privacy() {
             and tax, and tells us whether your subscription is active. {LEGAL.paymentProvider} is responsible for that data under its own privacy
             policy;
           </li>
-          <li>our email delivery provider, Brevo, which sends the emails in section 2, including messages from visitors to businesses;</li>
-          <li>our hosting provider, [name].</li>
+          <li>
+            our email delivery provider, Brevo, which sends emails for the service, including the messages visitors write to a
+            business through its contact form;
+          </li>
+          <li>
+            our business email provider, Namecheap (Private Email), which hosts the mailbox where messages sent to {LEGAL.email}{" "}
+            arrive and from which we answer them;
+          </li>
+          <li>
+            our hosting provider, OVHcloud, which runs the server that hosts sqrtx, in the United States (Virginia).
+          </li>
         </LegalList>
         <p>
           We may also share data if the law or a public authority requires it, or with a company that takes over sqrtx, if
@@ -122,7 +135,7 @@ export default function Privacy() {
         <p>
           Our providers may store or handle data in other countries, including outside your own. Where the law requires it, we
           make sure the data stays protected, for example with standard contract terms. Our database, which holds your account and
-          the content of your business page, is stored in the United States (US East).
+          the content of your business page, is stored in the United States (US East), and our servers run in the United States (Virginia).
         </p>
       </LegalSection>
 
@@ -158,7 +171,8 @@ export default function Privacy() {
           sqrtx keeps your login in your browser so that you stay signed in, and remembers your language, your country filter and
           a few settings of the page you are on (for example a search you typed in your account). This is needed for the service to
           work and is kept in your browser. We do not use advertising or tracking cookies. Google’s address search and our payment
-          provider’s checkout are loaded from those companies and may store their own data as described in their policies.
+          provider’s checkout are loaded from those companies and may store their own data as described in their policies. The visit
+          statistics of our network provider work without cookies.
         </p>
       </LegalSection>
 

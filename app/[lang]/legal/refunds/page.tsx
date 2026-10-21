@@ -9,7 +9,7 @@ export const metadata = { title: "Refund Policy – sqrtx" };
 // the backend together. Keep it true to what the payment provider (LEGAL.paymentProvider) really does with refunds.
 export default function Refunds() {
   return (
-    <LegalDocument title="Refund Policy" version={TERMS_VERSION} updated="October 16, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/legal/refunds")}>
+    <LegalDocument title="Refund Policy" version={TERMS_VERSION} updated="October 21, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/legal/refunds")}>
       <LegalSection title="1. Free trial">
         <p>
           Every account starts with a free trial of 30 days, and you do not need to give us a card. You are not charged
@@ -57,7 +57,7 @@ export default function Refunds() {
 
       <LegalSection title="5. After a refund">
         <p>
-          When we refund a payment, we also end the subscription it was for. If you have no other paid plan, your business page, products and
+          When we refund a payment in full, we also end the subscription it was for. A partial refund (part of a payment) does not end the subscription. If a full refund ended your only paid plan, your business page, products and
           services are hidden from the public, not deleted, and they become public again when you subscribe. See section 6 of the{" "}
           <Link href="/terms" className="underline">
             Terms and Conditions
