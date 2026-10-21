@@ -206,7 +206,7 @@ export default function AccountStep({ text }: { text: Dictionary["account"] }) {
                   </div>
                 )}
                 {load.billing.has_access && load.active && load.slug && (
-                  <BusinessLink slug={load.slug} reload className="flex h-11 w-full items-center justify-center bg-black text-[14px] font-bold text-white">
+                  <BusinessLink slug={load.slug} className="flex h-11 w-full items-center justify-center bg-black text-[14px] font-bold text-white">
                     {text.view}
                   </BusinessLink>
                 )}
