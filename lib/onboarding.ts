@@ -45,6 +45,18 @@ export async function refreshMyPublicPage(previousSlug?: string) {
   } catch {
     // ignored on purpose, see above
   }
+  await clearBrowserCache();
+}
+
+// The site's saved copies are cleared by the call above, but this browser keeps its own (pages the owner opened before the save, which it shows first while it
+// asks again): the server's answer here tells it to drop them (app/api/clear-browser-cache), in every tab of this browser. Pictures come from another address and stay.
+// A server action's own answer cannot carry that header, hence a call of its own, made after the saved copies were cleared so nothing is saved again from the old ones.
+async function clearBrowserCache() {
+  try {
+    await fetch("/api/clear-browser-cache", { method: "POST", cache: "no-store", signal: AbortSignal.timeout(2000) });
+  } catch {
+    // best effort, like the rest
+  }
 }
 
 // Which page each step lives on. Change a route here and everything that sends users to it follows.
