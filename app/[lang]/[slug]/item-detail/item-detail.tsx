@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useCommonText } from "@/app/[lang]/components/lang-context";
 import type { Dictionary } from "@/app/[lang]/dictionaries/en";
 import PlaceholderPicture, { avifSourceSet, markSeen } from "@/app/[lang]/components/placeholder-picture";
@@ -385,12 +386,16 @@ export default function ItemDetail({
                 <div ref={contactBox} className={`absolute ${contactUp ? POPUP_ABOVE : POPUP_BELOW} left-0 z-20 hidden w-[min(24rem,calc(100vw-2rem))] p-3.5 md:block ${POPUP_CARD}`}>
                   <Contact business={business} />
                 </div>
-                {/* On a phone: a sheet at the bottom of the screen with big rows to tap (the popup's small links are hard to hit with a thumb). It is inside the box
-                    that usePopupDismiss watches, so a tap on a row is not taken for a tap outside; the dimmed page behind it closes it by its own click. */}
-                <div className="md:hidden">
-                  <div aria-hidden onClick={() => setContactOpen(false)} className="fixed inset-0 z-30 bg-black/35" />
-                  <ContactSheet business={business} text={text} onClose={() => setContactOpen(false)} />
-                </div>
+                {/* On a phone: a sheet at the bottom of the screen with big rows to tap (the popup's small links are hard to hit with a thumb). Drawn straight into the page's body,
+                    not inside the product's overlay (components/item-overlay.tsx), which sits below the phone's bottom bar and would hide the sheet behind it (like the photo viewer).
+                    usePopupDismiss counts [data-popup-portal] as inside the popup, so a tap on a row is not taken for a tap outside; the dimmed page behind it closes it by its own click. */}
+                {createPortal(
+                  <div className="md:hidden" data-popup-portal>
+                    <div aria-hidden onClick={() => setContactOpen(false)} className="fixed inset-0 z-30 bg-black/35" />
+                    <ContactSheet business={business} text={text} onClose={() => setContactOpen(false)} />
+                  </div>,
+                  document.body,
+                )}
               </>
             )}
           </div>

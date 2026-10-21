@@ -17,7 +17,8 @@ export function usePopupDismiss(open: boolean, root: RefObject<HTMLElement | nul
   useEffect(() => {
     if (!open) return;
     let pressedOutside = false;
-    const outside = (e: Event) => !!root.current && !root.current.contains(e.target as Node);
+    // [data-popup-portal]: a part of the popup drawn elsewhere in the page (the product contact sheet on a phone), which `root` does not contain.
+    const outside = (e: Event) => !!root.current && !root.current.contains(e.target as Node) && !(e.target as Element).closest?.("[data-popup-portal]");
     const onDown = (e: PointerEvent) => {
       pressedOutside = outside(e);
     };
