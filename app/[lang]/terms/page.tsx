@@ -11,7 +11,7 @@ export const metadata = { title: "Terms and Conditions – sqrtx" };
 // CURRENT_TERMS_VERSION in the backend together. Keep section 6 true once billing exists.
 export default function Terms() {
   return (
-    <LegalDocument title="Terms and Conditions" version={TERMS_VERSION} updated="October 16, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/terms")}>
+    <LegalDocument title="Terms and Conditions" version={TERMS_VERSION} updated="October 22, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/terms")}>
       <LegalSection title="1. About these terms">
         <p>
           These terms are an agreement between you and {LEGAL.operator}, an individual operating the sqrtx service (“sqrtx”,

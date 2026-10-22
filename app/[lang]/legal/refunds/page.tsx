@@ -9,7 +9,7 @@ export const metadata = { title: "Refund Policy – sqrtx" };
 // the backend together. Keep it true to what the payment provider (LEGAL.paymentProvider) really does with refunds.
 export default function Refunds() {
   return (
-    <LegalDocument title="Refund Policy" version={TERMS_VERSION} updated="October 21, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/legal/refunds")}>
+    <LegalDocument title="Refund Policy" version={TERMS_VERSION} updated="October 22, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/legal/refunds")}>
       <LegalSection title="1. Free trial">
         <p>
           Every account starts with a free trial of 30 days, and you do not need to give us a card. You are not charged

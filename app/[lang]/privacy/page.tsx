@@ -11,7 +11,7 @@ export const metadata = { title: "Privacy Policy – sqrtx" };
 // process data.
 export default function Privacy() {
   return (
-    <LegalDocument title="Privacy Policy" version={PRIVACY_VERSION} updated="October 21, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/privacy")}>
+    <LegalDocument title="Privacy Policy" version={PRIVACY_VERSION} updated="October 22, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/privacy")}>
       <LegalSection title="1. Who we are">
         <p>
           This policy explains how {LEGAL.operator}, an individual operating the sqrtx service (“sqrtx”, “we”, “us”),

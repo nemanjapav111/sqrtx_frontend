@@ -88,7 +88,7 @@ export async function startPlanCheckout(plan: PlanId, { goToAccountAfter = false
     settings: {
       displayMode: "overlay",
       variant: "one-page",
-      showAddDiscounts: false,
+      showAddDiscounts: true, // TEMPORARY for the live zero-cost test: set back to false afterwards
       ...(goToAccountAfter ? { successUrl: `${window.location.origin}/welcome` } : {}),
     },
   });
