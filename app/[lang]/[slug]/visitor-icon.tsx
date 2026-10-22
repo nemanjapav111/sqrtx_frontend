@@ -187,9 +187,9 @@ export default function VisitorIcon({ light = false, businessLink = false }: { l
     let cancelled = false;
     (async () => {
       try {
-        const [{ homePathFor }, { getBootstrap }] = await Promise.all([import("@/lib/onboarding"), import("@/lib/bootstrap")]);
+        const [{ ownerHomePath }, { getBootstrap }] = await Promise.all([import("@/lib/onboarding"), import("@/lib/bootstrap")]);
         const bootstrap = await getBootstrap();
-        const path = homePathFor(bootstrap);
+        const path = await ownerHomePath(bootstrap);
         followAccountLanguage(bootstrap.language, lang); // the same answer carries the language they chose on their account
         keepMyPage(path === "/account" || path.startsWith("/register") ? null : path);
       } catch {

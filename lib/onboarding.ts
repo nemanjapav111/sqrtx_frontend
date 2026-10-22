@@ -2,7 +2,7 @@ import { apiFetch, jsonBody } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { refreshPublicPage } from "@/lib/refresh-public-page";
 import { getBootstrap, type Bootstrap } from "@/lib/bootstrap";
-import { slugFromUrl } from "@/lib/business-profile";
+import { getMyProfile, slugFromUrl } from "@/lib/business-profile";
 import { addressInLanguage } from "@/lib/i18n";
 import { readLanguageCookie } from "@/lib/language-cookie";
 
@@ -83,9 +83,25 @@ export function homePathFor({ onboarding, company_url, billing }: Bootstrap): st
   return billing.has_access && slug ? `/${slug}` : pathForStep("done");
 }
 
-/** Asks the API where the signed-in user belongs (see homePathFor): one request. Throws if it can't be asked. */
+/**
+ * homePathFor, plus the owner's own choice: the bootstrap says whether the page is public as far as billing goes, not whether the owner hid it (the switch on the account
+ * page), and a hidden page only says "not found". So when it would lead to the page, the profile is asked too (one more request, only for an owner with a page) and a hidden one
+ * goes to the account page, where it can be shown again. If that can't be asked, the page is the answer, as before.
+ */
+export async function ownerHomePath(bootstrap: Bootstrap): Promise<string> {
+  const path = homePathFor(bootstrap);
+  if (path === pathForStep("done") || path.startsWith("/register")) return path;
+  try {
+    if ((await getMyProfile())?.is_active === false) return pathForStep("done");
+  } catch {
+    // keep the page
+  }
+  return path;
+}
+
+/** Asks the API where the signed-in user belongs (see homePathFor): one request, two for an owner with a page. Throws if it can't be asked. */
 export async function getHomePath(): Promise<string> {
-  const path = homePathFor(await getBootstrap());
+  const path = await ownerHomePath(await getBootstrap());
   // The owner's own page is a business's page, whose address carries the language (/sr/vega): they land on the copy in the language they chose.
   const lang = readLanguageCookie();
   return lang ? addressInLanguage(path, lang) : path;
