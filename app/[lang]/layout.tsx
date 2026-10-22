@@ -9,12 +9,14 @@ import { LOCALES, hasLocale } from "@/lib/i18n";
 import { getDictionary } from "./dictionaries";
 import { LangProvider } from "./components/lang-context";
 import BackToTop from "./components/back-to-top";
+import { SITE_ORIGIN } from "@/lib/public-site";
 
 // Measures the width of a scrollbar (0 where scrollbars float over the page) into --sbw, see keep-width in globals.css. It runs before
 // the first paint, and again when the window is resized (browser zoom changes a scrollbar's width in CSS pixels).
 const MEASURE_SCROLLBAR = `(function(){var d=document,r=d.documentElement;function m(){var e=d.createElement("div");e.style.cssText="position:absolute;top:-9999px;width:100px;height:100px;overflow:scroll";d.body.appendChild(e);var w=e.offsetWidth-e.clientWidth;d.body.removeChild(e);r.style.setProperty("--sbw",w+"px")}m();addEventListener("resize",m)})()`;
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_ORIGIN),
   title: "sqrtx",
   description: "Find businesses, products and services near you, or create a page for your business.",
 };

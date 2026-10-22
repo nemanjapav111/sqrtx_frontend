@@ -142,8 +142,8 @@ export const en = {
     },
   },
   home: {
-    metaTitle: "sqrtx",
-    metaDescription: "Find products from businesses near you.",
+    metaTitle: "sqrtx – find businesses, products and services near you",
+    metaDescription: "Search by words or by photo to find products and services from real businesses near you.",
     pages: { label: "Pages", products: "Products", services: "Services", companies: "Companies", about: "About" },
     search: {
       products: "Search products",
@@ -383,8 +383,8 @@ export const en = {
     links: { pricing: "Pricing", terms: "Terms and Conditions", privacy: "Privacy Policy", refunds: "Refund Policy" },
   },
   landing: {
-    metaTitle: "sqrtx for business",
-    metaDescription: "A professional page for your business. Show your products and services, and let customers find you.",
+    metaTitle: "Business page with product and service search – sqrtx",
+    metaDescription: "Create a professional page for your business, show your products and services, and let customers find you by words or by photo. Free for 30 days.",
     nav: { label: "Business", enter: "Enter sqrtx", pricing: "Pricing", logIn: "Log in", create: "Create my page" },
     hero: {
       kicker: "GET TO THE CORE",
