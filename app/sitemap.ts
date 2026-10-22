@@ -37,7 +37,7 @@ export default async function sitemap(props: { id: Promise<string> }): Promise<M
 
   return [
     ...(id === 0
-      ? [SITE_ORIGIN, `${SITE_ORIGIN}/services`, `${SITE_ORIGIN}/companies`, `${SITE_ORIGIN}/about`, `${SITE_ORIGIN}/pricing`, `${SITE_ORIGIN}/privacy`, `${SITE_ORIGIN}/terms`, `${SITE_ORIGIN}/legal/refunds`].map((url) => ({ url }))
+      ? [SITE_ORIGIN, `${SITE_ORIGIN}/services`, `${SITE_ORIGIN}/companies`, `${SITE_ORIGIN}/about`, `${SITE_ORIGIN}/business`, `${SITE_ORIGIN}/pricing`, `${SITE_ORIGIN}/privacy`, `${SITE_ORIGIN}/terms`, `${SITE_ORIGIN}/legal/refunds`].map((url) => ({ url }))
       : []),
     ...entries,
   ];
