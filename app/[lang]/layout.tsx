@@ -16,7 +16,7 @@ const MEASURE_SCROLLBAR = `(function(){var d=document,r=d.documentElement;functi
 
 export const metadata: Metadata = {
   title: "sqrtx",
-  description: "next-gen business platform",
+  description: "Find businesses, products and services near you, or create a page for your business.",
 };
 
 // One copy of every page per language (the address does not say which, except on a business's pages in another language: proxy.ts).
