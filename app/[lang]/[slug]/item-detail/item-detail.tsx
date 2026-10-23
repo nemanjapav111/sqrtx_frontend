@@ -247,6 +247,7 @@ export default function ItemDetail({
                         webp={image.urls.detail.webp}
                         alt={i === selected ? item.name : ""}
                         loading={i === selected ? "eager" : "lazy"}
+                        instant={i === 0} // the page's first photo: not hidden until the scripts have run (placeholder-picture.tsx), so a visitor arriving from Google or a shared link sees it as soon as it is decoded; the other photos keep their fade
                         placeholder={image.placeholder}
                         className="size-full"
                         imgClassName="size-full object-contain"
@@ -282,6 +283,7 @@ export default function ItemDetail({
                     webp={shown.urls.detail.webp}
                     alt={item.name}
                     loading="eager"
+                    instant={shown.id === images[0].id} // the page's first photo: not hidden until the scripts have run (placeholder-picture.tsx), so a visitor arriving from Google or a shared link sees it as soon as it is decoded; the other photos keep their fade
                     placeholder={shown.placeholder}
                     className="size-full"
                     imgClassName="size-full object-contain"

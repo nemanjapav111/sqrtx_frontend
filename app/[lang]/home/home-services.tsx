@@ -210,6 +210,7 @@ export default function HomeServices({ initial, initialCountry }: { initial: Fee
                         alt=""
                         // The first rows are on screen at once: load them at once. The rest wait until they come near.
                         loading={index < 2 ? "eager" : "lazy"}
+                        instant={index < 4 && !view.fresh} // the first screen as the server drew it: not hidden until the scripts have run (placeholder-picture.tsx); not for search results (`fresh`)
                         className="size-full"
                         imgClassName="size-full object-cover"
                         placeholder={service.image.placeholder}

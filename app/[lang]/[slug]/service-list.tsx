@@ -192,6 +192,7 @@ export default function ServiceList({ initial, userId, slug, currency, intro }: 
                         alt=""
                         // The first rows are on screen at once: load them at once. The rest wait until they come near.
                         loading={index < 2 ? "eager" : "lazy"}
+                        instant={index < 4} // the first screen as the server drew it: not hidden until the scripts have run (placeholder-picture.tsx)
                         className={pop ? "business-in size-full" : "size-full"}
                         imgClassName="size-full object-cover"
                         placeholder={service.image.placeholder}

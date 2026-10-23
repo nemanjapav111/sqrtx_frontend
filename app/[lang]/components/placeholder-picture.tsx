@@ -123,6 +123,7 @@ export default function PlaceholderPicture({
   blurPx = PREVIEW_BLUR_PX,
   blockClassName,
   sweep = true,
+  instant = false,
 }: {
   avif: string;
   // The same picture at three times its box (AVIF only): see avifSourceSet. Pictures saved before it existed have none.
@@ -148,6 +149,9 @@ export default function PlaceholderPicture({
   // picture inside a padded card, so the block can cover the whole card in the card's own colour and only the sweep
   // shows.
   blockClassName?: string;
+  // The picture is never hidden waiting for the page's scripts (no opacity-0 gate, no fade): the browser paints it over the preview as soon as it is decoded, and the preview goes
+  // when the scripts have run. For the first cards of a page, whose picture is the page's largest contentful paint (2026-10-23, Cloudflare web analytics: render delay 1.97 s).
+  instant?: boolean;
   // The light streak that moves over the loading block (no preview). Off: the block stays plain.
   sweep?: boolean;
 }) {
@@ -185,7 +189,7 @@ export default function PlaceholderPicture({
   const [quick, setQuick] = useState(false);
   const born = useRef(0);
   // This picture fades in: not one seen before, not a quick one.
-  const fade = !seenBefore && !quick;
+  const fade = !instant && !seenBefore && !quick;
   // A fading picture: the fade is over, what is behind it can go.
   const [faded, setFaded] = useState(false);
   const decodedNow = useCallback(() => {

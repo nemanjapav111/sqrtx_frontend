@@ -59,6 +59,7 @@ export default function BusinessHeader({ business, slug, lang, categoryName, bac
                 webp={logo.webp}
                 alt=""
                 placeholder={logo.placeholder}
+                instant // in the bar of every page of the business, seen first: not hidden until the scripts have run (placeholder-picture.tsx)
                 className="h-(--lh) w-(--lw) shrink-0 min-[1120px]:h-(--dh) min-[1120px]:w-(--dw)"
                 style={logoVars}
               />
