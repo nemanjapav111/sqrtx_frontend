@@ -383,8 +383,8 @@ export const en = {
     links: { pricing: "Pricing", terms: "Terms and Conditions", privacy: "Privacy Policy", refunds: "Refund Policy" },
   },
   landing: {
-    metaTitle: "Business page with product and service search – sqrtx",
-    metaDescription: "Create a professional page for your business, show your products and services, and let customers find you by words or by photo. Free for 30 days.",
+    metaTitle: "Create a professional page for your business – sqrtx",
+    metaDescription: "Show your products and services on one page, and let customers find you by words or by photo. Free for 30 days.",
     nav: { label: "Business", enter: "Enter sqrtx", pricing: "Pricing", logIn: "Log in", create: "Create my page" },
     hero: {
       kicker: "GET TO THE CORE",
