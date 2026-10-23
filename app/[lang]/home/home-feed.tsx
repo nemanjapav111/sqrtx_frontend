@@ -208,7 +208,8 @@ export default function HomeFeed({ initial, initialCountry }: { initial: FeedPag
                       alt={product.product_name}
                       // The first few are on screen at once: load them at once. The rest wait until they come near.
                       loading={index < 3 ? "eager" : "lazy"}
-                      instant={index < 3} // the largest paint of the page: not hidden until the scripts have run (placeholder-picture.tsx)
+                      priority={index === 0 && !view.fresh} // the page's very first picture: fetched before everything else (placeholder-picture.tsx)
+                      instant={index < 6 && !view.fresh} // the page's first screen, as drawn by the server: not hidden until the scripts have run (placeholder-picture.tsx). Not for the results of a search, filter or country (`fresh`: their cards fade in as a whole)
                       className="size-full"
                       imgClassName="size-full object-contain"
                       placeholder={product.image.placeholder}

@@ -124,6 +124,7 @@ export default function PlaceholderPicture({
   blockClassName,
   sweep = true,
   instant = false,
+  priority = false,
 }: {
   avif: string;
   // The same picture at three times its box (AVIF only): see avifSourceSet. Pictures saved before it existed have none.
@@ -152,6 +153,8 @@ export default function PlaceholderPicture({
   // The picture is never hidden waiting for the page's scripts (no opacity-0 gate, no fade): the browser paints it over the preview as soon as it is decoded, and the preview goes
   // when the scripts have run. For the first cards of a page, whose picture is the page's largest contentful paint (2026-10-23, Cloudflare web analytics: render delay 1.97 s).
   instant?: boolean;
+  // The page's largest picture (its first one): the browser is told to fetch it before everything else (fetchpriority=high). Only ever for ONE picture per page.
+  priority?: boolean;
   // The light streak that moves over the loading block (no preview). Off: the block stays plain.
   sweep?: boolean;
 }) {
@@ -319,6 +322,7 @@ export default function PlaceholderPicture({
           // A picture seen before is never lazy either: its file is in the browser's cache, and a new lazy element is only started after
           // the page has been laid out, a moment in which it would show an empty box.
           loading={seenBefore ? "eager" : loading}
+          fetchPriority={priority ? "high" : undefined}
           // A picture seen before is drawn again as a NEW element (going back to a page rebuilds it) and is decoded again, which took 8
           // to 60 ms for a 604px card picture and more for a big one: "sync" asks the browser to decode before painting. (In Chrome
           // and Safari that is already the default; "async" is what lets an empty box show.) One not seen yet keeps "async": its
