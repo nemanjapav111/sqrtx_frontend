@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import "./globals.css";
 import { inter } from './fonts';
 import { InlineScript } from "./components/inline-script";
@@ -14,10 +14,6 @@ import { SITE_ORIGIN } from "@/lib/public-site";
 // Measures the width of a scrollbar (0 where scrollbars float over the page) into --sbw, see keep-width in globals.css. It runs before
 // the first paint, and again when the window is resized (browser zoom changes a scrollbar's width in CSS pixels).
 const MEASURE_SCROLLBAR = `(function(){var d=document,r=d.documentElement;function m(){var e=d.createElement("div");e.style.cssText="position:absolute;top:-9999px;width:100px;height:100px;overflow:scroll";d.body.appendChild(e);var w=e.offsetWidth-e.clientWidth;d.body.removeChild(e);r.style.setProperty("--sbw",w+"px")}m();addEventListener("resize",m)})()`;
-
-// "cover": the page is drawn all the way to the screen's edges, including behind the iPhone's home-bar area, so the fixed bottom bars (which already add env(safe-area-inset-bottom) as padding)
-// reach the bottom edge. Without it Safari leaves a strip below them where the page shows through.
-export const viewport: Viewport = { viewportFit: "cover" };
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
