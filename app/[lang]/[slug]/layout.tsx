@@ -10,6 +10,7 @@ import BusinessContent from "./business-content";
 import LanguageOffer from "./language-offer";
 import { getDictionary } from "../dictionaries";
 import { SearchProvider } from "./search-context";
+import ScrollTopOnTab from "./scroll-top-on-tab";
 
 // The shell of a business's public site (sqrtx.co/<address>): the top bar with the logo and name, and, on a phone, the
 // bottom bar with the pages (Products, Services, Contact, About) and the way back to sqrtx (on tablet and desktop those
@@ -59,6 +60,7 @@ export default async function BusinessLayout({
 
   return (
     <SearchProvider text={text}>
+      <ScrollTopOnTab />
       <div className="flex min-h-dvh flex-col bg-white leading-[normal] text-black">
         <BusinessHeader business={business} slug={slug} lang={lang} categoryName={categoryName} backLabel={text.backToSqrtx} />
         {/* pb: on a phone, room for the fixed bottom bar (58px + its 1px top line, plus the phone's own bottom edge
