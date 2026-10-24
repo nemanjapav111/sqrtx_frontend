@@ -82,20 +82,24 @@ function Tile({
     setTouchOffset(null);
   }
 
-  // The browser's own drag-and-drop (the `draggable` attribute) is only for a mouse. On a phone a long press on a draggable element starts that native drag, which
-  // takes the finger over and cancels our pointer drag a moment into it (on every phone, found 2026-10-24): so a touch screen without a mouse does not get the attribute at all.
-  const [mouse, setMouse] = useState(false);
+  // Once armed, the finger's moves must not scroll the page. `touch-action: none` (set below, only after arming) comes too late: the browser has already decided how to treat this
+  // touch, so it takes the gesture over for scrolling as soon as the finger moves and cancels the pointer, which the code reads as a release (found on phones 2026-10-24).
+  // A touchmove listener that is not passive and calls preventDefault while armed keeps the touch ours; it has to be added by hand because React's own touch handlers are passive.
+  const tile = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const query = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const update = () => setMouse(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
+    const el = tile.current;
+    if (!el) return;
+    const keep = (e: TouchEvent) => {
+      if (touch.current?.armed && e.cancelable) e.preventDefault();
+    };
+    el.addEventListener("touchmove", keep, { passive: false });
+    return () => el.removeEventListener("touchmove", keep);
   }, []);
 
   return (
     <div
-      draggable={mouse}
+      ref={tile}
+      draggable
       onDragStart={(e) => {
         e.dataTransfer.setData(REORDER_MIME, image.id);
         e.dataTransfer.effectAllowed = "move";
