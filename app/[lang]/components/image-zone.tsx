@@ -82,9 +82,20 @@ function Tile({
     setTouchOffset(null);
   }
 
+  // The browser's own drag-and-drop (the `draggable` attribute) is only for a mouse. On a phone a long press on a draggable element starts that native drag, which
+  // takes the finger over and cancels our pointer drag a moment into it (on every phone, found 2026-10-24): so a touch screen without a mouse does not get the attribute at all.
+  const [mouse, setMouse] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const update = () => setMouse(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
   return (
     <div
-      draggable
+      draggable={mouse}
       onDragStart={(e) => {
         e.dataTransfer.setData(REORDER_MIME, image.id);
         e.dataTransfer.effectAllowed = "move";
