@@ -581,6 +581,7 @@ export const en = {
       until: ", until {date}",
       trialPublic: "Your business page is public during the trial. If you subscribe now, you keep the rest of the trial and pay for the first time when it ends.",
       trialEnded: "Your free trial has ended.",
+      subscriptionEnded: "Your subscription has ended.",
       trialEndedText: "Choose a plan to make your business page public again.",
       pastDue: "We could not take your last payment.",
       pastDueText: "Update your payment method to keep your business page public.",

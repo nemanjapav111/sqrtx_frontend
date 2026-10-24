@@ -197,7 +197,7 @@ export default function BillingSection({
       )}
       {trialOver && !waiting && (
         <p className="text-[14px]">
-          <strong>{text.trialEnded}</strong> {text.trialEndedText}
+          <strong>{billing.plan ? text.subscriptionEnded : text.trialEnded}</strong> {text.trialEndedText}
         </p>
       )}
 

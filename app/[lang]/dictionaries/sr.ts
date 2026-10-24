@@ -581,6 +581,7 @@ export const sr: Dictionary = {
       until: ", do {date}",
       trialPublic: "Stranica vaše firme je javna tokom probnog perioda. Ako se pretplatite sada, ostatak probnog perioda se čuva, a prvo plaćanje je kada on istekne.",
       trialEnded: "Vaš besplatni probni period je završen.",
+      subscriptionEnded: "Vaša pretplata je završena.",
       trialEndedText: "Izaberite plan da stranica vaše firme ponovo postane javna.",
       pastDue: "Nismo mogli da naplatimo vašu poslednju uplatu.",
       pastDueText: "Ažurirajte način plaćanja da stranica vaše firme ostane javna.",
