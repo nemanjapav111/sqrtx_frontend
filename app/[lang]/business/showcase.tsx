@@ -212,8 +212,9 @@ export default function HeroShowcase({ text }: { text: DemoText }) {
     if (slide) el.scrollTo({ left: slide.offsetLeft - el.offsetLeft - 16, behavior: "smooth" });
   }
 
+  // data-nosnippet: Google must not take the demo's text (a law firm's price list) as the page's search-result description.
   return (
-    <div className="float-in relative w-full md:mx-auto md:max-w-125 min-[1120px]:mr-0! min-[1120px]:ml-auto! min-[1120px]:max-w-155!">
+    <div data-nosnippet className="float-in relative w-full md:mx-auto md:max-w-125 min-[1120px]:mr-0! min-[1120px]:ml-auto! min-[1120px]:max-w-155!">
       <div
         ref={row}
         onScroll={onScroll}
