@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BusinessLink } from "@/app/[lang]/components/business-link";
+import { OwnBusinessLink } from "@/app/[lang]/components/business-link";
 import { useCallback, useEffect, useState } from "react";
 import BigLogo from "@/app/[lang]/components/big-logo";
 import { useCommonText } from "@/app/[lang]/components/lang-context";
@@ -206,9 +206,9 @@ export default function AccountStep({ text }: { text: Dictionary["account"] }) {
                   </div>
                 )}
                 {load.billing.has_access && load.active && load.slug && (
-                  <BusinessLink slug={load.slug} className="flex h-11 w-full items-center justify-center bg-black text-[14px] font-bold text-white">
+                  <OwnBusinessLink slug={load.slug} className="flex h-11 w-full items-center justify-center bg-black text-[14px] font-bold text-white">
                     {text.view}
-                  </BusinessLink>
+                  </OwnBusinessLink>
                 )}
                 {/* The owner's own switch: hides the whole page (with its products and services) from the public, or shows it again. Only offered while
                     the page could be public (a hidden page whose trial is over says why above, and can't be shown by this). */}

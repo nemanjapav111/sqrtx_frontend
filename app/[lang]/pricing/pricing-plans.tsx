@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { useCommonText } from "@/app/[lang]/components/lang-context";
 import type { Dictionary } from "@/app/[lang]/dictionaries/en";
 import { ApiError } from "@/lib/api";
-import { getPaddle, getTiers, startPlanCheckout } from "@/lib/paddle";
+import { formatMoney, type BillingPlans } from "@/lib/billing-format";
+import { getPaddle, getTiers, paddleConfigured, startPlanCheckout } from "@/lib/paddle";
 import { supabase } from "@/lib/supabase";
 
 type Interval = "month" | "year";
@@ -13,17 +14,26 @@ type Interval = "month" | "year";
 // The prices shown here are Paddle's own, for the visitor's country: `formattedTotals.total` is displayed exactly as Paddle returns it
 // (no arithmetic and no re-formatting on this side). `country` is the visitor's country from the request headers, when the host
 // sends one; without it Paddle works the country out from the visitor's IP address.
-export default function PricingPlans({ text, country }: { text: Dictionary["account"]["billing"]; country?: string }) {
+// Without Paddle.js (no client token: the payment provider is another one, Dodo) there is no preview: the API's own list prices are shown.
+export default function PricingPlans({ text, country, plans }: { text: Dictionary["account"]["billing"]; country?: string; plans: BillingPlans }) {
   const router = useRouter();
   const common = useCommonText();
   const [interval, setInterval] = useState<Interval>("month");
-  const [totals, setTotals] = useState<Record<Interval, string> | null>(null);
+  const [paddleTotals, setTotals] = useState<Record<Interval, string> | null>(null);
+  const listPrice = (id: "monthly" | "yearly") => {
+    const plan = plans.plans.find((p) => p.id === id);
+    return plan ? formatMoney(plan.amount_cents, plan.currency) : null;
+  };
+  const monthlyPrice = listPrice("monthly");
+  const yearlyPrice = listPrice("yearly");
+  const totals = paddleConfigured ? paddleTotals : monthlyPrice && yearlyPrice ? { month: monthlyPrice, year: yearlyPrice } : null;
   const [failed, setFailed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
 
   useEffect(() => {
+    if (!paddleConfigured) return;
     let cancelled = false;
     (async () => {
       const tier = getTiers()[0];

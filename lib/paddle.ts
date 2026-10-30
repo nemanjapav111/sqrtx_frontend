@@ -11,6 +11,9 @@ const CLIENT_TOKEN = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
 const PRICE_MONTHLY = process.env.NEXT_PUBLIC_PADDLE_PRICE_MONTHLY;
 const PRICE_YEARLY = process.env.NEXT_PUBLIC_PADDLE_PRICE_YEARLY;
 
+/** Paddle.js is set up only when its client token is given: with another provider (Dodo) the site runs without any NEXT_PUBLIC_PADDLE_* value. */
+export const paddleConfigured = Boolean(CLIENT_TOKEN);
+
 function required(value: string | undefined, name: string): string {
   if (!value) throw new Error(`Missing ${name} (see .env.example).`);
   return value;
@@ -98,7 +101,13 @@ export async function startPlanCheckout(plan: PlanId, { goToAccountAfter = false
 /** Opens the overlay for entering a new card on the running subscription. Nothing is charged; the user stays on this page. */
 export async function startPaymentMethodChange(): Promise<void> {
   closeWhenCompleted = true;
-  const { transaction_id } = await getPaymentMethodChange();
+  const { transaction_id, url } = await getPaymentMethodChange();
+  // A provider without an overlay (Dodo) answers the address of its own page for entering the card: the browser is sent there, and Paddle.js
+  // is never touched, whatever else the answer holds. Paddle answers a transaction_id only.
+  if (url || !transaction_id) {
+    if (!url || !goToProvider(url)) throw new Error("The card page address was not accepted.");
+    return;
+  }
   const paddle = await getPaddle();
   paddle.Checkout.open({ transactionId: transaction_id, settings: { displayMode: "overlay", variant: "one-page", showAddDiscounts: false } });
 }

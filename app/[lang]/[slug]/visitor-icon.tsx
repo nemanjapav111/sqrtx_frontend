@@ -76,9 +76,15 @@ function forgetMyPage() {
 const ICON_BOTTOM = (40 - 25) / 2 + 25; // 32.5
 const MENU_TOP = ICON_BOTTOM + POPUP_GAP; // 48.5
 
-function MenuRow({ href, children, onClick, disabled, className = "" }: { href?: string; children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string }) {
+// `fullLoad`: a plain link (the browser loads the page again, nothing prefetched or kept by the client router): for the owner's own page, whose top and bottom bars
+// change when they switch products or services on or off (see OwnBusinessLink in components/business-link.tsx).
+function MenuRow({ href, children, onClick, disabled, className = "", fullLoad = false }: { href?: string; children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string; fullLoad?: boolean }) {
   // The row of every popup (components/popup.tsx).
-  return href ? (
+  return href && fullLoad ? (
+    <a href={href} className={`${POPUP_ROW} ${className}`} onClick={onClick}>
+      {children}
+    </a>
+  ) : href ? (
     <Link href={href} className={`${POPUP_ROW} ${className}`} onClick={onClick}>
       {children}
     </Link>
@@ -268,7 +274,7 @@ export default function VisitorIcon({ light = false, businessLink = false }: { l
           ) : signedIn ? (
             <>
               {myPage && (
-                <MenuRow href={addressInLanguage(myPage, lang)} onClick={onNavigate}>
+                <MenuRow href={addressInLanguage(myPage, lang)} onClick={onNavigate} fullLoad>
                   {t.viewMyPage}
                 </MenuRow>
               )}

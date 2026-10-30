@@ -12,6 +12,7 @@ import {
   formatMoney,
   cancelSubscription,
   changePlan,
+  getPlanChangeStatus,
   resumeSubscription,
   planWord,
   yearlySavingCents,
@@ -29,6 +30,8 @@ type PortalAction = "payment" | "cancel" | "resume" | "switch";
 
 const POLL_EVERY_MS = 3000;
 const POLLS = 20; // about a minute: a payment is confirmed by the provider's notification, which normally takes seconds
+const SWITCH_POLL_EVERY_MS = 2500;
+const SWITCH_POLLS = 30; // about 75 seconds: Dodo takes the payment for a plan change after it has answered (25 seconds in the test)
 
 const PRIMARY = "flex h-11 w-full cursor-pointer items-center justify-center bg-black font-bold text-white disabled:cursor-wait disabled:opacity-60";
 const SECONDARY =
@@ -60,10 +63,25 @@ export default function BillingSection({
   const lang = useLang();
   const common = useCommonText();
   const date = (iso: string) => formatDate(iso, FORMAT_LOCALE[lang]);
-  const checkout = useSearchParams().get("checkout");
+  const searchParams = useSearchParams();
+  const checkout = searchParams.get("checkout");
+  // Dodo brings the user back to the success address even when the payment was declined, and adds its own `status` to it (Dodo's docs: "succeeded",
+  // "active", "failed", "processing", "expired"): a declined payment is shown as one that did not go through, not as one being confirmed (it never will
+  // be). "processing" and anything else unknown keep the waiting. Paddle adds no `status`, so its flow is as before.
+  const paymentStatus = searchParams.get("status");
   // What the payment page brought the user back with, read once when this part appears and then taken out of the address: a page
   // reload (or an old bookmark) must not show "confirming your payment" for a payment that is not happening.
-  const [returned] = useState<"success" | "cancelled" | null>(checkout === "success" || checkout === "cancelled" ? checkout : null);
+  const [returned] = useState<"success" | "cancelled" | "failed" | null>(
+    checkout === "success"
+      ? paymentStatus === "failed"
+        ? "failed"
+        : paymentStatus === "expired"
+          ? "cancelled"
+          : "success"
+      : checkout === "cancelled"
+        ? "cancelled"
+        : null,
+  );
   useEffect(() => {
     if (checkout) window.history.replaceState(null, "", window.location.pathname);
   }, [checkout]);
@@ -73,6 +91,7 @@ export default function BillingSection({
   const [confirmingSwitch, setConfirmingSwitch] = useState(false); // "Switch to the other plan" was pressed: waiting for the yes
   const [confirmingCancel, setConfirmingCancel] = useState(false); // "Cancel subscription" was pressed: waiting for the yes
   const [gaveUp, setGaveUp] = useState(false); // still waiting for the payment to show up after about a minute
+  const [switchSlow, setSwitchSlow] = useState(false); // the payment for a plan change is still not confirmed after about a minute
 
   const paid = billing.status === "active" || billing.status === "past_due";
   const inTrial = billing.status === "trialing" && billing.has_access;
@@ -139,10 +158,18 @@ export default function BillingSection({
         await onRefresh();
       } else if (action === "switch") {
         if (!otherPlan) return;
-        await changePlan(otherPlan.id);
+        setSwitchSlow(false);
+        const started = await changePlan(otherPlan.id);
         setConfirmingSwitch(false);
+        if (started.pending) {
+          // The payment for the change is still going through: nothing is shown but the spinner until it is accepted or refused, so no half-way
+          // state (the old plan with the new one's date, or the other way round) is ever on the page.
+          const outcome = await waitForSwitch();
+          if (outcome === "declined") setError(text.switchDeclined);
+          if (outcome === "timeout") setSwitchSlow(true);
+        }
         await onRefresh();
-        setTimeout(() => onRefresh().catch(() => {}), 5000); // the new paid-until date comes with the provider's notification, a moment later
+        if (!started.pending) setTimeout(() => onRefresh().catch(() => {}), 5000); // the new paid-until date comes with the provider's notification, a moment later
       } else if (action === "cancel") {
         await cancelSubscription();
         setConfirmingCancel(false);
@@ -156,6 +183,21 @@ export default function BillingSection({
     }
     inFlight.current = false;
     setBusy(null);
+  }
+
+  // Asks how the plan change ended until it is known: done, declined (the card was refused), or "timeout" after about 75 seconds (the page then
+  // says it is still confirming, and shows the change when the notification arrives).
+  async function waitForSwitch(): Promise<"done" | "declined" | "timeout"> {
+    for (let i = 0; i < SWITCH_POLLS; i++) {
+      await new Promise((resolve) => setTimeout(resolve, SWITCH_POLL_EVERY_MS));
+      try {
+        const { status } = await getPlanChangeStatus();
+        if (status !== "pending") return status;
+      } catch {
+        // a failed check is simply asked again
+      }
+    }
+    return "timeout";
   }
 
   const saving = yearlySavingCents(plans.plans);
@@ -181,6 +223,11 @@ export default function BillingSection({
         </p>
       )}
       {returned === "cancelled" && !paid && <p className="text-[14px] font-semibold">{text.cancelled}</p>}
+      {returned === "failed" && !paid && (
+        <p role="alert" className="text-[14px] font-semibold text-red-600">
+          {text.paymentFailed}
+        </p>
+      )}
 
       {inTrial && !waiting && (
         <p className="text-[14px]">
@@ -201,7 +248,18 @@ export default function BillingSection({
         </p>
       )}
 
-      {paid && (
+      {paid && busy === "switch" && (
+        <p role="status" className="flex items-center gap-2.5 text-[14px] font-semibold">
+          <span aria-hidden className="size-4 shrink-0 animate-spin rounded-full border-2 border-black border-t-transparent" />
+          {text.switchWait}
+        </p>
+      )}
+      {paid && busy !== "switch" && switchSlow && (
+        <p role="status" className="text-[14px] font-semibold">
+          {text.switchSlow}
+        </p>
+      )}
+      {paid && busy !== "switch" && (
         <div className="flex flex-col gap-3">
           <p className="text-[14px]">
             {billing.status === "past_due" ? (
@@ -231,7 +289,7 @@ export default function BillingSection({
               <div className="flex flex-col gap-3 border border-black p-4">
                 <p className="text-[14px]">{fill(text.switchAsk, { plan: planWord(text.planAdjectives, otherPlan.id), price: priceOf(otherPlan) })}</p>
                 <button type="button" onClick={() => goTo("switch")} disabled={busy !== null} className={PRIMARY}>
-                  {busy === "switch" ? text.switching : text.confirmSwitch}
+                  {text.confirmSwitch}
                 </button>
                 <button type="button" onClick={() => setConfirmingSwitch(false)} disabled={busy !== null} className={SECONDARY}>
                   {text.keepPlan}

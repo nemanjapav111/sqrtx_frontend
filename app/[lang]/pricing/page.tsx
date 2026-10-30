@@ -24,7 +24,8 @@ const LEGAL_KEY = { "/pricing": "pricing", "/terms": "terms", "/privacy": "priva
 const INCLUDED = ["page", "items", "marketplace", "contact"] as const;
 
 export default async function Pricing() {
-  const { trial_days } = await getPublicPlans();
+  const plans = await getPublicPlans();
+  const { trial_days } = plans;
   const dictionary = await getDictionary(asLocale(await pageLang()));
   const { pricing: text, legal } = dictionary;
   const billing = dictionary.account.billing;
@@ -42,7 +43,7 @@ export default async function Pricing() {
             <strong>{fill(text.freeLead, { days: trial_days })}</strong> {text.freeRest}
           </p>
 
-          <PricingPlans text={billing} country={country} />
+          <PricingPlans text={billing} country={country} plans={plans} />
 
           <Link
             href="/register"
