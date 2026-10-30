@@ -11,7 +11,7 @@ export const metadata = { title: "Privacy Policy – sqrtx" };
 // process data.
 export default function Privacy() {
   return (
-    <LegalDocument title="Privacy Policy" version={PRIVACY_VERSION} updated="October 22, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/privacy")}>
+    <LegalDocument title="Privacy Policy" version={PRIVACY_VERSION} updated="October 30, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/privacy")}>
       <LegalSection title="1. Who we are">
         <p>
           This policy explains how {LEGAL.operator}, an individual operating the sqrtx service (“sqrtx”, “we”, “us”),
@@ -108,9 +108,9 @@ export default function Privacy() {
             Google’s own privacy policy applies to that;
           </li>
           <li>
-            our payment provider, {LEGAL.paymentProvider}, the Merchant of Record for our plans, which takes your payments,
-            holds your card details and handles taxes and invoices. It receives your name, email and billing details, works out your country from your internet address to show the right price
-            and tax, and tells us whether your subscription is active. {LEGAL.paymentProvider} is responsible for that data under its own privacy
+            our payment provider, {LEGAL.paymentProvider} ({LEGAL.paymentProviderEntity}), the Merchant of Record for our plans, which takes your payments,
+            holds your card details and handles taxes and invoices. It receives your name, email, billing country (and postal code where tax needs it) and
+            payment details, checks payments for fraud, and tells us whether your subscription is active. {LEGAL.paymentProvider} is responsible for that data under its own privacy
             policy;
           </li>
           <li>

@@ -16,10 +16,13 @@ export const LEGAL = {
   operator: "Nemanja Pavlović", // the person (later the company) behind sqrtx: the "we" of both documents
   address: "14000 Valjevo, Serbia", // shown publicly. For a person this is a home address unless a business address or PO box is used
   email: "support@sqrtx.co", // one monitored address for everything (legal, privacy, refunds, support); the sqrtx.co mailbox must exist (receive + send-as) before launch
-  updated: "[Date this version was published]",
-  // Takes the payments and is the seller of record (Paddle's "Merchant of Record"): it is the one that charges the card, collects the
-  // taxes and handles refunds. Named in Terms section 6, the Refund Policy and the Privacy Policy; keep them true if it changes.
-  paymentProvider: "Paddle",
+  updated: "October 30, 2026",
+  // Takes the payments and is the seller of record (Dodo Payments' "Merchant of Record"): it is the legal seller, charges the card, collects the
+  // taxes, sends the invoice and pays refunds back. Named in Terms section 6, the Refund Policy, the pricing page and the Privacy Policy; keep them
+  // true if it changes.
+  paymentProvider: "Dodo Payments",
+  // The companies behind it, as Dodo's legal notice names them: which one sells a given order depends on the transaction, the one named on the receipt.
+  paymentProviderEntity: "Dodo Payments Inc. and its group companies",
 };
 
 // The pages every legal document links to, in the order they are listed.

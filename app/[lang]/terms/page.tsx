@@ -11,7 +11,7 @@ export const metadata = { title: "Terms and Conditions – sqrtx" };
 // CURRENT_TERMS_VERSION in the backend together. Keep section 6 true once billing exists.
 export default function Terms() {
   return (
-    <LegalDocument title="Terms and Conditions" version={TERMS_VERSION} updated="October 22, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/terms")}>
+    <LegalDocument title="Terms and Conditions" version={TERMS_VERSION} updated="October 30, 2026" draft={false} other={LEGAL_LINKS.filter((link) => link.href !== "/terms")}>
       <LegalSection title="1. About these terms">
         <p>
           These terms are an agreement between you and {LEGAL.operator}, an individual operating the sqrtx service (“sqrtx”,
@@ -100,6 +100,7 @@ export default function Terms() {
         <p>
           <strong>Paid plans.</strong> To keep your business page public after the trial, you need a paid plan. The plans are
           $11.10 per month or $111 per year, per account, in US dollars (see <Link href="/pricing" className="underline">Pricing</Link>).
+          At checkout, {LEGAL.paymentProvider} may show the price in your local currency, so the amount on your receipt can differ slightly.
           Taxes such as VAT or sales tax may be added at checkout, depending on where you are. You can choose a plan before the
           trial ends or at any time after it. We will not charge you unless you have chosen a plan.
         </p>
@@ -117,7 +118,7 @@ export default function Terms() {
           you paid for, and choose the monthly plan after that.
         </p>
         <p>
-          <strong>Refunds.</strong> You can ask for a refund within 14 days of a payment. The details are in our{" "}
+          <strong>Refunds.</strong> You can ask for a refund within 7 days of a payment. The details are in our{" "}
           <Link href="/legal/refunds" className="underline">Refund Policy</Link>.
         </p>
         <p>
@@ -131,10 +132,10 @@ export default function Terms() {
           your business page, products or services until you subscribe again.
         </p>
         <p>
-          <strong>How you pay.</strong> Our order process is conducted by our online reseller {LEGAL.paymentProvider}.{" "}
-          {LEGAL.paymentProvider} is the Merchant of Record for all our orders: it sells the plans to you, takes your payment,
-          collects the taxes, sends your invoice and handles refunds. We do not see or store your card details. Your purchase is
-          also subject to {LEGAL.paymentProvider}’s own terms for buyers, which you are shown at checkout.
+          <strong>How you pay.</strong> Our order process is conducted by our payment provider {LEGAL.paymentProvider}.{" "}
+          {LEGAL.paymentProvider} ({LEGAL.paymentProviderEntity}) acts as the Merchant of Record for all our orders and is the legal seller of the plans to you; the exact company that sells to you is named on your receipt. It takes your payment,
+          collects the taxes, sends your invoice and pays refunds back. We do not see or store your card details. Your purchase is
+          also subject to {LEGAL.paymentProvider}’s own Buyer Terms and Privacy Policy, which are linked at checkout.
         </p>
       </LegalSection>
 
