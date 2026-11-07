@@ -9,7 +9,7 @@ import { useRequireSession } from "@/lib/use-session";
 import ChangeEmailForm from "./change-email-form";
 import ChangePasswordForm from "./change-password-form";
 
-type Load = { status: "loading" } | { status: "error" } | { status: "ready"; email: string; pendingEmail: string | null };
+type Load = { status: "loading" } | { status: "error" } | { status: "ready"; email: string; pendingEmail: string | null; google: boolean };
 
 // Loads who is logged in, then shows the two forms. It asks Supabase's server (getUser) instead of reading the copy in
 // the browser, because an email change that was confirmed in the meantime is only known there.
@@ -25,7 +25,9 @@ export default function SettingsStep({ text }: { text: Dictionary["account"]["se
       try {
         const { data, error } = await supabase.auth.getUser();
         if (error || !data.user?.email) throw error ?? new Error("no user");
-        if (!cancelled) setLoad({ status: "ready", email: data.user.email, pendingEmail: data.user.new_email ?? null });
+        // Signs in with Google: the email form cannot work for them (their login email is their Google email) and both forms below ask for the current password / a password they may not have.
+        const google = !!data.user.identities?.length && !data.user.identities.some((i) => i.provider === "email");
+        if (!cancelled) setLoad({ status: "ready", email: data.user.email, pendingEmail: data.user.new_email ?? null, google });
       } catch {
         if (!cancelled) setLoad({ status: "error" });
       }
@@ -41,6 +43,7 @@ export default function SettingsStep({ text }: { text: Dictionary["account"]["se
   // Not remembered from the last visit like the account page: a pending email change is only known to Supabase's server.
   const email = load.status === "ready" ? load.email : "";
   const pendingEmail = load.status === "ready" ? load.pendingEmail : null;
+  const google = load.status === "ready" && load.google;
 
   return (
     <>
@@ -58,8 +61,22 @@ export default function SettingsStep({ text }: { text: Dictionary["account"]["se
               ever reads `pendingEmail` once, when it's created (see that file), so it needs to be re-created instead
               of updated once the real value is known. Harmless: the placeholder was `inert`, so nothing could have
               been typed into it yet. ChangePasswordForm doesn't seed any state from its props, so it doesn't need this. */}
-          <ChangeEmailForm text={text} key={pending ? "pending" : "ready"} currentEmail={email} pendingEmail={pendingEmail} />
-          <ChangePasswordForm text={text} currentEmail={email} />
+          {google ? (
+            <>
+              <section className="flex flex-col gap-3">
+                <p className="text-[14px]">
+                  <span className="text-[#4b5563]">{text.email.yours}</span>
+                  {email}
+                </p>
+                <p className="text-[14px] text-[#4b5563]">{text.google}</p>
+              </section>
+            </>
+          ) : (
+            <>
+              <ChangeEmailForm text={text} key={pending ? "pending" : "ready"} currentEmail={email} pendingEmail={pendingEmail} />
+              <ChangePasswordForm text={text} currentEmail={email} />
+            </>
+          )}
         </div>
 
         {pending && (

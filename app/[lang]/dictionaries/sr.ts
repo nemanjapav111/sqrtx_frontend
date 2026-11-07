@@ -24,6 +24,8 @@ export const sr: Dictionary = {
     showPassword: "Prikaži lozinku",
     hidePassword: "Sakrij lozinku",
     loginEmail: "Email za prijavu*",
+    continueWithGoogle: "Nastavite preko Google-a",
+    orDivider: "ili",
     password: "Lozinka*",
     passwordRule: "Najmanje 8 karaktera, sa velikim i malim slovima i brojem.",
     weakPassword: "Ta lozinka je preslaba. Koristite najmanje 8 karaktera, velika i mala slova i broj.",
@@ -714,6 +716,7 @@ export const sr: Dictionary = {
     settings: {
       metaTitle: "Podešavanja prijave – sqrtx",
       title: "Podešavanja prijave",
+      google: "Prijavljujete se preko Google-a, pa je vaš email za prijavu vaš Google email i ovde nema lozinke za promenu.",
       wrongPassword: "Pogrešna lozinka.",
       currentPassword: "Trenutna lozinka*",
       email: {

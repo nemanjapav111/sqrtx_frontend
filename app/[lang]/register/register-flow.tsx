@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import BigLogo from "@/app/[lang]/components/big-logo";
+import GoogleButton from "@/app/[lang]/components/google-button";
 import type { Dictionary } from "@/app/[lang]/dictionaries/en";
 import { useRedirectIfSignedIn } from "@/lib/use-redirect-if-signed-in";
 import RegisterForm from "./register-form";
@@ -42,8 +43,9 @@ export default function RegisterFlow({
       <BigLogo />
       <StepProgress current={1} />
       <h1 className="pt-6 pb-2 text-[26px] leading-[1.2] font-bold">{text.title}</h1>
-      <p className="pb-10 text-[#636363]">{text.intro}</p>
-      <RegisterForm text={text} initialEmail={emailToKeep} onSent={(email, password) => setSent({ email, password })} />
+      <p className="pb-6 text-[#636363]">{text.intro}</p>
+      <GoogleButton />
+      <div className="flex w-full flex-col items-center pt-6"><RegisterForm text={text} initialEmail={emailToKeep} onSent={(email, password) => setSent({ email, password })} /></div>
     </>
   );
 }

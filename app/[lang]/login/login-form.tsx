@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import BigLogo from "@/app/[lang]/components/big-logo";
+import GoogleButton from "@/app/[lang]/components/google-button";
 import Field from "@/app/[lang]/components/field";
 import { useCommonText } from "@/app/[lang]/components/lang-context";
 import type { Dictionary } from "@/app/[lang]/dictionaries/en";
@@ -88,7 +89,9 @@ export default function LoginForm({ text }: { text: Dictionary["auth"]["login"] 
       <BigLogo />
       <h1 className="pt-9.5 pb-10 text-[26px] leading-[1.2] font-bold md:pt-6 md:pb-6">{text.title}</h1>
 
-      <form onSubmit={handleSubmit} noValidate method="post" className="flex w-full flex-col items-center">
+      <GoogleButton />
+
+      <form onSubmit={handleSubmit} noValidate method="post" className="flex w-full flex-col items-center pt-6">
         <div className="flex w-full max-w-135 flex-col gap-5 px-5 pb-17.5">
           <Field
             label={common.loginEmail}

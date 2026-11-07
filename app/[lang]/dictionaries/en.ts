@@ -24,6 +24,8 @@ export const en = {
     showPassword: "Show password",
     hidePassword: "Hide password",
     loginEmail: "Login email*",
+    continueWithGoogle: "Continue with Google",
+    orDivider: "or",
     password: "Password*",
     passwordRule: "At least 8 characters, with upper and lowercase letters and a number.",
     weakPassword: "That password is too weak. Use at least 8 characters, upper and lowercase letters, and a number.",
@@ -714,6 +716,7 @@ export const en = {
     settings: {
       metaTitle: "Login settings – sqrtx",
       title: "Login settings",
+      google: "You sign in with Google, so your login email is your Google email and there is no password to change here.",
       wrongPassword: "Wrong password.",
       currentPassword: "Current password*",
       email: {
