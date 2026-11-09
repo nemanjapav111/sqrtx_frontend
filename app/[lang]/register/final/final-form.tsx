@@ -126,7 +126,7 @@ export default function FinalForm({
     <>
       <BigLogo />
       <StepProgress current={4} />
-      <h1 className="pt-6 pb-10 text-[26px] leading-[1.2] font-bold md:pb-6">{text.title}</h1>
+      <h1 className="px-5 pt-6 pb-10 text-center text-[26px] leading-[1.2] font-bold text-balance md:pb-6">{text.title}</h1>
 
       {/* relative: PendingOverlay (absolute) floats over the form while `pending`. `inert` on the form itself
           (not just a visual dimming) is what actually stops it being typed into or submitted meanwhile. */}
