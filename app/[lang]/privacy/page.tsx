@@ -170,7 +170,7 @@ export default function Privacy() {
         <p>
           sqrtx keeps your login in your browser so that you stay signed in, and remembers your language, your country filter and
           a few settings of the page you are on (for example a search you typed in your account). This is needed for the service to
-          work and is kept in your browser. We do not use advertising or tracking cookies. Google’s address search and our payment
+          work and is kept in your browser. Apart from the Meta Pixel described next, we do not use advertising or tracking cookies. We use the Meta Pixel on our marketing and sign-up pages (sqrtx.co/business, sign-up and login) to measure the performance of our ads, and Meta may set cookies there; we do not use it on business pages, and you can opt out through your Meta ad settings or your browser’s tracking protection. Google’s address search and our payment
           provider’s checkout are loaded from those companies and may store their own data as described in their policies. The visit
           statistics of our network provider work without cookies.
         </p>

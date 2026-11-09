@@ -6,6 +6,7 @@ import { LEGAL, LEGAL_LINKS } from "@/lib/legal";
 import { asLocale, fill } from "@/lib/i18n";
 import { getPublicPlans } from "@/lib/public-site";
 import { getDictionary } from "../dictionaries";
+import CreateLink from "./create-link";
 import EnterLink from "./enter-link";
 import HeroShowcase from "./showcase";
 
@@ -128,9 +129,9 @@ export default async function BusinessLanding({ params }: PageProps<"/[lang]/bus
               {t.nav.pricing}
             </Link>
             <LoginLink className="border border-[#525252] px-3 py-1.5 hover:border-white md:px-3.5">{t.nav.logIn}</LoginLink>
-            <Link href="/register" className={`${GREEN} hidden px-3.5 py-1.75 font-medium md:block`}>
+            <CreateLink className={`${GREEN} hidden px-3.5 py-1.75 font-medium md:block`}>
               {t.nav.create}
-            </Link>
+            </CreateLink>
           </nav>
         </div>
       </header>
@@ -152,9 +153,9 @@ export default async function BusinessLanding({ params }: PageProps<"/[lang]/bus
               {t.hero.intro}
             </p>
             <div className="mt-5 flex w-full flex-col md:w-auto md:flex-row md:gap-2.5 min-[1120px]:mt-7">
-              <Link href="/register" className={`${BUTTON} ${GREEN} h-11 px-6 md:h-10.5 min-[1120px]:h-12 min-[1120px]:px-8 min-[1120px]:text-[15px]`}>
+              <CreateLink className={`${BUTTON} ${GREEN} h-11 px-6 md:h-10.5 min-[1120px]:h-12 min-[1120px]:px-8 min-[1120px]:text-[15px]`}>
                 {t.nav.create}
-              </Link>
+              </CreateLink>
             </div>
             <p className="mt-2.5 text-[12px] text-[#a3a3a3] max-md:text-center min-[1120px]:mt-5 min-[1120px]:flex min-[1120px]:gap-5 min-[1120px]:text-[13px]">
               <span className="min-[1120px]:before:mr-1.5 min-[1120px]:before:text-[#00cf37] min-[1120px]:before:content-['✓']">
@@ -221,9 +222,9 @@ export default async function BusinessLanding({ params }: PageProps<"/[lang]/bus
               </span>
             ))}
           </p>
-          <Link href="/register" className={`${GREEN} flex h-10 w-full items-center justify-center px-5 text-[13px] font-medium min-[1120px]:w-auto`}>
+          <CreateLink className={`${GREEN} flex h-10 w-full items-center justify-center px-5 text-[13px] font-medium min-[1120px]:w-auto`}>
             {t.nav.create}
-          </Link>
+          </CreateLink>
         </section>
 
         {/* Foot: the legal pages (they open in a new tab, so the visitor keeps this page) and the contact. No link to the marketplace here (the owner): it is at the top. */}

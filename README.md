@@ -34,3 +34,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Meta Pixel
+
+Set `NEXT_PUBLIC_META_PIXEL_ID=1646869527479654` (build-time, so set it in the production environment before building). It loads the Meta Pixel only on `/business`, `/register/*` and `/login` (also under `/sr`); with the variable missing nothing loads. It is never loaded on business pages, the marketplace or the account pages. Events: `PageView`, `Lead` (Create my page buttons on `/business`), `CompleteRegistration` (final registration step succeeds). Code: `lib/meta-pixel.ts`, `app/[lang]/components/meta-pixel.tsx`.

@@ -8,6 +8,7 @@ import { useCommonText } from "@/app/[lang]/components/lang-context";
 import PendingOverlay from "@/app/[lang]/components/pending-overlay";
 import type { Dictionary } from "@/app/[lang]/dictionaries/en";
 import { ApiError } from "@/lib/api";
+import { trackMetaEvent } from "@/lib/meta-pixel";
 import { finishOnboarding, homePath } from "@/lib/onboarding";
 import StepProgress from "../step-progress";
 
@@ -108,6 +109,7 @@ export default function FinalForm({
     setBusy(true);
     try {
       const state = await finishOnboarding(about);
+      trackMetaEvent("CompleteRegistration"); // once: only here, when finishing succeeds (not when this page is revisited)
       router.push(await homePath(state)); // registration is finished: on to their own public page
       leaving.current = true;
     } catch (err) {

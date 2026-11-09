@@ -9,6 +9,7 @@ import { LOCALES, hasLocale } from "@/lib/i18n";
 import { getDictionary } from "./dictionaries";
 import { LangProvider } from "./components/lang-context";
 import BackToTop from "./components/back-to-top";
+import MetaPixel from "./components/meta-pixel";
 import { SITE_ORIGIN } from "@/lib/public-site";
 
 // Measures the width of a scrollbar (0 where scrollbars float over the page) into --sbw, see keep-width in globals.css. It runs before
@@ -43,6 +44,8 @@ export default async function RootLayout({ children, params }: { children: React
         <InlineScript code={HIDE_UNTIL_RESTORED_SCRIPT} />
         {/* In the root layout so it sees EVERY page (the account page too): "← sqrtx" must know the page before the business. */}
         <PathTracker />
+        {/* The Meta Pixel: loads only on /business, /register and /login (lib/meta-pixel.ts), and only with NEXT_PUBLIC_META_PIXEL_ID set. */}
+        <MetaPixel />
         <LangProvider lang={lang} shell={shell} common={common}>
           {children}
           <BackToTop />
