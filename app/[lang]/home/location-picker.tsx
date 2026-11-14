@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ALL_COUNTRIES, countryName, fetchFeedCities, type FeedCity, type FeedKind } from "@/lib/feed";
+import { ALL_COUNTRIES, cityLabel, cityMatchesSearch, cityValue, countryName, fetchFeedCities, isChosenCity, type FeedCity, type FeedKind } from "@/lib/feed";
 import { useLang } from "@/app/[lang]/components/lang-context";
 import { usePopupDismiss } from "@/app/[lang]/components/use-popup-dismiss";
 import { POPUP_GAP, POPUP_HEADING, POPUP_PANEL, POPUP_ROW, TICK } from "@/app/[lang]/components/popup";
@@ -94,14 +94,15 @@ export default function LocationPicker({ variant, className = "" }: { variant: "
 
   const bar = variant === "bar";
   const desktop = variant === "desktop";
-  const label = city || country || (bar ? t.label : t.allShort); // the phone's bottom bar has room for a word that says what the pin is
-  const place = city || (country ? countryName(country, lang) : t.allCountriesLower);
+  const cityText = city ? cityLabel(city) : ""; // "Austin, TX" for a US city with a state (the chosen city also holds its state: see cityValue in lib/feed.ts)
+  const label = cityText || country || (bar ? t.label : t.allShort); // the phone's bottom bar has room for a word that says what the pin is
+  const place = cityText || (country ? countryName(country, lang) : t.allCountriesLower);
 
   const words = countrySearch.trim().toLowerCase();
   const allCountries = [{ value: ALL_COUNTRIES, text: t.allCountries }, ...countries.map((code) => ({ value: code, text: countryName(code, lang) }))];
   const countryOptions = words ? allCountries.filter((o) => o.value !== ALL_COUNTRIES && (o.text.toLowerCase().includes(words) || o.value.toLowerCase() === words)) : allCountries;
   const cityWords = citySearch.trim().toLowerCase();
-  const cityOptions = (cities ?? []).filter((c) => !cityWords || c.name.toLowerCase().includes(cityWords));
+  const cityOptions = (cities ?? []).filter((c) => cityMatchesSearch(c, cityWords)); // by the city's name, or by its state (US): "texas" and "tx" find Austin
 
   const searchBox = (value: string, onChange: (value: string) => void, placeholder: string) => (
     <label className="mx-4.5 flex h-10 shrink-0 items-center gap-2 border-b border-[#b8b8b8] focus-within:border-black">
@@ -235,18 +236,18 @@ export default function LocationPicker({ variant, className = "" }: { variant: "
                     )}
                     {cityOptions.map((option) => (
                       <button
-                        key={option.name}
+                        key={cityValue(option)}
                         type="button"
                         role="option"
-                        aria-selected={option.name.toLowerCase() === city.toLowerCase()}
+                        aria-selected={isChosenCity(option, city)}
                         onClick={() => {
-                          setCity(option.name);
+                          setCity(cityValue(option));
                           setOpen(false);
                         }}
-                        className={`${ROW} ${option.name.toLowerCase() === city.toLowerCase() ? "font-semibold" : ""}`}
+                        className={`${ROW} ${isChosenCity(option, city) ? "font-semibold" : ""}`}
                       >
-                        <span className="min-w-0 truncate">{option.name}</span>
-                        {option.name.toLowerCase() === city.toLowerCase() ? TICK : <span className="text-[13px] font-normal text-[#8f8f8f]">{option.count}</span>}
+                        <span className="min-w-0 truncate">{cityLabel(cityValue(option))}</span>
+                        {isChosenCity(option, city) ? TICK : <span className="text-[13px] font-normal text-[#8f8f8f]">{option.count}</span>}
                       </button>
                     ))}
                     {cities === null && !failed && <p className="px-4.5 py-3 text-[14px] text-[#636363]">{t.loadingCities}</p>}

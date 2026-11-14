@@ -3,6 +3,7 @@
 // nothing that only works on one of them.
 import { shrinkForSearch } from "@/lib/photos";
 import type { ServicePriceType } from "@/lib/price";
+import { usStateCode } from "@/lib/us-states";
 
 // How many products a page holds. 24 is a whole number of rows for one, two and three columns.
 export const FEED_PAGE_SIZE = 24;
@@ -109,15 +110,55 @@ export function feedQuery({ q = "", category = "", country = "", city = "", phot
   if (q) params.set("q", q);
   if (category) params.set("business_category", category);
   if (country) params.set("country", country);
-  if (country && city) params.set("city", city); // a city belongs to its country: without one it is not sent
+  if (country && city) {
+    // a city belongs to its country: without one it is not sent. A US city also carries its state (see cityValue).
+    const place = splitCityValue(city);
+    params.set("city", place.city);
+    if (place.state) params.set("state", place.state);
+  }
   return params.toString();
 }
 
 // The location picker's list of cities (GET /feed/cities): the cities of one country that have something to show, with how many items each has
-// (products, services or businesses, by the page the visitor is on), the busiest first.
+// (products, services or businesses, by the page the visitor is on), the busiest first. `state` is the state as the owner saved it ("Texas"),
+// only for the United States, where "Austin, TX" and "Austin, MN" are two cities; null everywhere else.
 export interface FeedCity {
   name: string;
+  state?: string | null;
   count: number;
+}
+
+// The chosen city is ONE string all over the home page (the context, the lists' keys, the query). For a US city with a state it is "Austin" and
+// "Texas" joined with a separator that no place name holds; feedQuery splits it again, and cityLabel makes the text for the screen ("Austin, TX").
+const CITY_STATE_SEPARATOR = "\u001f";
+
+export function cityValue({ name, state }: Pick<FeedCity, "name" | "state">): string {
+  return state ? `${name}${CITY_STATE_SEPARATOR}${state}` : name;
+}
+
+export function splitCityValue(value: string): { city: string; state: string } {
+  const [city, state = ""] = value.split(CITY_STATE_SEPARATOR);
+  return { city, state };
+}
+
+/** The text of a city for the screen: "Austin, TX" for a US city with a state, the plain name otherwise. */
+export function cityLabel(value: string): string {
+  const { city, state } = splitCityValue(value);
+  return state ? `${city}, ${usStateCode(state)}` : city;
+}
+
+/** Whether a picker row is the chosen city (letter case does not matter, as in the API's filter). */
+export function isChosenCity(option: Pick<FeedCity, "name" | "state">, chosen: string): boolean {
+  return cityValue(option).toLowerCase() === chosen.toLowerCase();
+}
+
+/** Whether what the visitor typed in "Find a city" matches a row: the city's name, or its state (written out or as a code). */
+export function cityMatchesSearch(option: Pick<FeedCity, "name" | "state">, words: string): boolean {
+  if (!words) return true;
+  const needle = words.toLowerCase();
+  if (option.name.toLowerCase().includes(needle)) return true;
+  if (!option.state) return false;
+  return option.state.toLowerCase().includes(needle) || usStateCode(option.state).toLowerCase() === needle;
 }
 export type FeedKind = "products" | "services" | "companies";
 
