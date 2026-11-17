@@ -305,7 +305,7 @@ export default function ItemDetail({
           {images.length > 1 && (
             // PHONE: one row that is swiped sideways (not wrapped into rows that would push the name down, a product can have 30 photos); the 1px of padding keeps the chosen photo's outline from being cut.
             // DESKTOP: starts at the photo's left edge (44px arrow + 25px gap = 69px) and wraps at the photo's right edge (the same 69px margin on the right, for the next arrow).
-            <ul ref={thumbList} className="relative flex flex-wrap gap-2.5 self-start px-4 max-md:w-full max-md:flex-nowrap max-md:overflow-x-auto max-md:py-px max-md:[scrollbar-width:none] md:px-0 min-[1120px]:mx-17.25 min-[1120px]:justify-center min-[1120px]:self-stretch">
+            <ul ref={thumbList} className="relative flex flex-wrap gap-2.5 self-start px-4 max-md:w-full max-md:flex-nowrap max-md:overflow-x-auto max-md:py-px max-md:[scrollbar-width:none] md:px-0 min-[1120px]:mx-17.25 min-[1120px]:self-center">
               {images.map((image, i) => (
                 <li key={image.id} className="max-md:shrink-0">
                   <button
