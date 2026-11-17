@@ -195,7 +195,7 @@ export default function ItemDetail({
       {/* The content is at most 1440px wide (the design's) and centered; everything of the page is placed against THIS box,
           so on a wider window nothing is left behind at the window's edge. */}
       <div className="relative mx-auto w-full max-w-360">
-      <main className={`flex w-full flex-col gap-2.5 pt-1.5 pb-10 min-[1120px]:grid min-[1120px]:grid-cols-[minmax(0,740fr)_minmax(0,680fr)] ${companyLine ? "min-[1120px]:grid-rows-[auto_auto_1fr]" : "min-[1120px]:grid-rows-[auto_1fr]"} min-[1120px]:items-start min-[1120px]:gap-x-0 min-[1120px]:gap-y-3.75 min-[1120px]:px-2.5 min-[1120px]:pt-0 min-[1120px]:pb-16`}>
+      <main className={`flex w-full flex-col gap-2.5 pt-1.5 pb-10 min-[1120px]:grid min-[1120px]:grid-cols-[minmax(0,772fr)_minmax(0,648fr)] ${companyLine ? "min-[1120px]:grid-rows-[auto_auto_1fr]" : "min-[1120px]:grid-rows-[auto_1fr]"} min-[1120px]:items-start min-[1120px]:gap-x-0 min-[1120px]:gap-y-3.75 min-[1120px]:px-2.5 min-[1120px]:pt-0 min-[1120px]:pb-16`}>
         {/* The way back, on DESKTOP only: the site's thin arrow, no words (the label is for screen readers), above the left edge of the photo area (20px from the top; 108px from the
             content's left edge: the column's 10 + 40, the gallery arrow's 44 and its 25 gap, less the arrow's own 10px padding; absolute, so it is not a grid cell: the main box is not positioned, the box around it is). On phone
             and tablet the arrow is in front of the search line (header-search.tsx, home-search.tsx). */}
